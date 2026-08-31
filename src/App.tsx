@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Bot, 
-  Award, 
+import {
+  Bot,
+  Award,
   Database,
   ArrowRight,
   Sparkles,
@@ -12,14 +11,14 @@ import {
   LayoutDashboard,
   AlertTriangle,
   LineChart,
-  FileText
+  FileText,
+  Loader2,
 } from 'lucide-react';
 
 // Import local components
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { CitizenManagement } from './components/CitizenManagement';
-import { BeneficiaryRecommendations } from './components/BeneficiaryRecommendations';
 import { GrievanceManagement } from './components/GrievanceManagement';
 import { DevelopmentProjects } from './components/DevelopmentProjects';
 import { GramSabhaAI } from './components/GramSabhaAI';
@@ -27,57 +26,87 @@ import { GISMap } from './components/GISMap';
 import { AIAssistant } from './components/AIAssistant';
 import { Analytics } from './components/Analytics';
 import { CitizenPortal } from './components/CitizenPortal';
+import { CitizenSchemes } from './components/CitizenSchemes';
+import { CitizenGrievances } from './components/CitizenGrievances';
+import { DistrictOverview } from './components/DistrictOverview';
+import { SchemeBrowser } from './components/SchemeBrowser';
+import { RegistrationReview } from './components/RegistrationReview';
 import { Login } from './components/Login';
 
 // Import i18n initialization
 import './i18n/i18n';
-import { syncCloudDataToLocal, addPersistenceListener } from './lib/persistence';
-import { CITIZENS, GRIEVANCES, PROJECTS, CITIZEN_DOCUMENTS, MOCK_SABHA_MEETING } from './data/mockData';
+import { useAuth } from './lib/auth';
+import { clearPersistentCache } from './lib/persistence';
+import { api, type Village } from './lib/api';
+import { useQuery } from './lib/useApi';
 
 function App() {
-  const { i18n } = useTranslation();
-  const [syncTrigger, setSyncTrigger] = useState(0);
+  const { t, i18n } = useTranslation();
+  const { user, initialising, signOut, isOfficer } = useAuth();
 
-  // Trigger Supabase Cloud Sync on mount
-  useEffect(() => {
-    syncCloudDataToLocal(CITIZENS, GRIEVANCES, PROJECTS, CITIZEN_DOCUMENTS, MOCK_SABHA_MEETING);
+  const isAdmin = user?.role === 'admin';
 
-    // Force reactive re-render once background sync finishes loading cloud data
-    const unsubscribe = addPersistenceListener(() => {
-      setSyncTrigger(prev => prev + 1);
-    });
+  // Which Gram Panchayat this session is working in. Null for an admin, who
+  // works across the block — the village name in the header comes from here
+  // rather than being hardcoded, because the platform now serves 23 villages.
+  const village = useQuery<Village | null>(
+    () => (user ? api.villages.current() : Promise.resolve(null)),
+    [user?.id],
+  );
 
-    return unsubscribe;
-  }, []);
-  const [viewMode, setViewMode] = useState<'landing' | 'login' | 'dashboard'>('landing');
+  const [showLogin, setShowLogin] = useState(false);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [userRole, setUserRole] = useState<'officer' | 'citizen'>('officer');
-  const [loginUser, setLoginUser] = useState('');
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'en' ? 'mr' : 'en';
     i18n.changeLanguage(nextLang);
   };
 
-  // Render active dashboard tab
+  const handleSignOut = () => {
+    signOut();
+    clearPersistentCache();
+    setShowLogin(false);
+    setCurrentTab('dashboard');
+  };
+
+  // Which screen to show is derived from the session, not from a local
+  // variable — you cannot become an officer by setting React state.
+  const view = initialising
+    ? 'restoring'
+    : user
+      ? 'dashboard'
+      : showLogin
+        ? 'login'
+        : 'landing';
+
   const renderTabContent = () => {
-    if (userRole === 'citizen') {
-      return <CitizenPortal currentTab={currentTab} setCurrentTab={setCurrentTab} citizenId={loginUser} />;
+    if (!isOfficer) {
+      // Schemes are served from the API with this resident's own eligibility;
+      // the rest of the portal still runs on the older screens.
+      if (currentTab === 'schemes') return <CitizenSchemes />;
+      if (currentTab === 'grievances') return <CitizenGrievances />;
+      if (currentTab === 'ai_assistant') return <AIAssistant />;
+      return (
+        <CitizenPortal
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          citizenId={user?.citizenId ?? ''}
+        />
+      );
     }
 
-    // Reactive trigger key to rebuild state on cloud load
     switch (currentTab) {
+      case 'district':
+        return <DistrictOverview />;
       case 'dashboard':
-        return (
-          <Dashboard 
-            setCurrentTab={setCurrentTab} 
-          />
-        );
+        return <Dashboard setCurrentTab={setCurrentTab} />;
       case 'citizens':
         return <CitizenManagement />;
+      case 'registrations':
+        return <RegistrationReview />;
       case 'schemes':
-        return <BeneficiaryRecommendations />;
+        return <SchemeBrowser />;
       case 'grievances':
         return <GrievanceManagement />;
       case 'projects':
@@ -96,9 +125,19 @@ function App() {
   };
 
   return (
-    <div key={syncTrigger} className="min-h-screen text-slate-800 bg-[#f4f6f9] font-sans selection:bg-govsaffron selection:text-white">
+    <div className="min-h-screen text-slate-800 bg-[#f4f6f9] font-sans selection:bg-govsaffron selection:text-white">
+      {/* 0. RESTORING AN EXISTING SESSION */}
+      {view === 'restoring' && (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-slate-50">
+          <Loader2 size={28} className="animate-spin text-govnavy" />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Restoring your session
+          </span>
+        </div>
+      )}
+
       {/* 1. LANDING PAGE VIEW */}
-      {viewMode === 'landing' && (
+      {view === 'landing' && (
         <div className="relative overflow-hidden bg-slate-50 min-h-screen flex flex-col justify-between">
           {/* Top National Tricolor Indicator Strip */}
           <div className="w-full gov-tricolor-strip z-20" />
@@ -116,17 +155,27 @@ function App() {
                   </div>
                 </div>
                 <div className="flex flex-col select-none">
-                  <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Ministry of Rural Development • Government of Maharashtra</span>
-                  <span className="font-extrabold text-govnavy tracking-tight text-lg">LONI KALBHOR GRAM PANCHAYAT</span>
-                  <span className="text-[10px] font-bold text-govsaffron uppercase tracking-widest mt-0.5">Decision Support Support Portal (DSS)</span>
+                  <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                    {t('landing.ministry')}
+                  </span>
+                  <span className="font-extrabold text-govnavy tracking-tight text-lg">
+                    {t('landing.portal_name')}
+                  </span>
+                  <span className="text-[10px] font-bold text-govsaffron uppercase tracking-widest mt-0.5">
+                    {t('landing.region')}
+                  </span>
                 </div>
               </div>
 
               {/* PM/CM & Flag Section */}
               <div className="flex items-center gap-6 self-end md:self-center">
                 <div className="text-right hidden sm:block">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Digital Governance</span>
-                  <span className="text-xs font-extrabold text-govgreen uppercase block">Swachh Bharat Abhiyan Mapped</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">
+                    {t('landing.governance')}
+                  </span>
+                  <span className="text-xs font-extrabold text-govgreen uppercase block">
+                    {t('landing.mission')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50">
                   <span className="text-sm">🇮🇳</span>
@@ -140,7 +189,9 @@ function App() {
           <header className="max-w-7xl mx-auto w-full px-6 py-4 flex items-center justify-between border-b border-slate-100 z-20">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-govsaffron animate-pulse" />
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">GraphRAG AI Operational Mode</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                {t('landing.status')}
+              </span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -152,15 +203,12 @@ function App() {
                 <Globe size={14} className="text-govnavy" />
                 <span>{i18n.language === 'en' ? 'मराठी' : 'English'}</span>
               </button>
-              
+
               <button
-                onClick={() => {
-                  setUserRole('officer');
-                  setViewMode('login');
-                }}
+                onClick={() => setShowLogin(true)}
                 className="px-4 py-2 rounded-lg bg-govnavy hover:bg-govblue-700 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors shadow-md"
               >
-                <span>Explore Dashboard</span>
+                <span>{t('landing.sign_in')}</span>
                 <LayoutDashboard size={14} />
               </button>
             </div>
@@ -172,41 +220,33 @@ function App() {
             <div className="space-y-6 lg:col-span-6 text-left">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-govnavy/10 text-govnavy text-[11px] font-bold uppercase tracking-wider border border-govnavy/15 select-none">
                 <Sparkles size={12} className="text-govsaffron animate-pulse" />
-                <span>AI Governance Systems Integration</span>
+                <span>{t('landing.badge')}</span>
               </div>
-              
+
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-govnavy leading-tight tracking-tight m-0 font-sans">
-                Smarter Panchayats.<br />
-                <span className="text-govsaffron">Better Decisions.</span>
+                {t('landing.headline_1')}<br />
+                <span className="text-govsaffron">{t('landing.headline_2')}</span>
               </h1>
-              
+
               <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl">
-                AI-powered decision support for transparent, efficient, and data-driven rural governance. Translates fragmented databases, spatial maps, and Sabha transcripts into instantly actionable administrative insights.
+                {t('landing.intro')}
               </p>
 
               {/* CTAs */}
               <div className="flex flex-wrap gap-4 pt-2">
                 <button
-                  onClick={() => {
-                    setUserRole('officer');
-                    setCurrentTab('dashboard');
-                    setViewMode('login');
-                  }}
+                  onClick={() => setShowLogin(true)}
                   className="px-6 py-3 rounded-lg bg-govnavy hover:bg-govblue-700 text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:translate-y-[-1px]"
                 >
-                  <span>Enter Dashboard</span>
+                  <span>{t('landing.cta_dashboard')}</span>
                   <ArrowRight size={16} />
                 </button>
                 <button
-                  onClick={() => {
-                    setUserRole('citizen');
-                    setCurrentTab('ai_assistant');
-                    setViewMode('login');
-                  }}
+                  onClick={() => setShowLogin(true)}
                   className="px-6 py-3 rounded-lg bg-white border border-govsaffron text-govsaffron hover:bg-orange-50/50 font-bold text-sm flex items-center gap-2 transition-all"
                 >
                   <Bot size={16} />
-                  <span>Ask Panchayat AI</span>
+                  <span>{t('landing.cta_assistant')}</span>
                 </button>
               </div>
             </div>
@@ -214,42 +254,46 @@ function App() {
             {/* Right Flow Diagram Card */}
             <div className="lg:col-span-6 flex items-center justify-center">
               <div className="w-full max-w-md bg-white rounded-xl border border-slate-200 p-6 space-y-5 shadow-sm border-t-4 border-govsaffron relative overflow-hidden">
-                
                 <h3 className="text-xs text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
                   <Database size={14} className="text-govnavy" />
-                  <span>Unified Panchayat Data Architecture</span>
+                  <span>{t('landing.architecture')}</span>
                 </h3>
 
                 {/* Vertical Step Flow */}
                 <div className="space-y-3.5 text-xs font-semibold font-sans">
-                  {/* Step 1 */}
                   <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-slate-500 font-bold border border-slate-200">1</span>
-                    <span className="text-slate-700">PANCHAYAT DATA (Citizens, GIS, Sabha transcripts, Budgets)</span>
-                  </div>
-                  {/* Arrow */}
-                  <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
-                  {/* Step 2 */}
-                  <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-slate-500 font-bold border border-slate-200">2</span>
-                    <span className="text-slate-700">DATABASES (PostgreSQL + PostGIS + pgvector + Neo4j)</span>
-                  </div>
-                  {/* Arrow */}
-                  <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
-                  {/* Step 3 */}
-                  <div className="flex items-center gap-3 bg-govblue-50 p-2.5 rounded border border-govblue-200">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-govnavy font-bold border border-govblue-200">3</span>
-                    <span className="text-govnavy font-bold flex items-center gap-1">
-                      <Sparkles size={12} className="text-govsaffron animate-pulse" />
-                      <span>GraphRAG + Multilingual Embeddings LLM</span>
+                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-slate-500 font-bold border border-slate-200">
+                      1
+                    </span>
+                    <span className="text-slate-700">
+                      {t('landing.arch_1')}
                     </span>
                   </div>
-                  {/* Arrow */}
                   <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
-                  {/* Step 4 */}
-                  <div className="flex items-center gap-3 bg-emerald-50 p-2.5 rounded border border-emerald-250">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-govgreen font-bold border border-emerald-200">4</span>
-                    <span className="text-govgreen font-extrabold">BETTER DECISIONS (Officer Insights & Recommendations)</span>
+                  <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded border border-slate-200">
+                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-slate-500 font-bold border border-slate-200">
+                      2
+                    </span>
+                    <span className="text-slate-700">{t('landing.arch_2')}</span>
+                  </div>
+                  <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
+                  <div className="flex items-center gap-3 bg-govblue-50 p-2.5 rounded border border-govblue-200">
+                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-govnavy font-bold border border-govblue-200">
+                      3
+                    </span>
+                    <span className="text-govnavy font-bold flex items-center gap-1">
+                      <Sparkles size={12} className="text-govsaffron animate-pulse" />
+                      <span>{t('landing.arch_3')}</span>
+                    </span>
+                  </div>
+                  <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
+                  <div className="flex items-center gap-3 bg-emerald-50 p-2.5 rounded border border-emerald-200">
+                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-govgreen font-bold border border-emerald-200">
+                      4
+                    </span>
+                    <span className="text-govgreen font-extrabold">
+                      {t('landing.arch_4')}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -259,72 +303,90 @@ function App() {
           {/* Features Grid Showcase */}
           <section className="bg-slate-100/80 border-t border-slate-200 py-12">
             <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              
-              {/* Feature 1 */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govsaffron">
                 <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center text-govsaffron border border-orange-100">
                   <Award size={18} />
                 </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">AI Recommendations</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Assess citizen demographic parameters programmatically against criteria guidelines for pension or housing support.</p>
+                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
+                  {t('landing.f1_title')}
+                </h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {t('landing.f1_body')}
+                </p>
               </div>
 
-              {/* Feature 2 */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govnavy">
                 <div className="w-9 h-9 rounded-lg bg-govblue-50 flex items-center justify-center text-govnavy border border-govblue-100">
                   <Layers size={18} />
                 </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">GIS Intelligence</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Pinpoint water wells, primary ZP schools, health clinics, civil projects, and unresolved grievances on a dark-themed street map.</p>
+                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
+                  {t('landing.f2_title')}
+                </h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {t('landing.f2_body')}
+                </p>
               </div>
 
-              {/* Feature 3 */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govgreen">
                 <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-govgreen border border-emerald-100">
                   <AlertTriangle size={18} />
                 </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">Smart Grievances</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Dynamic NLP heuristic categorizer that parses complaints to suggest category labels, urgency, coordinates, and route departments.</p>
+                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
+                  {t('landing.f3_title')}
+                </h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {t('landing.f3_body')}
+                </p>
               </div>
 
-              {/* Feature 4 */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govnavy">
                 <div className="w-9 h-9 rounded-lg bg-govblue-50 flex items-center justify-center text-govnavy border border-govblue-100">
                   <LineChart size={18} />
                 </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">Project Monitoring</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Monitor ongoing civil constructions, track expenditures against budget ceilings, and flag delays via visual progress meters.</p>
+                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
+                  {t('landing.f4_title')}
+                </h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {t('landing.f4_body')}
+                </p>
               </div>
 
-              {/* Feature 5 */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govsaffron">
                 <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center text-govsaffron border border-orange-100">
                   <FileText size={18} />
                 </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">Gram Sabha AI</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Upload minutes documents to run automated GraphRAG summarization, extracting decisions and tracking action item task status.</p>
+                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
+                  {t('landing.f5_title')}
+                </h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {t('landing.f5_body')}
+                </p>
               </div>
 
-              {/* Feature 6 */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govgreen">
                 <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-govgreen border border-emerald-100">
                   <Bot size={18} />
                 </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">Unified Panchayat Data</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">A unified GraphRAG ChatGPT-style interface helping officials query budgets, citizen profiles, and files in English and Marathi.</p>
+                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
+                  {t('landing.f6_title')}
+                </h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {t('landing.f6_body')}
+                </p>
               </div>
-
             </div>
           </section>
 
           {/* National Informatics Centre (NIC) stamp footer */}
           <footer className="bg-white border-t border-slate-200 z-20 text-[11px] text-slate-500">
             <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <span>© 2026 Loni Kalbhor Gram Panchayat. Built for rural governance analytics.</span>
+              <span>{t('landing.copyright')}</span>
               <div className="flex gap-4 font-bold text-slate-600">
-                <span className="select-none">Designed by National Informatics Centre (NIC) Mode</span>
+                <span className="select-none">{t('landing.designed_by')}</span>
                 <span>•</span>
-                <a href="#" className="hover:underline">Terms & Conditions</a>
+                <a href="#" className="hover:underline">
+                  {t('landing.terms')}
+                </a>
               </div>
             </div>
           </footer>
@@ -332,53 +394,55 @@ function App() {
       )}
 
       {/* 2. SECURE LOGIN VIEW */}
-      {viewMode === 'login' && (
-        <Login 
-          onLoginSuccess={(role, username) => {
-            setUserRole(role);
-            setLoginUser(username);
-            setViewMode('dashboard');
-          }}
-        />
-      )}
+      {view === 'login' && <Login />}
 
-      {/* 2. DASHBOARD VIEW WITH SIDEBAR */}
-      {viewMode === 'dashboard' && (
+      {/* 3. DASHBOARD VIEW WITH SIDEBAR */}
+      {view === 'dashboard' && user && (
         <div className="flex min-h-screen bg-slate-50">
-          <Sidebar 
-            currentTab={currentTab} 
-            setCurrentTab={setCurrentTab} 
+          <Sidebar
+            currentTab={currentTab}
+            setCurrentTab={setCurrentTab}
             collapsed={sidebarCollapsed}
             setCollapsed={setSidebarCollapsed}
-            role={userRole}
-            onLogout={() => {
-              setViewMode('landing');
-              setUserRole('officer');
-              setLoginUser('');
-            }}
+            role={isAdmin ? 'admin' : isOfficer ? 'officer' : 'citizen'}
+            onLogout={handleSignOut}
           />
-          
+
           <div className="flex-1 flex flex-col min-w-0">
             {/* Topbar Header */}
             <header className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between z-20 select-none shadow-sm">
               <div className="flex items-center gap-3">
-                {/* Small Emblem stamp */}
-                <span className="text-xs font-extrabold text-govblue-900 uppercase">Loni Kalbhor Gram Panchayat Portal</span>
-                <span className="bg-govgreen/10 text-govgreen text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase border border-govgreen/20">Active Session</span>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-xs font-extrabold text-govblue-900 uppercase">
+                    {village.data
+                      ? `${i18n.language === 'en' ? village.data.name : village.data.nameMr} Gram Panchayat`
+                      : isAdmin
+                        ? 'Haveli Block · Pune District'
+                        : 'Gram Panchayat Portal'}
+                  </span>
+                  {village.data && (
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      {village.data.blockName} · {village.data.districtName} ·{' '}
+                      LGD {village.data.lgdCode ?? '—'}
+                    </span>
+                  )}
+                </div>
+                <span className="bg-govgreen/10 text-govgreen text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase border border-govgreen/20">
+                  Active Session
+                </span>
                 <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-                  <span className="text-[10px] font-bold text-slate-500">ACTIVE ROLE:</span>
+                  <span className="text-[10px] font-bold text-slate-500">SIGNED IN AS:</span>
                   <span className="text-xs font-black text-govnavy uppercase bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-                    {userRole === 'officer' ? 'Panchayat Officer 👤' : `Citizen (${loginUser}) 👥`}
+                    {user.fullName} {isOfficer ? '👤' : '👥'}
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    {user.role}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => {
-                    setViewMode('landing');
-                    setUserRole('officer');
-                    setLoginUser('');
-                  }}
+                  onClick={handleSignOut}
                   className="text-xs font-bold text-govsaffron hover:text-orange-600 transition-colors"
                 >
                   ← Sign Out

@@ -45,6 +45,95 @@ class TimestampMixin:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Administrative hierarchy
+#
+# India's Local Government Directory (lgdirectory.gov.in) is the official
+# registry, and every unit below carries its real LGD code. Modelling the full
+# chain — state, district, block, village — rather than a single village field
+# means district-level rollups are a query, not a rewrite. Seeding more
+# villages is then an insert, not a code change.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class State(Base, TimestampMixin):
+    __tablename__ = "states"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    name_mr: Mapped[str] = mapped_column(String(120), nullable=False)
+    lgd_code: Mapped[int | None] = mapped_column(Integer, unique=True)
+
+    districts: Mapped[list[District]] = relationship(back_populates="state")
+
+
+class District(Base, TimestampMixin):
+    __tablename__ = "districts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    name_mr: Mapped[str] = mapped_column(String(120), nullable=False)
+    lgd_code: Mapped[int | None] = mapped_column(Integer, unique=True)
+    state_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("states.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    state: Mapped[State] = relationship(back_populates="districts")
+    blocks: Mapped[list[Block]] = relationship(back_populates="district")
+
+
+class Block(Base, TimestampMixin):
+    """A taluka / tehsil / panchayat samiti, depending on the state's wording."""
+
+    __tablename__ = "blocks"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    name_mr: Mapped[str] = mapped_column(String(120), nullable=False)
+    lgd_code: Mapped[int | None] = mapped_column(Integer, unique=True)
+    district_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("districts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    district: Mapped[District] = relationship(back_populates="blocks")
+    villages: Mapped[list[Village]] = relationship(back_populates="block")
+
+
+class Village(Base, TimestampMixin):
+    """A village and, where one exists, its Gram Panchayat.
+
+    `gram_panchayat_status` matters and is not decoration: several Haveli
+    villages were absorbed into Pune Municipal Corporation in 2017 and 2021 and
+    no longer have a Gram Panchayat at all. A platform for Panchayat
+    administration has to know the difference.
+    """
+
+    __tablename__ = "villages"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    name_mr: Mapped[str] = mapped_column(String(120), nullable=False)
+    lgd_code: Mapped[int | None] = mapped_column(Integer, index=True)
+    census_code_2011: Mapped[int | None] = mapped_column(Integer)
+
+    block_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("blocks.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    population_2011: Mapped[int | None] = mapped_column(Integer)
+    households_2011: Mapped[int | None] = mapped_column(Integer)
+    ward_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # 'active' | 'merged_into_municipal_corporation' | 'uncertain'
+    gram_panchayat_status: Mapped[str] = mapped_column(
+        String(48), default="active", nullable=False
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    block: Mapped[Block] = relationship(back_populates="villages")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Identity and access
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -69,7 +158,62 @@ class User(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # An officer works for one Gram Panchayat and sees only its records. An
+    # admin has no village and sees every village in the district.
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="SET NULL"), index=True
+    )
+
     citizen: Mapped[Citizen | None] = relationship(back_populates="user")
+
+
+class RegistrationRequest(Base):
+    """A resident asking for a portal account.
+
+    Self-registration is deliberately limited to residents, and even then it
+    does not create a working account on its own. An officer must match the
+    applicant to an existing citizen record and approve them.
+
+    The reason is the whole security model: a citizen account is bound to one
+    resident's file, so letting someone self-assert which resident they are
+    would hand them another person's income, documents and family details.
+    Officer and admin accounts cannot be self-registered at all — an officer
+    can read every resident in the village, so that account is created by an
+    admin or it is not created.
+    """
+
+    __tablename__ = "registration_requests"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    # Held until approval, so no usable login exists before an officer decides.
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    phone: Mapped[str | None] = mapped_column(String(30))
+    claimed_ward: Mapped[int | None] = mapped_column(Integer)
+    # What the applicant says identifies them — an officer checks it.
+    claimed_citizen_id: Mapped[str | None] = mapped_column(String(64))
+    note: Mapped[str | None] = mapped_column(Text)
+
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
+
+    # 'pending' | 'approved' | 'rejected'
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, index=True)
+    matched_citizen_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("citizens.id", ondelete="SET NULL")
+    )
+    reviewed_by_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    review_note: Mapped[str | None] = mapped_column(Text)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False, index=True
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -86,6 +230,9 @@ class Family(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     name_mr: Mapped[str] = mapped_column(String(255), nullable=False)
     ward: Mapped[int] = mapped_column(Integer, nullable=False)
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
     address: Mapped[str | None] = mapped_column(String(500))
     address_mr: Mapped[str | None] = mapped_column(String(500))
 
@@ -115,6 +262,9 @@ class Citizen(Base, TimestampMixin):
     income: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
 
     ward: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
     phone: Mapped[str | None] = mapped_column(String(30))
 
     family_id: Mapped[str | None] = mapped_column(
@@ -123,6 +273,28 @@ class Citizen(Base, TimestampMixin):
     relation: Mapped[str | None] = mapped_column(String(80))
     relation_mr: Mapped[str | None] = mapped_column(String(80))
     is_head: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # ── Attributes real scheme rules depend on ───────────────────────────────
+    # Government eligibility is rarely a simple income test. Ramai Awas is SC
+    # only, MJPJAY keys off ration card colour, Saur Krushi Pump off land size,
+    # Ladki Bahin off marital status. Without these the engine can only
+    # approximate, which for a welfare decision is worse than saying "unknown".
+    #
+    # These are sensitive personal attributes. Every value in this project is
+    # SYNTHETIC — a real deployment needs a lawful basis, consent, and access
+    # controls tighter than role-based ones before collecting any of it.
+
+    # 'Open' | 'SC' | 'ST' | 'OBC' | 'SEBC' | 'VJNT' | 'SBC'
+    social_category: Mapped[str | None] = mapped_column(String(20), index=True)
+    is_bpl: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # SECC-2011 deprivation listing — what PMAY-G and Ayushman Bharat actually use.
+    secc_listed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # 'Yellow' | 'Orange' | 'White' | 'AAY' | 'Annapurna'
+    ration_card_type: Mapped[str | None] = mapped_column(String(20))
+    land_holding_hectares: Mapped[float | None] = mapped_column(Float)
+    # 'Single' | 'Married' | 'Widowed' | 'Divorced' | 'Abandoned'
+    marital_status: Mapped[str | None] = mapped_column(String(20))
+    disability_percent: Mapped[int | None] = mapped_column(Integer)
 
     family: Mapped[Family | None] = relationship(back_populates="members")
     user: Mapped[User | None] = relationship(back_populates="citizen", uselist=False)
@@ -156,8 +328,10 @@ class Scheme(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     description_mr: Mapped[str] = mapped_column(Text, nullable=False)
 
-    benefit: Mapped[str] = mapped_column(String(255), nullable=False)
-    benefit_mr: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Text, not String(255): real government benefit descriptions run long —
+    # Birsa Munda lists five separate subsidy caps in one sentence.
+    benefit: Mapped[str] = mapped_column(Text, nullable=False)
+    benefit_mr: Mapped[str] = mapped_column(Text, nullable=False)
 
     criteria: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     required_documents: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
@@ -168,6 +342,22 @@ class Scheme(Base, TimestampMixin):
     is_government_feed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     source_gov: Mapped[str | None] = mapped_column(String(255))
     form_url: Mapped[str | None] = mapped_column(String(500))
+
+    # 'central' | 'state' | 'district' | 'panchayat'
+    level: Mapped[str] = mapped_column(String(20), default="state", nullable=False, index=True)
+    # Pension, Housing, Agriculture, Health, Education, Women and Child, …
+    category: Mapped[str | None] = mapped_column(String(60), index=True)
+
+    # When the government announced it — drives the "newest first" ordering that
+    # both the officer list and the citizen browser sort by.
+    announced_on: Mapped[date | None] = mapped_column(Date, index=True)
+
+    # Provenance. Every scheme points back at the official page its rules came
+    # from, so any figure in the system can be checked against its source.
+    source_url: Mapped[str | None] = mapped_column(String(500))
+    # 'high' | 'medium' | 'low' — how well the figures were verified.
+    confidence: Mapped[str] = mapped_column(String(20), default="medium", nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -194,6 +384,9 @@ class Grievance(Base, TimestampMixin):
     department_mr: Mapped[str] = mapped_column(String(120), nullable=False)
 
     ward: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
     latitude: Mapped[float | None] = mapped_column(Float)
     longitude: Mapped[float | None] = mapped_column(Float)
 
@@ -213,6 +406,47 @@ class Grievance(Base, TimestampMixin):
     auto_classified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     citizen: Mapped[Citizen | None] = relationship(back_populates="grievances")
+    events: Mapped[list[GrievanceEvent]] = relationship(
+        back_populates="grievance", cascade="all, delete-orphan",
+        order_by="GrievanceEvent.created_at",
+    )
+
+
+class GrievanceEvent(Base):
+    """One entry in a complaint's history.
+
+    A citizen tracking a complaint needs to see what has happened to it, not
+    just where it sits now. Every status change is recorded here with who made
+    it and when, so the citizen portal can show a real timeline and an officer
+    can be held to one.
+    """
+
+    __tablename__ = "grievance_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    grievance_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("grievances.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+
+    # 'filed' | 'status_changed' | 'priority_changed' | 'note_added'
+    event_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    from_status: Mapped[str | None] = mapped_column(String(30))
+    to_status: Mapped[str | None] = mapped_column(String(30))
+
+    note: Mapped[str | None] = mapped_column(Text)
+    note_mr: Mapped[str | None] = mapped_column(Text)
+
+    actor_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    actor_name: Mapped[str | None] = mapped_column(String(255))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False, index=True
+    )
+
+    grievance: Mapped[Grievance] = relationship(back_populates="events")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -236,6 +470,9 @@ class Project(Base, TimestampMixin):
     status_mr: Mapped[str] = mapped_column(String(30), nullable=False)
 
     ward: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
     location: Mapped[str] = mapped_column(String(255), nullable=False)
     location_mr: Mapped[str] = mapped_column(String(255), nullable=False)
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
@@ -289,6 +526,9 @@ class SabhaMeeting(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     meeting_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     title_mr: Mapped[str] = mapped_column(String(255), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -346,6 +586,9 @@ class Facility(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     name_mr: Mapped[str] = mapped_column(String(255), nullable=False)
     facility_type: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
     ward: Mapped[int | None] = mapped_column(Integer)

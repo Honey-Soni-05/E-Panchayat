@@ -68,6 +68,27 @@ require_officer = require_roles("officer", "admin")
 require_admin = require_roles("admin")
 
 
+def village_scope(user: User) -> str | None:
+    """Which village's records this user may see.
+
+    Returns a village id to filter by, or None meaning "all villages".
+    An officer is bound to one Gram Panchayat; an admin sees the district.
+    """
+    if user.role == "admin":
+        return None
+    return user.village_id
+
+
+def assert_can_access_village(user: User, village_id: str | None) -> None:
+    """Guard for routes that name a village explicitly."""
+    scope = village_scope(user)
+    if scope is not None and village_id is not None and scope != village_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That record belongs to another Gram Panchayat.",
+        )
+
+
 def assert_can_read_citizen(user: User, citizen_id: str) -> None:
     """Officers read anyone. A citizen reads only their own file.
 

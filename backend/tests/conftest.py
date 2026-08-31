@@ -36,15 +36,20 @@ def database():
 
     data = seeder.load_data()
     with SessionLocal() as db:
+        seeder.seed_hierarchy(db)
+        seeder.seed_villages(db)
         seeder.seed_families(db, data)
         seeder.seed_citizens(db, data)
         seeder.seed_schemes(db, data)
         seeder.seed_grievances(db, data)
+        seeder.seed_grievance_history(db)
         seeder.seed_projects(db, data)
         seeder.seed_documents(db, data)
         seeder.seed_sabha(db, data)
         seeder.seed_facilities(db, data)
+        seeder.assign_home_village(db)
         seeder.seed_users(db)
+        seeder.seed_neighbour_officer(db)
 
     yield
 
@@ -73,6 +78,18 @@ def _auth(client: TestClient, email: str) -> dict[str, str]:
 @pytest.fixture(scope="session")
 def officer(client: TestClient) -> dict[str, str]:
     return _auth(client, "officer@panchayat.gov.in")
+
+
+@pytest.fixture(scope="session")
+def neighbour_officer(client: TestClient) -> dict[str, str]:
+    """An officer of Theur, a different Gram Panchayat in the same block."""
+    return _auth(client, "officer.theur@panchayat.gov.in")
+
+
+@pytest.fixture(scope="session")
+def admin(client: TestClient) -> dict[str, str]:
+    """No village — sees the whole district."""
+    return _auth(client, "admin@panchayat.gov.in")
 
 
 @pytest.fixture(scope="session")

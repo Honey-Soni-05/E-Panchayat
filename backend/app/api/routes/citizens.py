@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import assert_can_read_citizen, get_current_user, require_officer
+from app.core.deps import (
+    assert_can_read_citizen,
+    get_current_user,
+    require_officer,
+    village_scope,
+)
 from app.db.session import get_db
 from app.models import Citizen, Family, User
 from app.schemas import (
@@ -33,7 +38,8 @@ def _to_out(c: Citizen) -> CitizenOut:
         if m.id != c.id
     ]
     return CitizenOut(
-        id=c.id, name=c.name, name_mr=c.name_mr, age=c.age,
+        id=c.id, village_id=c.village_id,
+        name=c.name, name_mr=c.name_mr, age=c.age,
         gender=c.gender, gender_mr=c.gender_mr,
         occupation=c.occupation, occupation_mr=c.occupation_mr,
         income=float(c.income or 0), ward=c.ward, phone=c.phone,
@@ -43,6 +49,10 @@ def _to_out(c: Citizen) -> CitizenOut:
         family_name_mr=c.family.name_mr if c.family else None,
         family_members=members,
         created_at=c.created_at,
+        social_category=c.social_category, is_bpl=c.is_bpl,
+        secc_listed=c.secc_listed, ration_card_type=c.ration_card_type,
+        land_holding_hectares=c.land_holding_hectares,
+        marital_status=c.marital_status, disability_percent=c.disability_percent,
     )
 
 
@@ -65,6 +75,10 @@ def list_citizens(
     stmt = select(Citizen).options(
         selectinload(Citizen.family).selectinload(Family.members)
     )
+    # An officer sees their own Gram Panchayat only; an admin sees the district.
+    scope = village_scope(user)
+    if scope is not None:
+        stmt = stmt.where(Citizen.village_id == scope)
     if ward is not None:
         stmt = stmt.where(Citizen.ward == ward)
     if search:
@@ -91,13 +105,19 @@ def get_citizen(
     citizen = db.get(Citizen, citizen_id)
     if citizen is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No citizen with that ID.")
+
+    scope = village_scope(user)
+    if scope is not None and citizen.village_id and citizen.village_id != scope:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "That resident belongs to another Gram Panchayat."
+        )
     return _to_out(citizen)
 
 
 @router.post("/citizens", response_model=CitizenOut, status_code=status.HTTP_201_CREATED)
 def create_citizen(
     body: CitizenCreate,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> CitizenOut:
     citizen_id = body.id or f"cit_{uuid4().hex[:10]}"
@@ -106,7 +126,12 @@ def create_citizen(
     if body.family_id and not db.get(Family, body.family_id):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No family with that ID.")
 
-    citizen = Citizen(id=citizen_id, **body.model_dump(exclude={"id"}))
+    # A new resident joins the officer's own village by default.
+    citizen = Citizen(
+        id=citizen_id,
+        village_id=village_scope(officer),
+        **body.model_dump(exclude={"id"}),
+    )
     db.add(citizen)
     db.commit()
     db.refresh(citizen)

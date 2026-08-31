@@ -28,9 +28,12 @@ def _result(a: elig.Assessment, language: str) -> EligibilityResult:
         citizen_name_mr=a.citizen.name_mr,
         ward=a.citizen.ward,
         scheme_id=a.scheme.id,
+        scheme_name=a.scheme.name,
+        scheme_name_mr=a.scheme.name_mr,
         status=a.status,
         status_mr=elig.STATUS_MR[a.status],
         criteria_passed=a.criteria_passed,
+        unknown_attributes=a.unknown_attributes,
         failed_criteria=a.failed_criteria_mr if language == "mr" else a.failed_criteria,
         missing_documents=[
             DocumentGap(name=d.name, name_mr=d.name_mr) for d in a.missing_documents
@@ -154,8 +157,8 @@ def scheme_eligibility(
         results = [r for r in results if r.status == only]
 
     # Eligible first, then near-misses, then the rest — the order an officer works in.
-    rank = {"Eligible": 0, "Missing Documents": 1, "Ineligible": 2}
-    results.sort(key=lambda r: (rank.get(r.status, 3), r.ward, r.citizen_name))
+    rank = {s: i for i, s in enumerate(elig.STATUS_ORDER)}
+    results.sort(key=lambda r: (rank.get(r.status, 9), r.ward, r.citizen_name))
     return results
 
 
@@ -179,6 +182,6 @@ def citizen_eligibility(
     schemes = db.scalars(select(Scheme).where(Scheme.status == "active"))
 
     results = [_result(elig.assess(citizen, s, docs), language) for s in schemes]
-    rank = {"Eligible": 0, "Missing Documents": 1, "Ineligible": 2}
-    results.sort(key=lambda r: rank.get(r.status, 3))
+    rank = {s: i for i, s in enumerate(elig.STATUS_ORDER)}
+    results.sort(key=lambda r: rank.get(r.status, 9))
     return results

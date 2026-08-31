@@ -14,7 +14,8 @@ import {
   ChevronRight,
   Globe,
   LogOut,
-  FolderOpen
+  FolderOpen,
+  UserPlus
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,7 +23,7 @@ interface SidebarProps {
   setCurrentTab: (tab: string) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  role?: 'officer' | 'citizen';
+  role?: 'officer' | 'citizen' | 'admin';
   onLogout?: () => void;
 }
 
@@ -48,8 +49,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'documents', label: i18n.language === 'en' ? 'Digital Locker' : 'डिजिटल लॉकर', icon: FolderOpen },
     { id: 'ai_assistant', label: i18n.language === 'en' ? 'AI Helpdesk' : 'AI मदत कक्ष', icon: Bot, isAI: true }
   ] : [
+    ...(role === 'admin'
+      ? [{
+          id: 'district',
+          label: i18n.language === 'en' ? 'Block Overview' : 'तालुका आढावा',
+          icon: Landmark,
+        }]
+      : []),
     { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
     { id: 'citizens', label: t('nav.citizens'), icon: Users },
+    { id: 'registrations', label: t('registrations.title'), icon: UserPlus },
     { id: 'schemes', label: t('nav.schemes'), icon: Landmark },
     { id: 'grievances', label: t('nav.grievances'), icon: Megaphone },
     { id: 'projects', label: t('nav.projects'), icon: Construction },

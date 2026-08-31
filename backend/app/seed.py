@@ -13,6 +13,7 @@ Accounts created (password from SEED_DEFAULT_PASSWORD in .env):
     admin@panchayat.gov.in     admin
     officer@panchayat.gov.in   officer
     <first-name>@citizen.panchayat.gov.in citizen, one per seeded citizen
+                               except the residents in UNREGISTERED_CITIZEN_IDS
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import delete
@@ -31,61 +32,40 @@ from app.core.security import hash_password
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
 from app.models import (
+    Block,
     Citizen,
     CitizenDocument,
     Facility,
     Family,
     Grievance,
+    GrievanceEvent,
     Project,
     SabhaActionItem,
     SabhaMeeting,
     Scheme,
+    State,
+    District,
     User,
+    Village,
 )
 from app.services.classifier import classify
 
 DATA_PATH = Path(__file__).parent / "seed_data.json"
+VILLAGES_PATH = Path(__file__).parent / "villages_data.json"
 
-# Eligibility rules, lifted out of the frontend's hardcoded if/else chain and
-# expressed as data the engine evaluates.
-SCHEME_CRITERIA: dict[str, dict] = {
-    "scheme_sr_citizen": {"min_age": 60, "max_income": 100000},
-    "scheme_pm_awas": {"max_income": 120000},
-    "scheme_krishi_sinchan": {
-        "max_income": 200000,
-        "occupation_any": ["farmer", "agriculture", "शेतकरी", "शेती"],
-    },
-    "scheme_beti_bachao": {
-        "max_income": 150000,
-        "gender": "Female",
-        "max_age": 25,
-    },
-    "scheme_lado_devona": {"min_age": 16, "max_income": 120000, "gender": "Female"},
-    "scheme_solar_pump": {
-        "min_age": 18,
-        "max_income": 250000,
-        "occupation_any": ["farmer", "agriculture", "शेतकरी", "शेती"],
-    },
+# The Gram Panchayat this demo's residents, projects and grievances belong to.
+HOME_VILLAGE_ID = "vil_loni_kalbhor"
+
+# Official Local Government Directory codes, verified against the LGD dump.
+HIERARCHY = {
+    "state": dict(id="st_maharashtra", name="Maharashtra", name_mr="महाराष्ट्र", lgd_code=27),
+    "district": dict(id="dist_pune", name="Pune", name_mr="पुणे", lgd_code=490),
+    "block": dict(id="blk_haveli", name="Haveli", name_mr="हवेली", lgd_code=4193),
 }
 
-REQUIRED_DOCS: dict[str, list[dict]] = {
-    "scheme_sr_citizen": [
-        {"name": "Aadhaar Card", "name_mr": "आधार कार्ड"},
-        {"name": "Income Certificate", "name_mr": "उत्पन्नाचा दाखला"},
-    ],
-    "scheme_pm_awas": [
-        {"name": "Income Certificate", "name_mr": "उत्पन्नाचा दाखला"},
-        {"name": "Land ownership 7/12 Extract", "name_mr": "७/१२ उतारा"},
-    ],
-    "scheme_krishi_sinchan": [
-        {"name": "Land ownership 7/12 Extract", "name_mr": "७/१२ उतारा"},
-        {"name": "Aadhaar Card", "name_mr": "आधार कार्ड"},
-    ],
-    "scheme_beti_bachao": [
-        {"name": "Aadhaar Card", "name_mr": "आधार कार्ड"},
-        {"name": "Income Certificate", "name_mr": "उत्पन्नाचा दाखला"},
-    ],
-}
+# Eligibility rules and required documents now live in seed_data.json, one set
+# per scheme, researched from official government sources with a source_url on
+# each record. They are no longer hardcoded here.
 
 FAMILY_NAME_MR = {
     "Patil Family": "पाटील कुटुंब",
@@ -114,12 +94,86 @@ def load_data() -> dict:
 def reset(db: Session) -> None:
     """Delete in dependency order so foreign keys never block the wipe."""
     for model in (
-        SabhaActionItem, SabhaMeeting, CitizenDocument, Grievance,
+        SabhaActionItem, SabhaMeeting, CitizenDocument, GrievanceEvent, Grievance,
         Facility, Project, Scheme, User, Citizen, Family,
+        Village, Block, District, State,
     ):
         db.execute(delete(model))
     db.commit()
     print("Cleared existing rows.")
+
+
+def slugify(name: str) -> str:
+    return "vil_" + "".join(ch if ch.isalnum() else "_" for ch in name.lower()).strip("_")
+
+
+def seed_hierarchy(db: Session) -> None:
+    """State, district and block, with their real LGD codes."""
+    if not db.get(State, HIERARCHY["state"]["id"]):
+        db.add(State(**HIERARCHY["state"]))
+    if not db.get(District, HIERARCHY["district"]["id"]):
+        db.add(District(**HIERARCHY["district"], state_id=HIERARCHY["state"]["id"]))
+    if not db.get(Block, HIERARCHY["block"]["id"]):
+        db.add(Block(**HIERARCHY["block"], district_id=HIERARCHY["district"]["id"]))
+    db.commit()
+    print("Hierarchy: Maharashtra (27) > Pune (490) > Haveli (4193)")
+
+
+def seed_villages(db: Session) -> None:
+    """Real Gram Panchayats of Haveli taluka, from the Local Government Directory.
+
+    `gram_panchayat_status` is not cosmetic: several of these villages were
+    absorbed into Pune Municipal Corporation in 2017 and 2021 and no longer have
+    a Gram Panchayat, which a Panchayat platform has to know.
+    """
+    if not VILLAGES_PATH.exists():
+        print(f"  ! villages file missing: {VILLAGES_PATH}")
+        return
+
+    villages = json.loads(VILLAGES_PATH.read_text(encoding="utf-8"))
+    count = 0
+    merged = 0
+    for v in villages:
+        village_id = slugify(v["name"])
+        if db.get(Village, village_id):
+            continue
+        raw_status = (v.get("gram_panchayat_status") or "active").lower()
+        if "merged" in raw_status and "uncertain" not in raw_status:
+            status = "merged_into_municipal_corporation"
+            merged += 1
+        elif "uncertain" in raw_status:
+            status = "uncertain"
+        else:
+            status = "active"
+
+        db.add(Village(
+            id=village_id, name=v["name"], name_mr=v.get("name_mr") or v["name"],
+            lgd_code=v.get("lgd_code"), census_code_2011=v.get("census_code_2011"),
+            block_id=HIERARCHY["block"]["id"],
+            latitude=v.get("latitude"), longitude=v.get("longitude"),
+            population_2011=v.get("population_2011"),
+            households_2011=v.get("households_2011"),
+            ward_count=9 if village_id == HOME_VILLAGE_ID else 0,
+            gram_panchayat_status=status, notes=v.get("notes"),
+        ))
+        count += 1
+    db.commit()
+    print(f"Villages: {count} in Haveli taluka ({merged} merged into PMC, no Gram Panchayat)")
+
+
+def assign_home_village(db: Session) -> None:
+    """Point the demo records at Loni Kalbhor.
+
+    Everything seeded from the original mock data belongs to one village; the
+    other 22 exist so the district rollup and the village scoping are real
+    rather than hypothetical.
+    """
+    if not db.get(Village, HOME_VILLAGE_ID):
+        return
+    for model in (Family, Citizen, Grievance, Project, Facility, SabhaMeeting):
+        for row in db.query(model).filter(model.village_id.is_(None)).all():
+            row.village_id = HOME_VILLAGE_ID
+    db.commit()
 
 
 def seed_families(db: Session, data: dict) -> None:
@@ -161,6 +215,15 @@ def seed_citizens(db: Session, data: dict) -> None:
             income=c["income"], ward=c["ward"], phone=c.get("phone"),
             family_id=c["familyId"], relation=relation, relation_mr=relation_mr,
             is_head=c["id"] in heads,
+            # Synthetic. Real scheme rules key off these, so without them the
+            # engine can only guess — see the note in app/models.py.
+            social_category=c.get("social_category"),
+            is_bpl=c.get("is_bpl", False),
+            secc_listed=c.get("secc_listed", False),
+            ration_card_type=c.get("ration_card_type"),
+            land_holding_hectares=c.get("land_holding_hectares"),
+            marital_status=c.get("marital_status"),
+            disability_percent=c.get("disability_percent"),
         ))
         count += 1
     db.commit()
@@ -168,52 +231,38 @@ def seed_citizens(db: Session, data: dict) -> None:
 
 
 def seed_schemes(db: Session, data: dict) -> None:
+    """Load the researched schemes.
+
+    Each record carries its own criteria, required documents, level, category,
+    announcement date, and the official URL its figures came from — so every
+    number in the system can be traced back to a government page.
+    """
     count = 0
     for s in data["schemes"]:
         if db.get(Scheme, s["id"]):
             continue
-        criteria = dict(SCHEME_CRITERIA.get(s["id"], {}))
-        # Fall back to whatever the old flat fields said, so a scheme without an
-        # explicit rule set still gets its age/income bounds.
-        criteria.setdefault("min_age", s.get("minAge"))
-        criteria.setdefault("max_income", s.get("maxIncome"))
-        if s.get("genderRestriction"):
-            criteria.setdefault("gender", s["genderRestriction"])
-        criteria = {k: v for k, v in criteria.items() if v is not None}
-
         db.add(Scheme(
-            id=s["id"], name=s["name"], name_mr=s["nameMr"],
-            description=s["description"], description_mr=s["descriptionMr"],
-            benefit=s["benefit"], benefit_mr=s["benefitMr"],
-            criteria=criteria,
-            required_documents=REQUIRED_DOCS.get(s["id"], []),
-            status="active", is_government_feed=False,
-            form_url=s.get("formUrl"),
-        ))
-        count += 1
-
-    # The state feed: schemes awaiting an officer's adopt/reject decision.
-    for s in data["feed"]:
-        if db.get(Scheme, s["id"]):
-            continue
-        criteria = dict(SCHEME_CRITERIA.get(s["id"], {}))
-        criteria.setdefault("min_age", s.get("minAge"))
-        criteria.setdefault("max_income", s.get("maxIncome"))
-        if s.get("genderRestriction"):
-            criteria.setdefault("gender", s["genderRestriction"])
-        criteria = {k: v for k, v in criteria.items() if v is not None}
-
-        db.add(Scheme(
-            id=s["id"], name=s["name"], name_mr=s["nameMr"],
-            description=s["description"], description_mr=s["descriptionMr"],
-            benefit=s["benefit"], benefit_mr=s["benefitMr"],
-            criteria=criteria, required_documents=[],
-            status="pending", is_government_feed=True,
-            source_gov=s.get("sourceGov"), form_url=s.get("formUrl"),
+            id=s["id"], name=s["name"], name_mr=s["name_mr"],
+            description=s["description"], description_mr=s["description_mr"],
+            benefit=s["benefit"], benefit_mr=s["benefit_mr"],
+            criteria=s.get("criteria") or {},
+            required_documents=s.get("required_documents") or [],
+            status=s.get("status", "active"),
+            is_government_feed=s.get("is_government_feed", False),
+            source_gov=s.get("source_gov"),
+            level=s.get("level", "state"),
+            category=s.get("category"),
+            announced_on=_date(s.get("announced_on")),
+            form_url=s.get("form_url"),
+            source_url=s.get("source_url"),
+            confidence=s.get("confidence", "medium"),
+            notes=s.get("notes"),
         ))
         count += 1
     db.commit()
-    print(f"Schemes: {count}")
+
+    review = sum(1 for s in data["schemes"] if (s.get("criteria") or {}).get("manual_review"))
+    print(f"Schemes: {count} ({review} need officer review — rules a resident record cannot decide)")
 
 
 def seed_grievances(db: Session, data: dict) -> None:
@@ -249,6 +298,61 @@ def seed_grievances(db: Session, data: dict) -> None:
     print(f"Grievances: {count}")
 
 
+def seed_grievance_history(db: Session) -> None:
+    """Give the seeded complaints a plausible history.
+
+    Without this the citizen tracking view would show a status with no story
+    behind it. Each complaint gets its filing event, and anything past Pending
+    gets the status change that moved it.
+    """
+    from datetime import timedelta
+
+    STATUS_MR = {
+        "Pending": "प्रलंबित", "In Progress": "प्रगतीपथावर", "Resolved": "निराकरण झाले",
+    }
+    count = 0
+    for g in db.query(Grievance).all():
+        if db.query(GrievanceEvent).filter_by(grievance_id=g.id).first():
+            continue
+
+        filed_at = datetime.combine(g.submitted_date, datetime.min.time(), timezone.utc)
+        db.add(GrievanceEvent(
+            id=f"gev_{g.id}_filed", grievance_id=g.id, event_type="filed",
+            to_status="Pending",
+            note=f"Complaint received and routed to {g.department}",
+            note_mr=f"तक्रार प्राप्त झाली असून {g.department_mr} कडे वर्ग करण्यात आली आहे",
+            actor_name=g.citizen_name, created_at=filed_at,
+        ))
+        count += 1
+
+        if g.status != "Pending":
+            db.add(GrievanceEvent(
+                id=f"gev_{g.id}_progress", grievance_id=g.id,
+                event_type="status_changed", from_status="Pending",
+                to_status="In Progress",
+                note="Site inspection completed; work assigned to the department team.",
+                note_mr="स्थळ पाहणी पूर्ण; विभागाच्या पथकाकडे काम सोपवण्यात आले.",
+                actor_name="Panchayat Officer",
+                created_at=filed_at + timedelta(days=2),
+            ))
+            count += 1
+
+        if g.status == "Resolved":
+            db.add(GrievanceEvent(
+                id=f"gev_{g.id}_resolved", grievance_id=g.id,
+                event_type="status_changed", from_status="In Progress",
+                to_status="Resolved",
+                note=g.officer_notes or "Work completed and verified on site.",
+                note_mr="काम पूर्ण झाले असून स्थळावर पडताळणी करण्यात आली.",
+                actor_name="Panchayat Officer",
+                created_at=filed_at + timedelta(days=6),
+            ))
+            count += 1
+
+    db.commit()
+    print(f"Grievance history: {count} events")
+
+
 def seed_projects(db: Session, data: dict) -> None:
     count = 0
     for p in data["projects"]:
@@ -268,20 +372,28 @@ def seed_projects(db: Session, data: dict) -> None:
     print(f"Projects: {count}")
 
 
-# The original mock data shipped only three documents, none of them an Aadhaar
-# card — so no citizen could ever reach "Eligible" for a scheme that requires
-# one, and the demo could only ever show two of the three states. These rows
-# complete a few files so all three outcomes are visible. `doc_102` in the mock
-# data also referenced "Amit Shinde", who is not in the citizen list at all.
-DEMO_DOCUMENTS = [
-    ("doc_201", "Anandrao Patil", "Aadhaar Card", "आधार कार्ड",
-     "aadhaar_anandrao.pdf", "Verified", "पडताळणी पूर्ण"),
-    ("doc_202", "Anandrao Patil", "Income Certificate", "उत्पन्नाचा दाखला",
-     "income_certificate_anandrao.pdf", "Verified", "पडताळणी पूर्ण"),
-    ("doc_203", "Savita Patil", "Aadhaar Card", "आधार कार्ड",
-     "aadhaar_savita.pdf", "Verified", "पडताळणी पूर्ण"),
-    ("doc_204", "Ramesh Shinde", "Aadhaar Card", "आधार कार्ड",
-     "aadhaar_ramesh.pdf", "Rejected", "नाकारले"),
+# The original mock data shipped three documents, none of them an Aadhaar card,
+# so no resident could satisfy any scheme's document list and the demo could
+# never show an "Eligible" result. `doc_102` also referenced "Amit Shinde", who
+# is not in the citizen list at all.
+#
+# Rather than invent a flat list, these pairs say "this resident has filed a
+# complete set for this scheme", and the documents are generated from that
+# scheme's own requirements. So the demo always has working examples even when
+# the scheme data changes.
+COMPLETE_FILES = [
+    ("cit_102", "scheme_sanjay_gandhi_niradhar"),   # BPL widow — destitute assistance
+    ("cit_102", "scheme_widow_pension"),            # same resident, widow pension
+    ("cit_101", "scheme_pm_kisan"),                 # farmer with land
+    ("cit_109", "scheme_birsa_munda_krishi_kranti"),# ST farmer, land in band
+    ("cit_104", "scheme_ramai_awas"),               # SC household, housing
+]
+
+# A few partial files so "Missing Documents" and "Rejected" are visible too.
+PARTIAL_FILES = [
+    ("cit_105", "Aadhaar Card", "आधार कार्ड", "Rejected", "नाकारले",
+     "Photograph is not legible."),
+    ("cit_110", "Aadhaar Card", "आधार कार्ड", "Pending Verification", "पडताळणी प्रलंबित", None),
 ]
 
 
@@ -289,24 +401,47 @@ def seed_documents(db: Session, data: dict) -> None:
     by_name = {c.name: c for c in db.query(Citizen).all()}
     count = 0
 
-    for doc_id, citizen_name, doc_type, doc_type_mr, file_name, st, st_mr in DEMO_DOCUMENTS:
-        citizen = by_name.get(citizen_name)
+    # Complete, verified sets generated from each scheme's real requirements.
+    for citizen_id, scheme_id in COMPLETE_FILES:
+        citizen = db.get(Citizen, citizen_id)
+        scheme = db.get(Scheme, scheme_id)
+        if citizen is None or scheme is None:
+            continue
+        for i, req in enumerate(scheme.required_documents or [], start=1):
+            doc_id = f"doc_{citizen_id}_{scheme_id[7:19]}_{i}"
+            if db.get(CitizenDocument, doc_id):
+                continue
+            slug = "".join(ch for ch in req["name"].lower() if ch.isalnum() or ch == " ")
+            db.add(CitizenDocument(
+                id=doc_id, citizen_id=citizen.id,
+                doc_type=req["name"], doc_type_mr=req.get("name_mr", req["name"]),
+                file_name=f"{slug.replace(' ', '_')}_{citizen_id}.pdf",
+                status="Verified", status_mr="पडताळणी पूर्ण",
+                submitted_date=date(2026, 8, 5),
+                verified_at=datetime(2026, 8, 7, tzinfo=timezone.utc),
+            ))
+            count += 1
+
+    for citizen_id, doc_type, doc_type_mr, st, st_mr, reason in PARTIAL_FILES:
+        citizen = db.get(Citizen, citizen_id)
+        doc_id = f"doc_partial_{citizen_id}"
         if citizen is None or db.get(CitizenDocument, doc_id):
             continue
         db.add(CitizenDocument(
             id=doc_id, citizen_id=citizen.id, doc_type=doc_type,
-            doc_type_mr=doc_type_mr, file_name=file_name,
-            status=st, status_mr=st_mr, submitted_date=date(2026, 8, 5),
-            rejection_reason="Photograph is not legible." if st == "Rejected" else None,
+            doc_type_mr=doc_type_mr, file_name=f"aadhaar_{citizen_id}.pdf",
+            status=st, status_mr=st_mr, submitted_date=date(2026, 8, 9),
+            rejection_reason=reason,
         ))
         count += 1
 
-    for d in data["docs"]:
+    # Anything still listed in the original mock data.
+    for d in data.get("docs", []):
         if db.get(CitizenDocument, d["id"]):
             continue
         citizen = by_name.get(d["citizenName"])
         if citizen is None:
-            print(f"  ! skipping {d['id']}: no citizen named {d['citizenName']}")
+            print(f"  ! skipping {d['id']}: the mock data names {d['citizenName']}, who is not a resident")
             continue
         db.add(CitizenDocument(
             id=d["id"], citizen_id=citizen.id,
@@ -315,6 +450,7 @@ def seed_documents(db: Session, data: dict) -> None:
             submitted_date=_date(d.get("submittedDate")) or date.today(),
         ))
         count += 1
+
     db.commit()
     print(f"Documents: {count}")
 
@@ -362,6 +498,12 @@ def seed_facilities(db: Session, data: dict) -> None:
     print(f"Facilities: {count}")
 
 
+# Residents deliberately left without a portal account. In a real village most
+# residents would not have signed up yet, and the registration queue needs
+# somebody an officer can actually approve.
+UNREGISTERED_CITIZEN_IDS = {"cit_109", "cit_110"}
+
+
 def seed_users(db: Session) -> None:
     password = hash_password(settings.SEED_DEFAULT_PASSWORD)
     created = 0
@@ -372,12 +514,22 @@ def seed_users(db: Session) -> None:
     ]:
         if db.get(User, user_id):
             continue
-        db.add(User(id=user_id, email=email, hashed_password=password,
-                    full_name=name, role=role))
+        db.add(User(
+            id=user_id, email=email, hashed_password=password,
+            full_name=name, role=role,
+            # An admin has no village and sees the whole district.
+            village_id=None if role == "admin" else HOME_VILLAGE_ID,
+        ))
         created += 1
 
-    # One login per citizen, so the portal can be demonstrated as that person.
+    # One login per citizen, so the portal can be demonstrated as that person —
+    # except the residents held back above, who are on the village register with
+    # no account yet. Somebody has to be in that position or the sign-up flow
+    # cannot be shown at all: an officer approving an application has to have an
+    # unclaimed record to attach it to.
     for citizen in db.query(Citizen).all():
+        if citizen.id in UNREGISTERED_CITIZEN_IDS:
+            continue
         user_id = f"usr_{citizen.id}"
         if db.get(User, user_id):
             continue
@@ -388,11 +540,32 @@ def seed_users(db: Session) -> None:
             id=user_id, email=f"{handle}@citizen.panchayat.gov.in",
             hashed_password=password,
             full_name=citizen.name, role="citizen", citizen_id=citizen.id,
+            village_id=citizen.village_id,
         ))
         created += 1
 
     db.commit()
     print(f"Users: {created}")
+
+
+def seed_neighbour_officer(db: Session) -> None:
+    """An officer in a neighbouring village.
+
+    Exists so village scoping can be demonstrated rather than asserted: sign in
+    as this account and the resident list is empty, because Theur has no seeded
+    residents and this officer cannot see Loni Kalbhor's.
+    """
+    neighbour = db.get(Village, "vil_theur")
+    if neighbour is None or db.get(User, "usr_officer_theur"):
+        return
+    db.add(User(
+        id="usr_officer_theur", email="officer.theur@panchayat.gov.in",
+        hashed_password=hash_password(settings.SEED_DEFAULT_PASSWORD),
+        full_name="Theur Panchayat Officer", role="officer",
+        village_id=neighbour.id,
+    ))
+    db.commit()
+    print("Neighbouring officer: officer.theur@panchayat.gov.in (Theur)")
 
 
 def main() -> None:
@@ -411,15 +584,20 @@ def main() -> None:
     with SessionLocal() as db:
         if args.reset:
             reset(db)
+        seed_hierarchy(db)
+        seed_villages(db)
         seed_families(db, data)
         seed_citizens(db, data)
         seed_schemes(db, data)
         seed_grievances(db, data)
+        seed_grievance_history(db)
         seed_projects(db, data)
         seed_documents(db, data)
         seed_sabha(db, data)
         seed_facilities(db, data)
+        assign_home_village(db)
         seed_users(db)
+        seed_neighbour_officer(db)
 
     print(f"\nDone. Sign in as officer@panchayat.gov.in / {settings.SEED_DEFAULT_PASSWORD}")
 

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import get_current_user, require_officer
+from app.core.deps import get_current_user, require_officer, village_scope
 from app.db.session import get_db
 from app.models import SabhaActionItem, SabhaMeeting, User
 from app.schemas import (
@@ -31,14 +31,13 @@ MAX_UPLOAD = 8 * 1024 * 1024
 
 @router.get("/meetings", response_model=list[SabhaMeetingOut])
 def list_meetings(
-    _: User = Depends(get_current_user), db: Session = Depends(get_db)
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[SabhaMeeting]:
-    stmt = (
-        select(SabhaMeeting)
-        .options(selectinload(SabhaMeeting.action_items))
-        .order_by(SabhaMeeting.meeting_date.desc())
-    )
-    return list(db.scalars(stmt))
+    stmt = select(SabhaMeeting).options(selectinload(SabhaMeeting.action_items))
+    scope = village_scope(user)
+    if scope is not None:
+        stmt = stmt.where(SabhaMeeting.village_id == scope)
+    return list(db.scalars(stmt.order_by(SabhaMeeting.meeting_date.desc())))
 
 
 @router.get("/meetings/{meeting_id}", response_model=SabhaMeetingOut)
@@ -56,7 +55,7 @@ def get_meeting(
 @router.post("/meetings", response_model=SabhaMeetingOut, status_code=status.HTTP_201_CREATED)
 def create_meeting(
     body: SabhaMeetingCreate,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> SabhaMeeting:
     meeting = SabhaMeeting(
@@ -69,6 +68,7 @@ def create_meeting(
         decisions=body.decisions,
         decisions_mr=body.decisions_mr,
         extracted_by="manual",
+        village_id=village_scope(officer),
     )
     db.add(meeting)
     db.commit()
@@ -122,6 +122,7 @@ async def process_transcript(
         source_file_name=file.filename,
         transcript_text=text,
         extracted_by="llm",
+        village_id=village_scope(officer),
     )
     db.add(meeting)
     db.flush()

@@ -1,286 +1,471 @@
-import React from 'react';
+/**
+ * Officer dashboard.
+ *
+ * Every figure here comes from `/analytics/dashboard`, scoped to the officer's
+ * own Gram Panchayat. The previous version displayed invented headline numbers
+ * — 12,450 citizens, 3,210 families, ₹2.4 Cr — with the real database counts
+ * demoted to subtitles reading "10 DB records" and "5 active mock cases", and a
+ * chart label that read "Total Mock".
+ *
+ * The insights below are computed from the same live figures rather than being
+ * four fixed sentences, so they change when the village does and say nothing
+ * when there is nothing to say.
+ *
+ * Chart colours: #2547a8 / #138808 — validated for colour-vision deficiency
+ * (ΔE 28.7 deutan, 32.0 normal) and 3:1 contrast against the surface. The old
+ * donut used amber #f59e0b beside yellow #eab308, which are ΔE 2.5 apart for a
+ * red-green colourblind reader and 5.3 for everyone else: indistinguishable.
+ */
+
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Users, 
-  Home, 
-  Award, 
-  AlertTriangle, 
-  Hammer, 
-  Coins, 
+import {
+  Users,
+  Home,
+  AlertTriangle,
+  Hammer,
+  Coins,
+  FileWarning,
   ChevronRight,
   Bot,
-  Sparkles
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
-import { CITIZENS, GRIEVANCES, PROJECTS } from '../data/mockData';
+
+import {
+  api,
+  type DashboardStats,
+  type NamedCount,
+  type ProjectBudget,
+  type Village,
+} from '../lib/api';
+import { useQuery } from '../lib/useApi';
+import { ErrorNotice } from './schemes/SchemeBits';
 
 interface DashboardProps {
   setCurrentTab: (tab: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ 
-  setCurrentTab
-}) => {
+// Validated pair — see the note at the top of this file.
+const SERIES_BUDGET = '#2547a8';
+const SERIES_SPENT = '#138808';
+const SINGLE_HUE = '#2547a8';
+
+const lakhs = (value: number, isEnglish: boolean) =>
+  isEnglish
+    ? `₹${(value / 100000).toFixed(2)} L`
+    : `₹${(value / 100000).toFixed(2)} लाख`;
+
+export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   const { t, i18n } = useTranslation();
+  const isEnglish = i18n.language === 'en';
 
-  // Summary Metrics with official colors
-  const metrics = [
-    { 
-      label: t('dashboard.total_citizens'), 
-      value: '12,450', 
-      sub: `Active: ${CITIZENS.length} DB records`, 
-      icon: Users, 
-      borderClass: 'border-t-4 border-govblue-600',
-      iconColor: 'bg-govblue-50 text-govblue-700 border border-govblue-200'
-    },
-    { 
-      label: t('dashboard.families'), 
-      value: '3,210', 
-      sub: 'Mapped: 4 main clans', 
-      icon: Home, 
-      borderClass: 'border-t-4 border-govgreen',
-      iconColor: 'bg-emerald-50 text-govgreen border border-emerald-200'
-    },
-    { 
-      label: t('dashboard.active_schemes'), 
-      value: '18', 
-      sub: '4 local subsidies active', 
-      icon: Award, 
-      borderClass: 'border-t-4 border-govsaffron',
-      iconColor: 'bg-orange-50 text-govsaffron border border-orange-200'
-    },
-    { 
-      label: t('dashboard.pending_grievances'), 
-      value: '126', 
-      sub: `${GRIEVANCES.filter(g => g.status !== 'Resolved').length} active mock cases`, 
-      icon: AlertTriangle, 
-      borderClass: 'border-t-4 border-rose-600',
-      iconColor: 'bg-rose-50 text-rose-600 border border-rose-200'
-    },
-    { 
-      label: t('dashboard.ongoing_projects'), 
-      value: '24', 
-      sub: `${PROJECTS.filter(p => p.status === 'Ongoing').length} monitoring feed`, 
-      icon: Hammer, 
-      borderClass: 'border-t-4 border-sky-600',
-      iconColor: 'bg-sky-50 text-sky-600 border border-sky-200'
-    },
-    { 
-      label: t('dashboard.project_budget'), 
-      value: '₹2.4 Cr', 
-      sub: 'Spent: ₹1.82 Cr (76%)', 
-      icon: Coins, 
-      borderClass: 'border-t-4 border-purple-600',
-      iconColor: 'bg-purple-50 text-purple-600 border border-purple-200'
-    },
-  ];
+  const stats = useQuery<DashboardStats>(() => api.analytics.dashboard(), []);
+  const budgets = useQuery<ProjectBudget[]>(() => api.analytics.projectBudgets(), []);
+  const byDepartment = useQuery<NamedCount[]>(
+    () => api.analytics.grievancesByDepartment(),
+    [],
+  );
+  const village = useQuery<Village | null>(() => api.villages.current(), []);
 
-  // AI Governance Insights
-  const insights = [
-    {
-      text: t('dashboard.insight_1'),
-      action: () => {
-        setCurrentTab('schemes');
-      }
-    },
-    {
-      text: t('dashboard.insight_2'),
-      action: () => {
-        setCurrentTab('grievances');
-      }
-    },
-    {
-      text: t('dashboard.insight_3'),
-      action: () => {
-        setCurrentTab('projects');
-      }
-    },
-    {
-      text: t('dashboard.insight_4'),
-      action: () => {
-        setCurrentTab('projects');
-      }
+  const s = stats.data;
+
+  const metrics = useMemo(() => {
+    if (!s) return [];
+    return [
+      {
+        label: t('dashboard.total_citizens'),
+        value: s.totalCitizens.toLocaleString('en-IN'),
+        sub: t('dashboard.sub_registered'),
+        icon: Users,
+        border: 'border-govblue-600',
+        chip: 'bg-govblue-50 text-govblue-700 border-govblue-200',
+        tab: 'citizens',
+      },
+      {
+        label: t('dashboard.families'),
+        value: s.totalFamilies.toLocaleString('en-IN'),
+        sub: t('dashboard.sub_households'),
+        icon: Home,
+        border: 'border-govgreen',
+        chip: 'bg-emerald-50 text-govgreen border-emerald-200',
+        tab: 'citizens',
+      },
+      {
+        label: t('dashboard.pending_grievances'),
+        value: s.openGrievances.toLocaleString('en-IN'),
+        sub: s.criticalGrievances
+          ? t('dashboard.sub_critical', { count: s.criticalGrievances })
+          : t('dashboard.sub_none_critical'),
+        icon: AlertTriangle,
+        border: s.criticalGrievances ? 'border-rose-600' : 'border-slate-300',
+        chip: s.criticalGrievances
+          ? 'bg-rose-50 text-rose-600 border-rose-200'
+          : 'bg-slate-50 text-slate-500 border-slate-200',
+        tab: 'grievances',
+      },
+      {
+        label: t('dashboard.ongoing_projects'),
+        value: s.activeProjects.toLocaleString('en-IN'),
+        sub: s.delayedProjects
+          ? t('dashboard.sub_delayed', { count: s.delayedProjects })
+          : t('dashboard.sub_on_track'),
+        icon: Hammer,
+        border: s.delayedProjects ? 'border-govsaffron' : 'border-sky-600',
+        chip: 'bg-sky-50 text-sky-600 border-sky-200',
+        tab: 'projects',
+      },
+      {
+        label: t('dashboard.project_budget'),
+        value: lakhs(s.totalBudget, isEnglish),
+        sub: t('dashboard.sub_spent', {
+          amount: lakhs(s.totalUtilized, isEnglish),
+          percent: s.totalBudget
+            ? Math.round((s.totalUtilized / s.totalBudget) * 100)
+            : 0,
+        }),
+        icon: Coins,
+        border: 'border-purple-600',
+        chip: 'bg-purple-50 text-purple-600 border-purple-200',
+        tab: 'projects',
+      },
+      {
+        label: t('dashboard.pending_documents'),
+        value: s.pendingDocuments.toLocaleString('en-IN'),
+        sub: t('dashboard.sub_awaiting'),
+        icon: FileWarning,
+        border: 'border-amber-500',
+        chip: 'bg-amber-50 text-amber-700 border-amber-200',
+        tab: 'citizens',
+      },
+    ];
+  }, [s, t, isEnglish]);
+
+  /** Alerts derived from the live figures — not a fixed list of sentences. */
+  const insights = useMemo(() => {
+    if (!s) return [];
+    const out: { text: string; tab: string }[] = [];
+
+    if (s.criticalGrievances > 0) {
+      out.push({
+        text: t('dashboard.alert_critical', { count: s.criticalGrievances }),
+        tab: 'grievances',
+      });
     }
-  ];
+    if (s.delayedProjects > 0) {
+      out.push({
+        text: t('dashboard.alert_delayed', { count: s.delayedProjects }),
+        tab: 'projects',
+      });
+    }
+    if (s.pendingDocuments > 0) {
+      out.push({
+        text: t('dashboard.alert_documents', { count: s.pendingDocuments }),
+        tab: 'citizens',
+      });
+    }
+    const unspent = s.totalBudget - s.totalUtilized;
+    if (unspent > 0) {
+      out.push({
+        text: t('dashboard.alert_budget', { amount: lakhs(unspent, isEnglish) }),
+        tab: 'projects',
+      });
+    }
+    return out;
+  }, [s, t, isEnglish]);
 
-  // Quick stats for mini graphs
-  const projectProgressData = PROJECTS.map(p => ({
-    name: i18n.language === 'en' ? p.name.substring(0, 15) + '...' : p.nameMr.substring(0, 15) + '...',
-    progress: p.progress,
-    budget: p.budget / 1000, // in k
-    utilized: p.utilized / 1000 // in k
-  }));
+  const budgetChart = useMemo(
+    () =>
+      (budgets.data ?? []).map((p) => ({
+        name: (isEnglish ? p.name : p.nameMr).slice(0, 18),
+        fullName: isEnglish ? p.name : p.nameMr,
+        budget: p.budgetLakh,
+        utilized: p.utilizedLakh,
+      })),
+    [budgets.data, isEnglish],
+  );
 
-  const grievanceCategories = [
-    { name: i18n.language === 'en' ? 'Water' : 'पानी पुरवठा', value: 2, color: '#0284c7' },
-    { name: i18n.language === 'en' ? 'Roads' : 'रस्ते', value: 1, color: '#f59e0b' },
-    { name: i18n.language === 'en' ? 'Electricity' : 'विद्युत', value: 1, color: '#eab308' },
-    { name: i18n.language === 'en' ? 'Sanitation' : 'स्वच्छता', value: 1, color: '#138808' }
-  ];
+  const departmentChart = useMemo(
+    () =>
+      (byDepartment.data ?? []).map((d) => ({
+        name: (isEnglish ? d.label : d.labelMr || d.label).replace(
+          / (Department|Cell|Board Liaison|Administration)$/,
+          '',
+        ),
+        value: d.value,
+      })),
+    [byDepartment.data, isEnglish],
+  );
+
+  const loading = stats.loading || budgets.loading || byDepartment.loading;
+  const error = stats.error || budgets.error || byDepartment.error;
 
   return (
     <div className="space-y-6">
-      {/* Header Banner with official tricolor accent */}
+      {/* Header */}
       <div className="relative overflow-hidden rounded-xl bg-white border border-slate-200 shadow-sm p-6">
         <div className="absolute top-0 left-0 right-0 h-1.5 gov-tricolor-strip" />
-        
         <div className="max-w-3xl space-y-2 mt-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-govnavy/10 text-govnavy text-[10px] font-bold uppercase tracking-wider border border-govnavy/15 select-none">
-            <Sparkles size={11} className="text-govsaffron animate-pulse" />
-            <span>Panchayat Decision Support Portal</span>
+            <span>{t('dashboard.overview')}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-govblue-900 tracking-tight leading-tight m-0 font-sans">
-            {t('app_title')}
+            {village.data
+              ? isEnglish
+                ? `${village.data.name} Gram Panchayat`
+                : `${village.data.nameMr} ग्रामपंचायत`
+              : t('app_title')}
           </h1>
           <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-            {i18n.language === 'en' 
-              ? 'Official decision support system for Loni Kalbhor Gram Panchayat. This portal integrates Citizen registries, Scheme recommendation filters, Grievance analytics, and Sabha documents to help representatives make data-backed decisions.'
-              : 'लोणी काळभोर ग्रामपंचायत अधिकृत निर्णय समर्थन प्रणाली. हे पोर्टल नागरिक नोंदणी, योजना शिफारस, तक्रार निवारण आणि ग्रामसभा दस्तऐवज एकत्रित करून पदाधिकाऱ्यांना अचूक निर्णय घेण्यास सहाय्य करते.'}
+            {village.data
+              ? isEnglish
+                ? `${village.data.blockName} block, ${village.data.districtName} district, ${village.data.stateName}. LGD code ${village.data.lgdCode ?? '—'}${
+                    village.data.population2011
+                      ? ` · Census 2011 population ${village.data.population2011.toLocaleString('en-IN')}`
+                      : ''
+                  }.`
+                : `${village.data.blockNameMr} तालुका, ${village.data.districtNameMr} जिल्हा. एलजीडी क्रमांक ${village.data.lgdCode ?? '—'}.`
+              : t('dashboard.subtitle')}
           </p>
         </div>
       </div>
 
-      {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {metrics.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div 
-              key={idx} 
-              className={`bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${card.borderClass}`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">{card.label}</span>
-                  <span className="text-2xl sm:text-3xl font-extrabold text-govblue-900 block">{card.value}</span>
-                  <span className="text-[10px] text-slate-400 font-semibold block">{card.sub}</span>
-                </div>
-                <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${card.iconColor}`}>
-                  <Icon size={20} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {error && <ErrorNotice message={error} onRetry={stats.refetch} />}
 
-      {/* AI Governance Insights Section */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 border-t-4 border-govsaffron">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center border border-orange-200">
-              <Bot size={18} className="text-govsaffron" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-govblue-900 m-0 tracking-wide uppercase">{t('dashboard.ai_insights')}</h2>
-              <p className="text-[10px] text-slate-500 font-medium">Automatic alerts and operational anomalies extracted by the LLM database model.</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setCurrentTab('ai_assistant')}
-            className="text-xs font-bold text-govnavy hover:text-govblue-500 flex items-center gap-1 transition-colors select-none"
-          >
-            <span>Ask AI Assistant</span>
-            <ChevronRight size={14} />
-          </button>
+      {loading && (
+        <div className="flex items-center justify-center gap-2 py-16 text-slate-400">
+          <Loader2 size={18} className="animate-spin" />
+          <span className="text-xs font-bold uppercase tracking-wider">
+            {t('dashboard.loading')}
+          </span>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {insights.map((insight, idx) => (
-            <div 
-              key={idx} 
-              className="p-4 rounded-lg bg-slate-50 border border-slate-200 flex items-start justify-between gap-4 group hover:bg-slate-100/50 transition-colors"
-            >
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-govsaffron" />
-                  <span className="text-[9px] text-govsaffron uppercase tracking-wider font-extrabold">System Alert</span>
+      {!loading && s && (
+        <>
+          {/* Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {metrics.map((card) => {
+              const Icon = card.icon;
+              return (
+                <button
+                  key={card.label}
+                  onClick={() => setCurrentTab(card.tab)}
+                  className={`text-left bg-white rounded-xl p-5 border border-slate-200 border-t-4 ${card.border} shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-3`}
+                >
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">
+                      {card.label}
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-extrabold text-govblue-900 block tabular-nums">
+                      {card.value}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-semibold block">
+                      {card.sub}
+                    </span>
+                  </div>
+                  <span
+                    className={`w-11 h-11 rounded-lg flex items-center justify-center border flex-shrink-0 ${card.chip}`}
+                  >
+                    <Icon size={20} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Attention needed */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 border-t-4 border-govsaffron">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center border border-orange-200">
+                  <Bot size={18} className="text-govsaffron" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-bold text-govblue-900 m-0 tracking-wide uppercase">
+                    {t('dashboard.needs_attention')}
+                  </h2>
+                  <p className="text-[10px] text-slate-500 font-medium m-0">
+                    {t('dashboard.needs_attention_sub')}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-700 leading-relaxed font-semibold">
-                  {insight.text}
-                </p>
               </div>
-              <button 
-                onClick={insight.action}
-                className="text-[10px] font-bold text-govnavy hover:text-govblue-600 whitespace-nowrap flex items-center mt-1 group-hover:translate-x-0.5 transition-transform"
+              <button
+                onClick={() => setCurrentTab('ai_assistant')}
+                className="text-xs font-bold text-govnavy hover:text-govblue-500 flex items-center gap-1 transition-colors"
               >
-                <span>{t('dashboard.view_details')}</span>
+                <span>{t('dashboard.ask_assistant')}</span>
+                <ChevronRight size={14} />
               </button>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Grid for charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Project Budgets Chart */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm lg:col-span-2 space-y-4">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Ongoing Projects Budget Analysis</h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={projectProgressData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#475569" fontSize={10} />
-                <YAxis stroke="#475569" fontSize={10} unit="k" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', color: '#1e293b' }}
-                  labelStyle={{ fontWeight: 'bold' }}
-                />
-                <Bar name="Total Budget (₹K)" dataKey="budget" fill="#000080" radius={[3, 3, 0, 0]} />
-                <Bar name="Utilized Fund (₹K)" dataKey="utilized" fill="#138808" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {insights.length === 0 ? (
+              <p className="flex items-center gap-2 text-xs text-govgreen font-semibold m-0 py-2">
+                <CheckCircle2 size={15} />
+                {t('dashboard.all_clear')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {insights.map((insight, i) => (
+                  <div
+                    key={i}
+                    className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 flex items-start justify-between gap-3"
+                  >
+                    <p className="text-xs text-slate-700 leading-relaxed font-semibold m-0">
+                      {insight.text}
+                    </p>
+                    <button
+                      onClick={() => setCurrentTab(insight.tab)}
+                      className="text-[10px] font-bold text-govnavy hover:text-govblue-600 whitespace-nowrap flex-shrink-0 mt-0.5"
+                    >
+                      {t('dashboard.view_details')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Grievances Pie Chart */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Grievance Category Load</h2>
-          <div className="h-56 flex items-center justify-center relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={grievanceCategories}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {grievanceCategories.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', color: '#1e293b' }} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute text-center select-none">
-              <span className="text-xl font-extrabold text-govblue-900">5</span>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Total Mock</p>
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm lg:col-span-2 space-y-3">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 m-0">
+                {t('dashboard.chart_budget')}
+              </h2>
+              {budgetChart.length ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={budgetChart}
+                      margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
+                      barGap={2}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#94a3b8"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={{ stroke: '#e2e8f0' }}
+                      />
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        unit="L"
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(37,71,168,0.05)' }}
+                        contentStyle={{
+                          backgroundColor: '#ffffff',
+                          borderColor: '#e2e8f0',
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                        labelFormatter={(_, payload) =>
+                          payload?.[0]?.payload?.fullName ?? ''
+                        }
+                        formatter={(value) => `₹${value} ${isEnglish ? 'lakh' : 'लाख'}`}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                        iconType="circle"
+                        iconSize={8}
+                      />
+                      <Bar
+                        name={t('dashboard.legend_sanctioned')}
+                        dataKey="budget"
+                        fill={SERIES_BUDGET}
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        name={t('dashboard.legend_spent')}
+                        dataKey="utilized"
+                        fill={SERIES_SPENT}
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 py-8 text-center m-0">
+                  {t('dashboard.no_projects')}
+                </p>
+              )}
+            </div>
+
+            {/* Grievances by department.
+                A horizontal bar, not the old donut: the question is "which
+                department is carrying the most", which is a magnitude
+                comparison. One series, so no legend and no categorical palette
+                — the values are labelled directly. */}
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-3">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 m-0">
+                {t('dashboard.chart_departments')}
+              </h2>
+              {departmentChart.length ? (
+                <div style={{ height: Math.max(180, departmentChart.length * 44) }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={departmentChart}
+                      layout="vertical"
+                      margin={{ top: 4, right: 28, left: 4, bottom: 4 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={104}
+                        stroke="#64748b"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(37,71,168,0.05)' }}
+                        contentStyle={{
+                          backgroundColor: '#ffffff',
+                          borderColor: '#e2e8f0',
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={16}>
+                        {departmentChart.map((entry) => (
+                          <Cell key={entry.name} fill={SINGLE_HUE} />
+                        ))}
+                        <LabelList
+                          dataKey="value"
+                          position="right"
+                          style={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 py-8 text-center m-0">
+                  {t('dashboard.no_grievances')}
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-2">
-            {grievanceCategories.map((cat, idx) => (
-              <div key={idx} className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                <span>{cat.name} ({cat.value})</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

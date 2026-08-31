@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_officer
+from app.core.deps import get_current_user, require_officer, village_scope
 from app.db.session import get_db
 from app.models import Project, User
 from app.schemas import ProjectCreate, ProjectOut, ProjectUpdate
@@ -20,10 +20,13 @@ STATUS_MR = {"Ongoing": "सुरू असलेले", "Completed": "पू�
 def list_projects(
     status_filter: str | None = None,
     ward: int | None = None,
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Project]:
     stmt = select(Project)
+    scope = village_scope(user)
+    if scope is not None:
+        stmt = stmt.where(Project.village_id == scope)
     if status_filter:
         stmt = stmt.where(Project.status == status_filter)
     if ward is not None:
@@ -46,13 +49,17 @@ def get_project(
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
 def create_project(
     body: ProjectCreate,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> Project:
     project_id = body.id or f"proj_{uuid4().hex[:10]}"
     if db.get(Project, project_id):
         raise HTTPException(status.HTTP_409_CONFLICT, "That project ID is already in use.")
-    project = Project(id=project_id, **body.model_dump(exclude={"id"}))
+    project = Project(
+        id=project_id,
+        village_id=village_scope(officer),
+        **body.model_dump(exclude={"id"}),
+    )
     db.add(project)
     db.commit()
     db.refresh(project)

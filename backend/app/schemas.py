@@ -55,6 +55,7 @@ class UserOut(ApiModel):
     full_name: str
     role: Role
     citizen_id: str | None = None
+    village_id: str | None = None
     is_active: bool
     last_login_at: datetime | None = None
 
@@ -67,9 +68,108 @@ class UserCreate(ApiModel):
     citizen_id: str | None = None
 
 
+class RegistrationCreate(ApiModel):
+    """A resident applying for a portal account.
+
+    Note there is no `role` field. Self-registration always produces a citizen
+    account; officer and admin accounts are created by an admin.
+    """
+
+    full_name: str = Field(min_length=2, max_length=255)
+    email: EmailStr
+    password: str = Field(min_length=8)
+    phone: str | None = Field(default=None, max_length=30)
+    claimed_ward: int | None = Field(default=None, ge=1, le=50)
+    claimed_citizen_id: str | None = None
+    village_id: str | None = None
+    note: str | None = None
+
+
+class RegistrationOut(ApiModel):
+    id: str
+    full_name: str
+    email: EmailStr
+    phone: str | None = None
+    claimed_ward: int | None = None
+    claimed_citizen_id: str | None = None
+    note: str | None = None
+    village_id: str | None = None
+    status: Literal["pending", "approved", "rejected"]
+    matched_citizen_id: str | None = None
+    review_note: str | None = None
+    created_at: datetime
+    reviewed_at: datetime | None = None
+    # Residents whose name or phone resembles the application, so an officer
+    # is choosing from candidates rather than searching from scratch.
+    suggested_matches: list[dict] = []
+
+
+class RegistrationDecision(ApiModel):
+    approve: bool
+    # Required when approving: which resident record this account belongs to.
+    citizen_id: str | None = None
+    review_note: str | None = None
+
+
 class PasswordChange(ApiModel):
     current_password: str
     new_password: str = Field(min_length=8)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Administrative hierarchy
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PublicVillage(ApiModel):
+    """The little that an unauthenticated visitor may see about a village."""
+
+    id: str
+    name: str
+    name_mr: str
+    lgd_code: int | None = None
+
+
+class VillageOut(ApiModel):
+    id: str
+    name: str
+    name_mr: str
+    lgd_code: int | None = None
+    census_code_2011: int | None = None
+    block_id: str
+    block_name: str
+    block_name_mr: str
+    district_name: str
+    district_name_mr: str
+    state_name: str
+    state_name_mr: str
+    latitude: float | None = None
+    longitude: float | None = None
+    population_2011: int | None = None
+    households_2011: int | None = None
+    ward_count: int = 0
+    # 'active' | 'merged_into_municipal_corporation' | 'uncertain'
+    gram_panchayat_status: str = "active"
+    notes: str | None = None
+
+
+class VillageDetail(VillageOut):
+    registered_citizens: int = 0
+    open_grievances: int = 0
+    active_projects: int = 0
+
+
+class VillageSummary(ApiModel):
+    """One row of the district rollup."""
+
+    id: str
+    name: str
+    name_mr: str
+    lgd_code: int | None = None
+    population_2011: int | None = None
+    gram_panchayat_status: str
+    registered_citizens: int
+    open_grievances: int
+    active_projects: int
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -113,6 +213,15 @@ class CitizenBase(ApiModel):
     is_head: bool = False
     date_of_birth: date | None = None
 
+    # Attributes real scheme rules depend on. All synthetic in this project.
+    social_category: Literal["Open", "SC", "ST", "OBC", "SEBC", "VJNT", "SBC"] | None = None
+    is_bpl: bool = False
+    secc_listed: bool = False
+    ration_card_type: Literal["Yellow", "Orange", "White", "AAY", "Annapurna"] | None = None
+    land_holding_hectares: float | None = Field(default=None, ge=0)
+    marital_status: Literal["Single", "Married", "Widowed", "Divorced", "Abandoned"] | None = None
+    disability_percent: int | None = Field(default=None, ge=0, le=100)
+
 
 class CitizenCreate(CitizenBase):
     id: str | None = None  # generated when omitted
@@ -137,6 +246,7 @@ class CitizenUpdate(ApiModel):
 
 class CitizenOut(CitizenBase):
     id: str
+    village_id: str | None = None
     family_name: str | None = None
     family_name_mr: str | None = None
     family_members: list[FamilyMemberOut] = []
@@ -165,6 +275,12 @@ class SchemeBase(ApiModel):
     is_government_feed: bool = False
     source_gov: str | None = None
     form_url: str | None = None
+    level: Literal["central", "state", "district", "panchayat"] = "state"
+    category: str | None = None
+    announced_on: date | None = None
+    source_url: str | None = None
+    confidence: Literal["high", "medium", "low"] = "medium"
+    notes: str | None = None
 
 
 class SchemeCreate(SchemeBase):
@@ -193,18 +309,25 @@ class DocumentGap(ApiModel):
     file_status: str | None = None  # None when the document was never uploaded
 
 
+EligibilityStatus = Literal["Eligible", "Missing Documents", "Needs Review", "Ineligible"]
+
+
 class EligibilityResult(ApiModel):
     citizen_id: str
     citizen_name: str
     citizen_name_mr: str
     ward: int
     scheme_id: str
-    status: Literal["Eligible", "Missing Documents", "Ineligible"]
+    scheme_name: str
+    scheme_name_mr: str
+    status: EligibilityStatus
     status_mr: str
     criteria_passed: bool
     failed_criteria: list[str] = []
     missing_documents: list[DocumentGap] = []
     unverified_documents: list[DocumentGap] = []
+    # Attributes the resident record does not hold, so a rule could not be run.
+    unknown_attributes: list[str] = []
     explanation: str
     explanation_mr: str
 
@@ -240,6 +363,17 @@ class GrievanceUpdate(ApiModel):
     department: str | None = None
 
 
+class GrievanceEventOut(ApiModel):
+    id: str
+    event_type: str
+    from_status: str | None = None
+    to_status: str | None = None
+    note: str | None = None
+    note_mr: str | None = None
+    actor_name: str | None = None
+    created_at: datetime
+
+
 class GrievanceOut(ApiModel):
     id: str
     title: str
@@ -264,6 +398,14 @@ class GrievanceOut(ApiModel):
     resolved_date: date | None = None
     officer_notes: str | None = None
     auto_classified: bool = False
+    village_id: str | None = None
+
+
+class GrievanceDetail(GrievanceOut):
+    """A single complaint with its full history — what the citizen's tracking
+    view reads."""
+
+    events: list[GrievanceEventOut] = []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -304,6 +446,7 @@ class ProjectUpdate(ApiModel):
 
 class ProjectOut(ProjectBase):
     id: str
+    village_id: str | None = None
 
     @field_validator("budget", "utilized", mode="before")
     @classmethod

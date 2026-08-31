@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_officer
+from app.core.deps import get_current_user, require_officer, village_scope
 from app.db.session import get_db
 from app.models import (
     Citizen,
@@ -29,10 +29,13 @@ router = APIRouter(tags=["analytics"])
 @router.get("/facilities", response_model=list[FacilityOut])
 def list_facilities(
     facility_type: str | None = None,
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Facility]:
     stmt = select(Facility)
+    scope = village_scope(user)
+    if scope is not None:
+        stmt = stmt.where(Facility.village_id == scope)
     if facility_type:
         stmt = stmt.where(Facility.facility_type == facility_type)
     return list(db.scalars(stmt.order_by(Facility.name)))
@@ -40,13 +43,30 @@ def list_facilities(
 
 @router.get("/analytics/dashboard", response_model=DashboardStats)
 def dashboard(
-    _: User = Depends(require_officer), db: Session = Depends(get_db)
+    user: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> DashboardStats:
-    def count(model, *where) -> int:
-        return db.scalar(select(func.count()).select_from(model).where(*where)) or 0
+    # Every figure below is scoped to the officer's own Gram Panchayat, so two
+    # officers in different villages never see each other's numbers.
+    scope = village_scope(user)
 
-    total_budget = db.scalar(select(func.coalesce(func.sum(Project.budget), 0))) or 0
-    total_utilized = db.scalar(select(func.coalesce(func.sum(Project.utilized), 0))) or 0
+    def scoped(model, *where):
+        clauses = list(where)
+        if scope is not None and hasattr(model, "village_id"):
+            clauses.append(model.village_id == scope)
+        return clauses
+
+    def count(model, *where) -> int:
+        return db.scalar(
+            select(func.count()).select_from(model).where(*scoped(model, *where))
+        ) or 0
+
+    budget_stmt = select(func.coalesce(func.sum(Project.budget), 0))
+    used_stmt = select(func.coalesce(func.sum(Project.utilized), 0))
+    if scope is not None:
+        budget_stmt = budget_stmt.where(Project.village_id == scope)
+        used_stmt = used_stmt.where(Project.village_id == scope)
+    total_budget = db.scalar(budget_stmt) or 0
+    total_utilized = db.scalar(used_stmt) or 0
     next_meeting = db.scalar(
         select(func.max(SabhaMeeting.meeting_date))
     )
