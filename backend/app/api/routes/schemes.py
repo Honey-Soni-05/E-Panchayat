@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -14,9 +14,13 @@ from app.schemas import (
     EligibilityResult,
     SchemeCreate,
     SchemeOut,
+    SchemeReadResult,
     SchemeUpdate,
 )
 from app.services import eligibility as elig
+from app.services.llm import LLMUnavailable
+from app.services.scheme_reader import SchemeExtractionError, read_scheme
+from app.services.transcript import UnsupportedTranscript, extract_text
 
 router = APIRouter(tags=["schemes"])
 
@@ -111,6 +115,70 @@ def update_scheme(
     return scheme
 
 
+MAX_GR_UPLOAD = 8 * 1024 * 1024
+
+
+@router.post(
+    "/schemes/read",
+    response_model=SchemeReadResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def read_scheme_document(
+    file: UploadFile = File(...),
+    officer: User = Depends(require_officer),
+    db: Session = Depends(get_db),
+) -> SchemeReadResult:
+    """Read a Government Resolution and propose a scheme from it.
+
+    The proposal is saved with status 'pending', which keeps it out of every
+    citizen-facing list and out of the eligibility engine until an officer
+    approves it through /schemes/{id}/decision. Nothing a model extracted tells
+    a resident they qualify for anything before a person has checked it against
+    the GR.
+    """
+    payload = await file.read()
+    if len(payload) > MAX_GR_UPLOAD:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            f"That file is {len(payload) / 1_048_576:.1f} MB. The limit is 8 MB.",
+        )
+
+    try:
+        text = extract_text(file.filename or "", payload)
+    except UnsupportedTranscript as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+    try:
+        draft = await read_scheme(text, source_name=file.filename)
+    except SchemeExtractionError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except LLMUnavailable as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            f"{exc} Add the scheme by hand, or set GEMINI_API_KEY on the server.",
+        ) from exc
+
+    review = draft.pop("_review")
+    scheme = Scheme(
+        id=f"scheme_gr_{uuid4().hex[:10]}",
+        status="pending",
+        is_government_feed=True,
+        source_gov=f"Uploaded by {officer.full_name}",
+        **draft,
+    )
+    db.add(scheme)
+    db.commit()
+    db.refresh(scheme)
+
+    return SchemeReadResult(
+        scheme=SchemeOut.model_validate(scheme, from_attributes=True),
+        unmappable_conditions=review["unmappable_conditions"],
+        discarded_criteria=review["discarded_criteria"],
+        confidence_note=review["confidence_note"],
+        needs_manual_review=review["needs_manual_review"],
+    )
+
+
 @router.post("/schemes/{scheme_id}/decision", response_model=SchemeOut)
 def decide_feed_scheme(
     scheme_id: str,
@@ -170,7 +238,7 @@ def citizen_eligibility(
     db: Session = Depends(get_db),
 ) -> list[EligibilityResult]:
     """Every active scheme assessed for one citizen — the citizen portal view."""
-    assert_can_read_citizen(user, citizen_id)
+    assert_can_read_citizen(db, user, citizen_id)
 
     citizen = db.get(Citizen, citizen_id)
     if citizen is None:

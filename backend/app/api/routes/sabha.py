@@ -11,6 +11,7 @@ from app.core.deps import get_current_user, require_officer, village_scope
 from app.db.session import get_db
 from app.models import SabhaActionItem, SabhaMeeting, User
 from app.schemas import (
+    ActionItemCreate,
     ActionItemOut,
     ActionItemUpdate,
     SabhaMeetingCreate,
@@ -151,6 +152,53 @@ async def process_transcript(
     db.commit()
     db.refresh(meeting)
     return meeting
+
+
+@router.post(
+    "/meetings/{meeting_id}/action-items",
+    response_model=ActionItemOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_action_item(
+    meeting_id: str,
+    body: ActionItemCreate,
+    officer: User = Depends(require_officer),
+    db: Session = Depends(get_db),
+) -> SabhaActionItem:
+    """Assign a follow-up task against a meeting by hand.
+
+    Transcript extraction finds most action items, but not everything said in a
+    Gram Sabha reaches the minutes in a form a model can pick up, and an officer
+    needs to be able to record a commitment the meeting made regardless.
+    """
+    meeting = db.get(SabhaMeeting, meeting_id)
+    if meeting is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No meeting with that ID.")
+
+    scope = village_scope(officer)
+    if scope is not None and meeting.village_id != scope:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "That meeting belongs to another Gram Panchayat.",
+        )
+
+    item = SabhaActionItem(
+        id=f"act_{uuid4().hex[:10]}",
+        meeting_id=meeting.id,
+        action=body.action.strip(),
+        # Falling back to the other language keeps the record readable in both
+        # rather than showing a blank line to whoever switches language.
+        action_mr=(body.action_mr or body.action).strip(),
+        responsible=body.responsible.strip(),
+        responsible_mr=(body.responsible_mr or body.responsible).strip(),
+        deadline=body.deadline,
+        status="Pending",
+        status_mr=ACTION_STATUS_MR["Pending"],
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
 
 
 @router.patch("/action-items/{item_id}", response_model=ActionItemOut)

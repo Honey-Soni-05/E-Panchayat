@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -69,7 +70,7 @@ async def upload_document(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DocumentOut:
-    assert_can_read_citizen(user, citizen_id)
+    assert_can_read_citizen(db, user, citizen_id)
 
     citizen = db.get(Citizen, citizen_id)
     if citizen is None:
@@ -111,6 +112,57 @@ async def upload_document(
     db.commit()
     db.refresh(document)
     return _to_out(document)
+
+
+@router.get("/documents/{document_id}/file")
+def download_document(
+    document_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    """Serve the stored file itself.
+
+    Without this the verification screen asks an officer to approve or reject a
+    document they cannot read, which makes the review a rubber stamp — and
+    makes the requirement to give a reason for rejection meaningless, because
+    there is nothing to form a reason about.
+
+    The same permission rule as every other document route: the resident it
+    belongs to, an officer of their village, or an admin. A document id is not
+    a capability.
+    """
+    document = db.get(CitizenDocument, document_id)
+    if document is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No document with that ID.")
+
+    assert_can_read_citizen(db, user, document.citizen_id)
+
+    if not document.storage_path:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "This record has no file attached. It was created as sample data "
+            "rather than uploaded, so there is nothing to open.",
+        )
+
+    path = Path(document.storage_path)
+    if not path.is_file():
+        # The row survived but the file did not — a redeployed container with
+        # ephemeral disk is the usual cause. Say so, rather than a bare 404
+        # that looks like a permissions problem.
+        raise HTTPException(
+            status.HTTP_410_GONE,
+            "The stored file is missing from the server. It may have been lost "
+            "when the service restarted. Ask the resident to upload it again.",
+        )
+
+    return FileResponse(
+        path,
+        media_type=document.content_type or "application/octet-stream",
+        # inline, not attachment: an officer verifying a document wants to look
+        # at it, not download it.
+        content_disposition_type="inline",
+        filename=document.file_name,
+    )
 
 
 @router.post("/documents/{document_id}/review", response_model=DocumentOut)

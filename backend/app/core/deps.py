@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_token
 from app.db.session import get_db
-from app.models import User
+from app.models import Citizen, User
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -89,16 +89,39 @@ def assert_can_access_village(user: User, village_id: str | None) -> None:
         )
 
 
-def assert_can_read_citizen(user: User, citizen_id: str) -> None:
-    """Officers read anyone. A citizen reads only their own file.
+def assert_can_read_citizen(db: Session, user: User, citizen_id: str) -> None:
+    """A citizen reads only their own file; an officer only their own village.
 
-    This single check is what replaces the old behaviour where typing any
-    citizen ID at the login screen opened that resident's record.
+    This replaces the old behaviour where typing any citizen ID at the login
+    screen opened that resident's record.
+
+    It takes the session because the village check needs to look the resident
+    up. That is deliberate: an earlier version took only (user, citizen_id) and
+    so could not check the village at all, which left every route relying on it
+    alone open to an officer of a different Gram Panchayat. `citizens.py`
+    happened to repeat the check by hand afterwards and was safe; the document
+    and eligibility routes did not, and were not. Putting the check here means
+    a new route cannot forget it.
     """
-    if user.role in ("officer", "admin"):
+    if user.role == "citizen":
+        if user.citizen_id != citizen_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only view your own records.",
+            )
         return
-    if user.citizen_id != citizen_id:
+
+    scope = village_scope(user)
+    if scope is None:
+        return  # an admin works across the whole district
+
+    citizen = db.get(Citizen, citizen_id)
+    # A resident who does not exist is the caller's 404 to raise. Refusing here
+    # instead would tell an officer which ids exist in villages they cannot see.
+    if citizen is None:
+        return
+    if citizen.village_id and citizen.village_id != scope:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view your own records.",
+            detail="That resident belongs to another Gram Panchayat.",
         )

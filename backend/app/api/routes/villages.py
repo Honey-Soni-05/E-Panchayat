@@ -111,14 +111,30 @@ def public_villages(db: Session = Depends(get_db)) -> list[PublicVillage]:
     Declared above /villages/{village_id} so "public" is not read as an id.
     """
     villages = db.scalars(
-        select(Village)
+        _load(db)
         .where(Village.gram_panchayat_status == "active")
         .order_by(Village.name)
     )
-    return [
-        PublicVillage(id=v.id, name=v.name, name_mr=v.name_mr, lgd_code=v.lgd_code)
-        for v in villages
-    ]
+    out: list[PublicVillage] = []
+    for v in villages:
+        block = v.block
+        district = block.district if block else None
+        state = district.state if district else None
+        out.append(
+            PublicVillage(
+                id=v.id,
+                name=v.name,
+                name_mr=v.name_mr,
+                lgd_code=v.lgd_code,
+                block_name=block.name if block else "",
+                block_name_mr=block.name_mr if block else "",
+                district_name=district.name if district else "",
+                district_name_mr=district.name_mr if district else "",
+                state_name=state.name if state else "",
+                state_name_mr=state.name_mr if state else "",
+            )
+        )
+    return out
 
 
 @router.get("/villages/{village_id}", response_model=VillageDetail)

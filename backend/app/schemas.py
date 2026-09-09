@@ -121,12 +121,24 @@ class PasswordChange(ApiModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class PublicVillage(ApiModel):
-    """The little that an unauthenticated visitor may see about a village."""
+    """The little that an unauthenticated visitor may see about a village.
+
+    The block, district and state ride along because an applicant choosing
+    their Gram Panchayat should be able to see where it sits — a village name
+    on its own is ambiguous across a state, and several names repeat. All of it
+    is published Local Government Directory data.
+    """
 
     id: str
     name: str
     name_mr: str
     lgd_code: int | None = None
+    block_name: str
+    block_name_mr: str
+    district_name: str
+    district_name_mr: str
+    state_name: str
+    state_name_mr: str
 
 
 class VillageOut(ApiModel):
@@ -285,6 +297,24 @@ class SchemeBase(ApiModel):
 
 class SchemeCreate(SchemeBase):
     id: str | None = None
+
+
+class SchemeReadResult(ApiModel):
+    """What came back from reading a Government Resolution.
+
+    The extra fields exist so the officer reviewing the proposal sees what the
+    reader could not handle, rather than only what it managed. A confident-looking
+    scheme with three silently dropped conditions is the failure this guards
+    against.
+    """
+
+    scheme: "SchemeOut"
+    # Eligibility conditions in the GR that no automatic rule can express.
+    unmappable_conditions: list[str] = []
+    # Criteria the reader proposed that this system does not evaluate.
+    discarded_criteria: list[str] = []
+    confidence_note: str | None = None
+    needs_manual_review: bool = False
 
 
 class SchemeUpdate(ApiModel):
@@ -497,6 +527,21 @@ class ActionItemOut(ApiModel):
     status_mr: str
 
 
+class ActionItemCreate(ApiModel):
+    """A follow-up task an officer assigns against a meeting by hand.
+
+    The Marathi fields are optional: an officer typing quickly in one language
+    should not be blocked, and the reader falls back to whichever was given
+    rather than being shown an empty string.
+    """
+
+    action: str = Field(min_length=2, max_length=500)
+    action_mr: str | None = None
+    responsible: str = Field(min_length=2, max_length=255)
+    responsible_mr: str | None = None
+    deadline: date | None = None
+
+
 class ActionItemUpdate(ApiModel):
     status: ActionStatus | None = None
     responsible: str | None = None
@@ -582,4 +627,9 @@ class RetrievedSource(ApiModel):
 class AssistantAnswer(ApiModel):
     answer: str
     sources: list[RetrievedSource] = []
+    # How the answer was written: by the model, or assembled from records alone.
     mode: Literal["llm", "retrieval_only", "unavailable"]
+    # How the records were found: by embedding similarity plus graph expansion,
+    # or by keyword routing. Reported rather than assumed, because the semantic
+    # path silently falls back and the reader deserves to know which ran.
+    retrieval: Literal["semantic", "keyword"] = "keyword"

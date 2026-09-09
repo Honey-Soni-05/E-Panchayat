@@ -31,6 +31,7 @@ from app.core.config import settings
 from app.core.security import hash_password
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
+from app.sample_docs import write_sample
 from app.models import (
     Block,
     Citizen,
@@ -49,6 +50,10 @@ from app.models import (
     Village,
 )
 from app.services.classifier import classify
+
+# Must match UPLOAD_ROOT in app/api/routes/documents.py, or the seeder writes
+# files the download endpoint cannot find.
+UPLOAD_ROOT = Path("uploads/documents")
 
 DATA_PATH = Path(__file__).parent / "seed_data.json"
 VILLAGES_PATH = Path(__file__).parent / "villages_data.json"
@@ -412,10 +417,14 @@ def seed_documents(db: Session, data: dict) -> None:
             if db.get(CitizenDocument, doc_id):
                 continue
             slug = "".join(ch for ch in req["name"].lower() if ch.isalnum() or ch == " ")
+            path, size = write_sample(
+                UPLOAD_ROOT, citizen.id, doc_id, req["name"], citizen.name, "5 August 2026"
+            )
             db.add(CitizenDocument(
                 id=doc_id, citizen_id=citizen.id,
                 doc_type=req["name"], doc_type_mr=req.get("name_mr", req["name"]),
                 file_name=f"{slug.replace(' ', '_')}_{citizen_id}.pdf",
+                storage_path=str(path), content_type="application/pdf", size_bytes=size,
                 status="Verified", status_mr="पडताळणी पूर्ण",
                 submitted_date=date(2026, 8, 5),
                 verified_at=datetime(2026, 8, 7, tzinfo=timezone.utc),
@@ -427,9 +436,13 @@ def seed_documents(db: Session, data: dict) -> None:
         doc_id = f"doc_partial_{citizen_id}"
         if citizen is None or db.get(CitizenDocument, doc_id):
             continue
+        path, size = write_sample(
+            UPLOAD_ROOT, citizen.id, doc_id, doc_type, citizen.name, "9 August 2026"
+        )
         db.add(CitizenDocument(
             id=doc_id, citizen_id=citizen.id, doc_type=doc_type,
             doc_type_mr=doc_type_mr, file_name=f"aadhaar_{citizen_id}.pdf",
+            storage_path=str(path), content_type="application/pdf", size_bytes=size,
             status=st, status_mr=st_mr, submitted_date=date(2026, 8, 9),
             rejection_reason=reason,
         ))
@@ -443,10 +456,15 @@ def seed_documents(db: Session, data: dict) -> None:
         if citizen is None:
             print(f"  ! skipping {d['id']}: the mock data names {d['citizenName']}, who is not a resident")
             continue
+        path, size = write_sample(
+            UPLOAD_ROOT, citizen.id, d["id"], d["docType"], citizen.name,
+            d.get("submittedDate", "")[:10] or "9 August 2026",
+        )
         db.add(CitizenDocument(
             id=d["id"], citizen_id=citizen.id,
             doc_type=d["docType"], doc_type_mr=d["docTypeMr"],
             file_name=d["fileName"], status=d["status"], status_mr=d["statusMr"],
+            storage_path=str(path), content_type="application/pdf", size_bytes=size,
             submitted_date=_date(d.get("submittedDate")) or date.today(),
         ))
         count += 1

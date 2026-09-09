@@ -696,3 +696,168 @@ def test_an_unmatched_question_still_returns_grounded_facts(client, officer):
                        json={"query": "what should I focus on this week?"}).json()
     assert body["topics"] == ["overview"]
     assert body["factCount"] > 0
+
+
+# ── Assigning a Gram Sabha action item by hand ──────────────────────────────
+
+def _a_meeting(client, officer) -> dict:
+    meetings = client.get(f"{API}/sabha/meetings", headers=officer).json()
+    assert meetings, "seed data has no Gram Sabha meeting"
+    return meetings[0]
+
+
+def test_officer_can_assign_an_action_item_against_a_meeting(client, officer):
+    meeting = _a_meeting(client, officer)
+    resp = client.post(
+        f"{API}/sabha/meetings/{meeting['id']}/action-items",
+        headers=officer,
+        json={
+            "action": "Repair the Ward 2 hand pump",
+            "actionMr": "प्रभाग २ मधील हातपंप दुरुस्त करा",
+            "responsible": "Junior Engineer",
+            "deadline": "2026-09-30",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    item = resp.json()
+    assert item["status"] == "Pending"
+    assert item["meetingId"] == meeting["id"]
+    # Marathi was not supplied for the responsible officer, so it falls back to
+    # the English rather than rendering as a blank line.
+    assert item["responsibleMr"] == "Junior Engineer"
+
+    listed = client.get(f"{API}/sabha/meetings/{meeting['id']}", headers=officer).json()
+    assert any(a["id"] == item["id"] for a in listed["actionItems"])
+
+
+def test_a_citizen_cannot_assign_action_items(client, citizen, officer):
+    meeting = _a_meeting(client, officer)
+    resp = client.post(
+        f"{API}/sabha/meetings/{meeting['id']}/action-items",
+        headers=citizen,
+        json={"action": "Something", "responsible": "Someone"},
+    )
+    assert resp.status_code == 403
+
+
+def test_an_officer_cannot_assign_against_another_villages_meeting(
+    client, officer, neighbour_officer
+):
+    meeting = _a_meeting(client, officer)
+    resp = client.post(
+        f"{API}/sabha/meetings/{meeting['id']}/action-items",
+        headers=neighbour_officer,
+        json={"action": "Something", "responsible": "Someone"},
+    )
+    assert resp.status_code == 403
+
+
+def test_assigning_against_a_meeting_that_does_not_exist_is_a_404(client, officer):
+    resp = client.post(
+        f"{API}/sabha/meetings/sabha_nope/action-items",
+        headers=officer,
+        json={"action": "Something", "responsible": "Someone"},
+    )
+    assert resp.status_code == 404
+
+
+# ── Opening a document ──────────────────────────────────────────────────────
+
+def _a_document(client, officer) -> dict:
+    docs = client.get(f"{API}/documents", headers=officer).json()
+    assert docs, "seed data has no documents"
+    return docs[0]
+
+
+def test_an_officer_can_open_a_document_they_are_asked_to_verify(client, officer):
+    """Without this the verification screen asks for a decision on something
+    the officer cannot read."""
+    doc = _a_document(client, officer)
+    resp = client.get(f"{API}/documents/{doc['id']}/file", headers=officer)
+    assert resp.status_code == 200, resp.text
+    assert resp.headers["content-type"].startswith("application/pdf")
+    assert resp.content.startswith(b"%PDF")
+    # Shown in the browser rather than downloaded — an officer wants to look at it.
+    assert "inline" in resp.headers.get("content-disposition", "")
+
+
+def test_a_seeded_document_actually_has_a_file_behind_it(client, officer):
+    """These rows used to be records with nothing attached, so the officer's
+    'open the document' button had nothing to open."""
+    docs = client.get(f"{API}/documents", headers=officer).json()
+    for doc in docs[:5]:
+        resp = client.get(f"{API}/documents/{doc['id']}/file", headers=officer)
+        assert resp.status_code == 200, f"{doc['id']} has no file"
+
+
+def test_the_sample_file_says_it_is_not_a_real_certificate(client, officer):
+    """A placeholder that looked like a genuine government certificate would be
+    a forgery, not a fixture."""
+    doc = _a_document(client, officer)
+    body = client.get(f"{API}/documents/{doc['id']}/file", headers=officer).content
+    assert b"SAMPLE DOCUMENT" in body
+    assert b"NOT A REAL CERTIFICATE" in body
+
+
+def test_a_document_file_is_not_readable_without_a_token(client, officer):
+    doc = _a_document(client, officer)
+    assert client.get(f"{API}/documents/{doc['id']}/file").status_code == 401
+
+
+def test_a_citizen_cannot_open_another_residents_document(client, officer, citizen):
+    """A document id must not be a capability — knowing it is not permission."""
+    me = client.get(f"{API}/auth/me", headers=citizen).json()
+    docs = client.get(f"{API}/documents", headers=officer).json()
+    someone_else = next(d for d in docs if d["citizenId"] != me["citizenId"])
+
+    resp = client.get(f"{API}/documents/{someone_else['id']}/file", headers=citizen)
+    assert resp.status_code == 403
+
+
+def test_a_citizen_can_open_their_own_document(client, officer, citizen):
+    me = client.get(f"{API}/auth/me", headers=citizen).json()
+    docs = client.get(f"{API}/documents", headers=officer).json()
+    theirs = next((d for d in docs if d["citizenId"] == me["citizenId"]), None)
+    if theirs is None:
+        return  # this resident has no documents in the seed
+
+    resp = client.get(f"{API}/documents/{theirs['id']}/file", headers=citizen)
+    assert resp.status_code == 200
+
+
+def test_a_neighbouring_officer_cannot_open_this_villages_documents(
+    client, officer, neighbour_officer
+):
+    doc = _a_document(client, officer)
+    resp = client.get(f"{API}/documents/{doc['id']}/file", headers=neighbour_officer)
+    assert resp.status_code == 403
+
+
+def test_a_missing_document_is_a_clear_404(client, officer):
+    resp = client.get(f"{API}/documents/doc_does_not_exist/file", headers=officer)
+    assert resp.status_code == 404
+
+
+def test_a_neighbouring_officer_cannot_read_another_villages_eligibility(
+    client, neighbour_officer
+):
+    """Eligibility results carry the reasons a resident passed or failed, which
+    means their income, category and BPL status. This route relied on a guard
+    that checked the role but not the village."""
+    resp = client.get(
+        f"{API}/citizens/cit_102/eligibility", headers=neighbour_officer
+    )
+    assert resp.status_code == 403
+    assert "another Gram Panchayat" in resp.json()["detail"]
+
+
+def test_a_neighbouring_officer_cannot_upload_into_another_village(
+    client, neighbour_officer
+):
+    resp = client.post(
+        f"{API}/documents",
+        headers=neighbour_officer,
+        data={"citizenId": "cit_102", "docType": "Income Certificate"},
+        files={"file": ("x.pdf", b"%PDF-1.4 test", "application/pdf")},
+    )
+    assert resp.status_code == 403

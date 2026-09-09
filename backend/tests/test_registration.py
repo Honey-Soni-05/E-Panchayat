@@ -366,13 +366,43 @@ def test_the_sign_up_village_list_is_readable_without_a_token(client):
     assert any(v["id"] == "vil_loni_kalbhor" for v in villages)
 
 
-def test_the_public_village_list_exposes_names_and_nothing_else(client):
+def test_the_public_village_list_exposes_place_names_and_nothing_else(client):
     """It has to work without a session, so it must not carry anything a
-    stranger should not have."""
+    stranger should not have.
+
+    Place names and LGD codes are published government data. Resident counts,
+    budgets, coordinates and internal fields are not, and must never be added
+    here by widening the schema without thinking about who can read it.
+    """
     villages = client.get(f"{API}/villages/public").json()
     assert villages
+
+    allowed = {
+        "id", "name", "nameMr", "lgdCode",
+        "blockName", "blockNameMr",
+        "districtName", "districtNameMr",
+        "stateName", "stateNameMr",
+    }
     for village in villages:
-        assert set(village) == {"id", "name", "nameMr", "lgdCode"}
+        assert set(village) == allowed
+
+    # Named explicitly, because these are the fields most likely to be added by
+    # accident when someone reuses the fuller village schema here.
+    forbidden = {"population2011", "households2011", "wardCount", "latitude",
+                 "longitude", "notes", "totalCitizens", "totalBudget"}
+    for village in villages:
+        assert not (set(village) & forbidden)
+
+
+def test_the_public_village_list_names_the_block_and_district(client):
+    """A village name alone is ambiguous — an applicant needs to see where it
+    sits before choosing it."""
+    villages = client.get(f"{API}/villages/public").json()
+    home = next(v for v in villages if v["id"] == "vil_loni_kalbhor")
+    assert home["blockName"] == "Haveli"
+    assert home["districtName"] == "Pune"
+    assert home["stateName"] == "Maharashtra"
+    assert home["blockNameMr"] and home["districtNameMr"] and home["stateNameMr"]
 
 
 def test_the_public_list_omits_villages_with_no_gram_panchayat(client):

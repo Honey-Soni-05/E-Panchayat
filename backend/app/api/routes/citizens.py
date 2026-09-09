@@ -101,7 +101,7 @@ def get_citizen(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> CitizenOut:
-    assert_can_read_citizen(user, citizen_id)
+    assert_can_read_citizen(db, user, citizen_id)
     citizen = db.get(Citizen, citizen_id)
     if citizen is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No citizen with that ID.")

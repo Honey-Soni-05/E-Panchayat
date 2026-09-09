@@ -1,2000 +1,2010 @@
 {
- "citizens": [
-  {
-   "id": "cit_101",
-   "name": "Anandrao Patil",
-   "nameMr": "आनंदराव पाटील",
-   "age": 67,
-   "gender": "Male",
-   "genderMr": "पुरुष",
-   "ward": 2,
-   "occupation": "Retired Farmer",
-   "occupationMr": "निवृत्त शेतकरी",
-   "income": 45000,
-   "familyId": "fam_patil",
-   "familyName": "Patil Family",
-   "familyMembers": [
+  "citizens": [
     {
-     "id": "cit_102",
-     "name": "Savita Patil",
-     "relation": "Spouse",
-     "relationMr": "पत्नी"
+      "id": "cit_101",
+      "name": "Anandrao Patil",
+      "nameMr": "आनंदराव पाटील",
+      "age": 67,
+      "gender": "Male",
+      "genderMr": "पुरुष",
+      "ward": 2,
+      "occupation": "Retired Farmer",
+      "occupationMr": "निवृत्त शेतकरी",
+      "income": 45000,
+      "familyId": "fam_patil",
+      "familyName": "Patil Family",
+      "familyMembers": [
+        {
+          "id": "cit_102",
+          "name": "Savita Patil",
+          "relation": "Spouse",
+          "relationMr": "पत्नी"
+        },
+        {
+          "id": "cit_103",
+          "name": "Sanjay Patil",
+          "relation": "Son",
+          "relationMr": "मुलगा"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_sr_citizen",
+        "scheme_pm_awas",
+        "scheme_krishi_sinchan"
+      ],
+      "social_category": "OBC",
+      "is_bpl": false,
+      "secc_listed": false,
+      "ration_card_type": "Orange",
+      "land_holding_hectares": 1.2,
+      "marital_status": "Married",
+      "disability_percent": null
     },
     {
-     "id": "cit_103",
-     "name": "Sanjay Patil",
-     "relation": "Son",
-     "relationMr": "मुलगा"
+      "id": "cit_102",
+      "name": "Savita Patil",
+      "nameMr": "सविता पाटील",
+      "age": 61,
+      "gender": "Female",
+      "genderMr": "महिला",
+      "ward": 2,
+      "occupation": "Homemaker",
+      "occupationMr": "गृहिणी",
+      "income": 0,
+      "familyId": "fam_patil",
+      "familyName": "Patil Family",
+      "familyMembers": [
+        {
+          "id": "cit_101",
+          "name": "Anandrao Patil",
+          "relation": "Spouse",
+          "relationMr": "पती"
+        },
+        {
+          "id": "cit_103",
+          "name": "Sanjay Patil",
+          "relation": "Son",
+          "relationMr": "मुलगा"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_sr_citizen",
+        "scheme_pm_awas"
+      ],
+      "social_category": "OBC",
+      "is_bpl": true,
+      "secc_listed": true,
+      "ration_card_type": "Yellow",
+      "land_holding_hectares": 1.2,
+      "marital_status": "Widowed",
+      "disability_percent": null
+    },
+    {
+      "id": "cit_103",
+      "name": "Sanjay Patil",
+      "nameMr": "संजय पाटील",
+      "age": 38,
+      "gender": "Male",
+      "genderMr": "पुरुष",
+      "ward": 2,
+      "occupation": "Farmer",
+      "occupationMr": "शेतकरी",
+      "income": 85000,
+      "familyId": "fam_patil",
+      "familyName": "Patil Family",
+      "familyMembers": [
+        {
+          "id": "cit_101",
+          "name": "Anandrao Patil",
+          "relation": "Father",
+          "relationMr": "वडील"
+        },
+        {
+          "id": "cit_102",
+          "name": "Savita Patil",
+          "relation": "Mother",
+          "relationMr": "आई"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_pm_awas",
+        "scheme_krishi_sinchan"
+      ],
+      "social_category": "OBC",
+      "is_bpl": false,
+      "secc_listed": false,
+      "ration_card_type": "Orange",
+      "land_holding_hectares": 0.0,
+      "marital_status": "Single",
+      "disability_percent": null
+    },
+    {
+      "id": "cit_104",
+      "name": "Ramesh Shinde",
+      "nameMr": "रमेश शिंदे",
+      "age": 72,
+      "gender": "Male",
+      "genderMr": "पुरुष",
+      "ward": 4,
+      "occupation": "Labourer",
+      "occupationMr": "मजूर",
+      "income": 38000,
+      "familyId": "fam_shinde",
+      "familyName": "Shinde Family",
+      "familyMembers": [
+        {
+          "id": "cit_105",
+          "name": "Lata Shinde",
+          "relation": "Spouse",
+          "relationMr": "पत्नी"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_sr_citizen",
+        "scheme_pm_awas"
+      ],
+      "social_category": "SC",
+      "is_bpl": true,
+      "secc_listed": true,
+      "ration_card_type": "Yellow",
+      "land_holding_hectares": 0.6,
+      "marital_status": "Married",
+      "disability_percent": null
+    },
+    {
+      "id": "cit_105",
+      "name": "Lata Shinde",
+      "nameMr": "लता शिंदे",
+      "age": 65,
+      "gender": "Female",
+      "genderMr": "महिला",
+      "ward": 4,
+      "occupation": "Labourer",
+      "occupationMr": "मजूर",
+      "income": 12000,
+      "familyId": "fam_shinde",
+      "familyName": "Shinde Family",
+      "familyMembers": [
+        {
+          "id": "cit_104",
+          "name": "Ramesh Shinde",
+          "relation": "Spouse",
+          "relationMr": "पती"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_sr_citizen",
+        "scheme_pm_awas"
+      ],
+      "social_category": "SC",
+      "is_bpl": true,
+      "secc_listed": true,
+      "ration_card_type": "Yellow",
+      "land_holding_hectares": 0.6,
+      "marital_status": "Widowed",
+      "disability_percent": 45
+    },
+    {
+      "id": "cit_106",
+      "name": "Priyanka Deshmukh",
+      "nameMr": "प्रियंका देशमुख",
+      "age": 24,
+      "gender": "Female",
+      "genderMr": "महिला",
+      "ward": 3,
+      "occupation": "Student",
+      "occupationMr": "विद्यार्थी",
+      "income": 15000,
+      "familyId": "fam_deshmukh",
+      "familyName": "Deshmukh Family",
+      "familyMembers": [
+        {
+          "id": "cit_107",
+          "name": "Abhijit Deshmukh",
+          "relation": "Brother",
+          "relationMr": "भाऊ"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_beti_bachao"
+      ],
+      "social_category": "Open",
+      "is_bpl": false,
+      "secc_listed": false,
+      "ration_card_type": "White",
+      "land_holding_hectares": 3.5,
+      "marital_status": "Single",
+      "disability_percent": null
+    },
+    {
+      "id": "cit_107",
+      "name": "Abhijit Deshmukh",
+      "nameMr": "अभिजित देशमुख",
+      "age": 28,
+      "gender": "Male",
+      "genderMr": "पुरुष",
+      "ward": 3,
+      "occupation": "Shop Owner",
+      "occupationMr": "दुकानदार",
+      "income": 140000,
+      "familyId": "fam_deshmukh",
+      "familyName": "Deshmukh Family",
+      "familyMembers": [
+        {
+          "id": "cit_106",
+          "name": "Priyanka Deshmukh",
+          "relation": "Sister",
+          "relationMr": "बहीण"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_pm_awas"
+      ],
+      "social_category": "Open",
+      "is_bpl": false,
+      "secc_listed": false,
+      "ration_card_type": "White",
+      "land_holding_hectares": 3.5,
+      "marital_status": "Married",
+      "disability_percent": null
+    },
+    {
+      "id": "cit_108",
+      "name": "Vitthal Jadhav",
+      "nameMr": "विठ्ठल जाधव",
+      "age": 58,
+      "gender": "Male",
+      "genderMr": "पुरुष",
+      "ward": 1,
+      "occupation": "Farmer",
+      "occupationMr": "शेतकरी",
+      "income": 110000,
+      "familyId": "fam_jadhav",
+      "familyName": "Jadhav Family",
+      "familyMembers": [
+        {
+          "id": "cit_109",
+          "name": "Sunita Jadhav",
+          "relation": "Spouse",
+          "relationMr": "पत्नी"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_krishi_sinchan",
+        "scheme_pm_awas"
+      ],
+      "social_category": null,
+      "is_bpl": false,
+      "secc_listed": false,
+      "ration_card_type": null,
+      "land_holding_hectares": null,
+      "marital_status": null,
+      "disability_percent": null
+    },
+    {
+      "id": "cit_109",
+      "name": "Sunita Jadhav",
+      "nameMr": "सुनीता जाधव",
+      "age": 52,
+      "gender": "Female",
+      "genderMr": "महिला",
+      "ward": 1,
+      "occupation": "Farmer",
+      "occupationMr": "शेतकरी",
+      "income": 25000,
+      "familyId": "fam_jadhav",
+      "familyName": "Jadhav Family",
+      "familyMembers": [
+        {
+          "id": "cit_108",
+          "name": "Vitthal Jadhav",
+          "relation": "Spouse",
+          "relationMr": "पती"
+        }
+      ],
+      "eligibleSchemes": [
+        "scheme_krishi_sinchan",
+        "scheme_pm_awas"
+      ],
+      "social_category": "ST",
+      "is_bpl": true,
+      "secc_listed": true,
+      "ration_card_type": "Yellow",
+      "land_holding_hectares": 1.8,
+      "marital_status": "Married",
+      "disability_percent": null
+    },
+    {
+      "id": "cit_110",
+      "name": "Sunil Ghadge",
+      "nameMr": "सुनील घाडगे",
+      "age": 42,
+      "gender": "Male",
+      "genderMr": "पुरुष",
+      "ward": 3,
+      "occupation": "Carpenter",
+      "occupationMr": "सुतार",
+      "income": 95000,
+      "familyId": "fam_ghadge",
+      "familyName": "Ghadge Family",
+      "familyMembers": [],
+      "eligibleSchemes": [
+        "scheme_pm_awas"
+      ],
+      "social_category": "ST",
+      "is_bpl": false,
+      "secc_listed": false,
+      "ration_card_type": "Orange",
+      "land_holding_hectares": 0.9,
+      "marital_status": "Married",
+      "disability_percent": null
     }
-   ],
-   "eligibleSchemes": [
-    "scheme_sr_citizen",
-    "scheme_pm_awas",
-    "scheme_krishi_sinchan"
-   ],
-   "social_category": "OBC",
-   "is_bpl": false,
-   "secc_listed": false,
-   "ration_card_type": "Orange",
-   "land_holding_hectares": 1.2,
-   "marital_status": "Married",
-   "disability_percent": null
-  },
-  {
-   "id": "cit_102",
-   "name": "Savita Patil",
-   "nameMr": "सविता पाटील",
-   "age": 61,
-   "gender": "Female",
-   "genderMr": "महिला",
-   "ward": 2,
-   "occupation": "Homemaker",
-   "occupationMr": "गृहिणी",
-   "income": 0,
-   "familyId": "fam_patil",
-   "familyName": "Patil Family",
-   "familyMembers": [
-    {
-     "id": "cit_101",
-     "name": "Anandrao Patil",
-     "relation": "Spouse",
-     "relationMr": "पती"
-    },
-    {
-     "id": "cit_103",
-     "name": "Sanjay Patil",
-     "relation": "Son",
-     "relationMr": "मुलगा"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_sr_citizen",
-    "scheme_pm_awas"
-   ],
-   "social_category": "OBC",
-   "is_bpl": true,
-   "secc_listed": true,
-   "ration_card_type": "Yellow",
-   "land_holding_hectares": 1.2,
-   "marital_status": "Widowed",
-   "disability_percent": null
-  },
-  {
-   "id": "cit_103",
-   "name": "Sanjay Patil",
-   "nameMr": "संजय पाटील",
-   "age": 38,
-   "gender": "Male",
-   "genderMr": "पुरुष",
-   "ward": 2,
-   "occupation": "Farmer",
-   "occupationMr": "शेतकरी",
-   "income": 85000,
-   "familyId": "fam_patil",
-   "familyName": "Patil Family",
-   "familyMembers": [
-    {
-     "id": "cit_101",
-     "name": "Anandrao Patil",
-     "relation": "Father",
-     "relationMr": "वडील"
-    },
-    {
-     "id": "cit_102",
-     "name": "Savita Patil",
-     "relation": "Mother",
-     "relationMr": "आई"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_pm_awas",
-    "scheme_krishi_sinchan"
-   ],
-   "social_category": "OBC",
-   "is_bpl": false,
-   "secc_listed": false,
-   "ration_card_type": "Orange",
-   "land_holding_hectares": 0.0,
-   "marital_status": "Single",
-   "disability_percent": null
-  },
-  {
-   "id": "cit_104",
-   "name": "Ramesh Shinde",
-   "nameMr": "रमेश शिंदे",
-   "age": 72,
-   "gender": "Male",
-   "genderMr": "पुरुष",
-   "ward": 4,
-   "occupation": "Labourer",
-   "occupationMr": "मजूर",
-   "income": 38000,
-   "familyId": "fam_shinde",
-   "familyName": "Shinde Family",
-   "familyMembers": [
-    {
-     "id": "cit_105",
-     "name": "Lata Shinde",
-     "relation": "Spouse",
-     "relationMr": "पत्नी"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_sr_citizen",
-    "scheme_pm_awas"
-   ],
-   "social_category": "SC",
-   "is_bpl": true,
-   "secc_listed": true,
-   "ration_card_type": "Yellow",
-   "land_holding_hectares": 0.6,
-   "marital_status": "Married",
-   "disability_percent": null
-  },
-  {
-   "id": "cit_105",
-   "name": "Lata Shinde",
-   "nameMr": "लता शिंदे",
-   "age": 65,
-   "gender": "Female",
-   "genderMr": "महिला",
-   "ward": 4,
-   "occupation": "Labourer",
-   "occupationMr": "मजूर",
-   "income": 12000,
-   "familyId": "fam_shinde",
-   "familyName": "Shinde Family",
-   "familyMembers": [
-    {
-     "id": "cit_104",
-     "name": "Ramesh Shinde",
-     "relation": "Spouse",
-     "relationMr": "पती"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_sr_citizen",
-    "scheme_pm_awas"
-   ],
-   "social_category": "SC",
-   "is_bpl": true,
-   "secc_listed": true,
-   "ration_card_type": "Yellow",
-   "land_holding_hectares": 0.6,
-   "marital_status": "Widowed",
-   "disability_percent": 45
-  },
-  {
-   "id": "cit_106",
-   "name": "Priyanka Deshmukh",
-   "nameMr": "प्रियंका देशमुख",
-   "age": 24,
-   "gender": "Female",
-   "genderMr": "महिला",
-   "ward": 3,
-   "occupation": "Student",
-   "occupationMr": "विद्यार्थी",
-   "income": 15000,
-   "familyId": "fam_deshmukh",
-   "familyName": "Deshmukh Family",
-   "familyMembers": [
-    {
-     "id": "cit_107",
-     "name": "Abhijit Deshmukh",
-     "relation": "Brother",
-     "relationMr": "भाऊ"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_beti_bachao"
-   ],
-   "social_category": "Open",
-   "is_bpl": false,
-   "secc_listed": false,
-   "ration_card_type": "White",
-   "land_holding_hectares": 3.5,
-   "marital_status": "Single",
-   "disability_percent": null
-  },
-  {
-   "id": "cit_107",
-   "name": "Abhijit Deshmukh",
-   "nameMr": "अभिजित देशमुख",
-   "age": 28,
-   "gender": "Male",
-   "genderMr": "पुरुष",
-   "ward": 3,
-   "occupation": "Shop Owner",
-   "occupationMr": "दुकानदार",
-   "income": 140000,
-   "familyId": "fam_deshmukh",
-   "familyName": "Deshmukh Family",
-   "familyMembers": [
-    {
-     "id": "cit_106",
-     "name": "Priyanka Deshmukh",
-     "relation": "Sister",
-     "relationMr": "बहीण"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_pm_awas"
-   ],
-   "social_category": "Open",
-   "is_bpl": false,
-   "secc_listed": false,
-   "ration_card_type": "White",
-   "land_holding_hectares": 3.5,
-   "marital_status": "Married",
-   "disability_percent": null
-  },
-  {
-   "id": "cit_108",
-   "name": "Vitthal Jadhav",
-   "nameMr": "विठ्ठल जाधव",
-   "age": 58,
-   "gender": "Male",
-   "genderMr": "पुरुष",
-   "ward": 1,
-   "occupation": "Farmer",
-   "occupationMr": "शेतकरी",
-   "income": 110000,
-   "familyId": "fam_jadhav",
-   "familyName": "Jadhav Family",
-   "familyMembers": [
-    {
-     "id": "cit_109",
-     "name": "Sunita Jadhav",
-     "relation": "Spouse",
-     "relationMr": "पत्नी"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_krishi_sinchan",
-    "scheme_pm_awas"
-   ],
-   "social_category": null,
-   "is_bpl": false,
-   "secc_listed": false,
-   "ration_card_type": null,
-   "land_holding_hectares": null,
-   "marital_status": null,
-   "disability_percent": null
-  },
-  {
-   "id": "cit_109",
-   "name": "Sunita Jadhav",
-   "nameMr": "सुनीता जाधव",
-   "age": 52,
-   "gender": "Female",
-   "genderMr": "महिला",
-   "ward": 1,
-   "occupation": "Farmer",
-   "occupationMr": "शेतकरी",
-   "income": 25000,
-   "familyId": "fam_jadhav",
-   "familyName": "Jadhav Family",
-   "familyMembers": [
-    {
-     "id": "cit_108",
-     "name": "Vitthal Jadhav",
-     "relation": "Spouse",
-     "relationMr": "पती"
-    }
-   ],
-   "eligibleSchemes": [
-    "scheme_krishi_sinchan",
-    "scheme_pm_awas"
-   ],
-   "social_category": "ST",
-   "is_bpl": true,
-   "secc_listed": true,
-   "ration_card_type": "Yellow",
-   "land_holding_hectares": 1.8,
-   "marital_status": "Married",
-   "disability_percent": null
-  },
-  {
-   "id": "cit_110",
-   "name": "Sunil Ghadge",
-   "nameMr": "सुनील घाडगे",
-   "age": 42,
-   "gender": "Male",
-   "genderMr": "पुरुष",
-   "ward": 3,
-   "occupation": "Carpenter",
-   "occupationMr": "सुतार",
-   "income": 95000,
-   "familyId": "fam_ghadge",
-   "familyName": "Ghadge Family",
-   "familyMembers": [],
-   "eligibleSchemes": [
-    "scheme_pm_awas"
-   ],
-   "social_category": "ST",
-   "is_bpl": false,
-   "secc_listed": false,
-   "ration_card_type": "Orange",
-   "land_holding_hectares": 0.9,
-   "marital_status": "Married",
-   "disability_percent": null
-  }
- ],
- "schemes": [
-  {
-   "id": "scheme_sanjay_gandhi_niradhar",
-   "name": "Sanjay Gandhi Niradhar Anudan Yojana",
-   "name_mr": "संजय गांधी निराधार अनुदान योजना",
-   "description": "Monthly cash assistance to destitute men, women, orphans, disabled persons, and other listed vulnerable categories with no means of support.",
-   "description_mr": "Monthly cash assistance to destitute men, women, orphans, disabled persons, and other listed vulnerable categories with no means of support.",
-   "benefit": "Rs. 1,500 per month (single beneficiary); rate is higher per NSAP-linked category when combined with central top-up.",
-   "benefit_mr": "Rs. 1,500 per month (single beneficiary); rate is higher per NSAP-linked category when combined with central top-up.",
-   "criteria": {
-    "min_age": 18,
-    "max_age": 65,
-    "any_of": [
-     {
-      "max_income": 21000
-     },
-     {
-      "requires_bpl": true
-     }
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Age proof",
-     "name_mr": "वयाचा दाखला"
-    },
-    {
-     "name": "Income certificate",
-     "name_mr": "उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Residence certificate",
-     "name_mr": "रहिवासी दाखला"
-    },
-    {
-     "name": "BPL certificate / Ration card",
-     "name_mr": "दारिद्र्यरेषेखालील (BPL) दाखला / रेशन कार्ड"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    },
-    {
-     "name": "Passport-size photograph",
-     "name_mr": "पासपोर्ट आकाराचे छायाचित्र"
-    }
-   ],
-   "level": "state",
-   "category": "Social Assistance",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "1980-04-01",
-   "form_url": "https://sas.mahait.org/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/sanjay-gandhi-niradhar-anudan-yojana/",
-   "confidence": "high",
-   "notes": "Official page states income ceiling as EITHER family annual income up to Rs 21,000 OR being on the BPL list — this OR condition cannot be expressed by max_income alone. Age range (18-65) applies to the general destitute category; several sub-categories (disabled, terminally ill, abuse survivors, unmarried women 35+, prisoners' wives) have no stated age band on this page. Document list is NOT itemized on the official page — the list above is the standard document set used across Social Justice Dept. (SJSA) anudan schemes and should be verified before production use."
-  },
-  {
-   "id": "scheme_shravanbal_nivruttivetan",
-   "name": "Shravan Bal Seva Rajya Nivruttivetan Yojana",
-   "name_mr": "श्रावणबाळ सेवा राज्य निवृत्तिवेतन योजना",
-   "description": "State old-age pension for senior citizens who are below the poverty line or below a low income threshold.",
-   "description_mr": "State old-age pension for senior citizens who are below the poverty line or below a low income threshold.",
-   "benefit": "Rs. 1,500 per month per beneficiary.",
-   "benefit_mr": "Rs. 1,500 per month per beneficiary.",
-   "criteria": {
-    "min_age": 65,
-    "any_of": [
-     {
-      "max_income": 21000
-     },
-     {
-      "requires_bpl": true
-     }
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "Age proof",
-     "name_mr": "वयाचा दाखला"
-    },
-    {
-     "name": "Income certificate",
-     "name_mr": "उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Residence certificate",
-     "name_mr": "रहिवासी दाखला"
-    },
-    {
-     "name": "BPL certificate / Ration card",
-     "name_mr": "दारिद्र्यरेषेखालील (BPL) दाखला / रेशन कार्ड"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    }
-   ],
-   "level": "state",
-   "category": "Pension",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "1995-04-01",
-   "form_url": "https://sas.mahait.org/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/shravan-bal-rajya-nivruttivetan-yojana/",
-   "confidence": "high",
-   "notes": "Same OR-condition caveat as Sanjay Gandhi Niradhar (BPL listing OR income <Rs 21,000). Document list not itemized on official page; inferred from standard SJSA anudan application format."
-  },
-  {
-   "id": "scheme_ramai_awas",
-   "name": "Ramai Awas Yojana",
-   "name_mr": "रमाई आवास योजना",
-   "description": "Housing subsidy scheme to construct pucca houses for Scheduled Caste and Neo-Buddhist families.",
-   "description_mr": "Housing subsidy scheme to construct pucca houses for Scheduled Caste and Neo-Buddhist families.",
-   "benefit": "Rs. 1.32 lakh in plain rural areas (incl. Rs 12,000 for toilet); Rs. 1.42 lakh in hilly/Naxal-affected areas; Rs. 2.50 lakh in Municipal Council/Corporation areas.",
-   "benefit_mr": "Rs. 1.32 lakh in plain rural areas (incl. Rs 12,000 for toilet); Rs. 1.42 lakh in hilly/Naxal-affected areas; Rs. 2.50 lakh in Municipal Council/Corporation areas.",
-   "criteria": {
-    "category_any": [
-     "SC"
-    ],
-    "max_income": 120000
-   },
-   "required_documents": [
-    {
-     "name": "Caste certificate (SC/Neo-Buddhist)",
-     "name_mr": "जातीचा दाखला (अनुसूचित जाती/नवबौद्ध)"
-    },
-    {
-     "name": "Income certificate",
-     "name_mr": "उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Property/plot ownership proof",
-     "name_mr": "मालमत्ता/भूखंड मालकी पुरावा"
-    },
-    {
-     "name": "Property tax / utility bill",
-     "name_mr": "मालमत्ता कर / उपयोगिता बिल"
-    },
-    {
-     "name": "Ration card",
-     "name_mr": "रेशन कार्ड"
-    },
-    {
-     "name": "Voter ID",
-     "name_mr": "मतदार ओळखपत्र"
-    },
-    {
-     "name": "Local authority (Gram Panchayat) certification",
-     "name_mr": "स्थानिक प्राधिकरण (ग्रामपंचायत) दाखला"
-    }
-   ],
-   "level": "state",
-   "category": "Housing",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "2008-04-01",
-   "form_url": "https://sjsa.maharashtra.gov.in/en/scheme/ramai-awas-yojana-rural-urban/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/ramai-awas-yojana-rural-urban/",
-   "confidence": "high",
-   "notes": "max_income of Rs 1,20,000 applies to RURAL areas specifically (relevant for a Gram Panchayat context); the urban ceiling is Rs 3,00,000 and cannot be represented alongside the rural figure with a single max_income key — pick per area type. Caste category (SC/Neo-Buddhist) is a hard eligibility gate that cannot be expressed with the given keys; also requires the applicant NOT be on the SECC-2011 priority list (i.e., not already eligible under PMAY-G), a mutual-exclusion rule the schema cannot represent. No dedicated online application URL was found — selection runs through the Gram Sabha, so form_url points to the informational page, not an application form."
-  },
-  {
-   "id": "scheme_mjpjay",
-   "name": "Mahatma Jyotirao Phule Jan Arogya Yojana",
-   "name_mr": "महात्मा जोतिराव फुले जन आरोग्य योजना",
-   "description": "Cashless health insurance scheme providing free surgeries and treatments through empanelled network hospitals for economically weaker ration-card holding families.",
-   "description_mr": "Cashless health insurance scheme providing free surgeries and treatments through empanelled network hospitals for economically weaker ration-card holding families.",
-   "benefit": "Cashless hospitalisation cover of Rs. 1,50,000 per family per year (floater); renal transplant capped at Rs. 2,50,000 including one year of immunosuppressive therapy.",
-   "benefit_mr": "Cashless hospitalisation cover of Rs. 1,50,000 per family per year (floater); renal transplant capped at Rs. 2,50,000 including one year of immunosuppressive therapy.",
-   "criteria": {
-    "ration_card_any": [
-     "Yellow",
-     "Orange",
-     "AAY",
-     "Annapurna"
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "MJPJAY/RGJAY Health Card (if issued)",
-     "name_mr": "आरोग्य कार्ड"
-    },
-    {
-     "name": "Yellow or Orange Ration Card with Aadhaar number",
-     "name_mr": "पिवळे/केशरी रेशन कार्ड (आधार क्रमांकासह)"
-    },
-    {
-     "name": "Government photo ID (interim, until health card issued)",
-     "name_mr": "शासकीय छायाचित्र ओळखपत्र"
-    },
-    {
-     "name": "Birth certificate (for newborns)",
-     "name_mr": "जन्म दाखला (नवजात बालकांसाठी)"
-    }
-   ],
-   "level": "state",
-   "category": "Health",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "2012-07-02",
-   "form_url": "https://www.jeevandayee.gov.in/",
-   "source_url": "https://www.jeevandayee.gov.in/MJPJAY/RGJAY.jsp",
-   "confidence": "medium",
-   "notes": "IMPORTANT GAP: the fetched official page describes the scheme's original 2013-era structure (Yellow/Orange/Antyodaya/Annapurna card holders, explicitly limited to 8 districts, White card holders excluded). Since 2020 MJPJAY has been merged with Ayushman Bharat-PMJAY (AB-MJPJAY) and public reporting indicates it now covers all ration-card categories statewide across all 36 districts — but I could not locate and fetch a current official maharashtra.gov.in/jeevandayee.gov.in page confirming the present-day statewide/all-category rules within the allowed source list in this session. Do NOT use the '8 districts' or 'White card excluded' facts for a current-year product without re-verifying against a current jeevandayee.gov.in or NHA page. No numeric age/income eligibility exists for this scheme — eligibility is entirely ration-card-category based, which cannot be expressed with the given criteria keys."
-  },
-  {
-   "id": "scheme_shabari_awas",
-   "name": "Shabari Awas Yojana",
-   "name_mr": "शबरी आवास योजना",
-   "description": "Housing subsidy scheme to construct pucca houses for homeless Scheduled Tribe families.",
-   "description_mr": "Housing subsidy scheme to construct pucca houses for homeless Scheduled Tribe families.",
-   "benefit": "Rs. 1.20 lakh for construction of a 269 sq. ft. house.",
-   "benefit_mr": "Rs. 1.20 lakh for construction of a 269 sq. ft. house.",
-   "criteria": {
-    "category_any": [
-     "ST"
-    ],
-    "max_income": 120000
-   },
-   "required_documents": [
-    {
-     "name": "Caste certificate (Scheduled Tribe)",
-     "name_mr": "जातीचा दाखला (अनुसूचित जमाती)"
-    },
-    {
-     "name": "Income certificate",
-     "name_mr": "उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Residence certificate (15 years Maharashtra domicile)",
-     "name_mr": "रहिवासी दाखला (१५ वर्षे महाराष्ट्र वास्तव्य)"
-    },
-    {
-     "name": "Landlessness/homelessness declaration",
-     "name_mr": "भूमिहीन/निवारा नसल्याचे स्वयंघोषणापत्र"
-    }
-   ],
-   "level": "state",
-   "category": "Housing",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "2013-04-01",
-   "form_url": "https://akolazp.gov.in/en/scheme/shabari-aawas-yojana/",
-   "source_url": "https://akolazp.gov.in/en/scheme/shabari-aawas-yojana/",
-   "confidence": "medium",
-   "notes": "Sourced from a Zilla Parishad (Akola) district government page rather than a direct state tribal-development-department page, since the department's own scheme page could not be reached in this session — treat as high-confidence on the numeric facts (matches the same figures used across multiple ZP portals) but re-verify against adivasi.maharashtra.gov.in before production use. Caste category (ST) is a hard gate not expressible with the given keys. No online application URL found; applications are typically routed through the Gram Panchayat/ITDP office, not a web portal."
-  },
-  {
-   "id": "scheme_sbm_g",
-   "name": "Swachh Bharat Mission - Gramin (household toilet incentive)",
-   "name_mr": "स्वच्छ भारत मिशन (ग्रामीण)",
-   "description": "Construction incentive for eligible rural households to build and use an individual household toilet.",
-   "description_mr": "पात्र ग्रामीण कुटुंबांना वैयक्तिक शौचालय बांधण्यासाठी प्रोत्साहन अनुदान.",
-   "benefit": "Rs 12,000 incentive per household for a twin-pit toilet",
-   "benefit_mr": "दुहेरी खड्डा शौचालयासाठी प्रति कुटुंब ₹१२,००० प्रोत्साहन",
-   "criteria": {
-    "any_of": [
-     {
-      "requires_bpl": true
-     },
-     {
-      "category_any": [
-       "SC",
-       "ST"
-      ]
-     },
-     {
-      "max_land_hectares": 2.0,
-      "occupation_any": [
-       "farmer",
-       "agriculture",
-       "शेतकरी"
-      ]
-     },
-     {
-      "min_disability_percent": 40
-     }
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "BPL certificate or category proof",
-     "name_mr": "दारिद्र्यरेषेखालील दाखला किंवा प्रवर्ग प्रमाणपत्र"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    }
-   ],
-   "level": "central",
-   "category": "Sanitation",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2014-10-02",
-   "form_url": "https://swachhbharatmission.ddws.gov.in/",
-   "source_url": "https://swachhbharatmission.ddws.gov.in/faq",
-   "confidence": "high",
-   "notes": "All BPL households qualify, plus listed above-poverty-line categories. Modelled as an any_of group; the woman-headed-household path is covered by is_head plus gender in practice but is not encoded here."
-  },
-  {
-   "id": "scheme_ssy",
-   "name": "Sukanya Samriddhi Yojana",
-   "name_mr": "सुकन्या समृद्धी योजना",
-   "description": "A government-guaranteed savings account for a girl child, maturing 21 years after opening.",
-   "description_mr": "मुलीच्या नावे शासन हमी असलेले बचत खाते, उघडल्यापासून २१ वर्षांनी परिपक्व.",
-   "benefit": "Deposits of Rs 250 to Rs 1,50,000 a year at the notified SSY interest rate",
-   "benefit_mr": "दरवर्षी ₹२५० ते ₹१,५०,००० ठेव, अधिसूचित व्याजदरासह",
-   "criteria": {
-    "max_age": 10,
-    "gender": "Female"
-   },
-   "required_documents": [
-    {
-     "name": "Girl child's birth certificate",
-     "name_mr": "मुलीचा जन्म दाखला"
-    },
-    {
-     "name": "Guardian's Aadhaar Card",
-     "name_mr": "पालकाचे आधार कार्ड"
-    },
-    {
-     "name": "Address proof",
-     "name_mr": "पत्ता पुरावा"
-    }
-   ],
-   "level": "central",
-   "category": "Girl Child",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2015-01-22",
-   "form_url": "https://www.indiapost.gov.in/Financial/Pages/Content/Sukanya-Samriddhi-Account.aspx",
-   "source_url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2022/jan/doc20221207101.pdf",
-   "confidence": "high",
-   "notes": "Limited to two girl children per family, with narrow exceptions for twins. Sibling count is not modelled."
-  },
-  {
-   "id": "scheme_pmjjby",
-   "name": "Pradhan Mantri Jeevan Jyoti Bima Yojana",
-   "name_mr": "प्रधानमंत्री जीवन ज्योती विमा योजना",
-   "description": "Government-backed renewable annual term life cover for bank and post office account holders.",
-   "description_mr": "बँक व पोस्ट खातेधारकांसाठी शासन पुरस्कृत वार्षिक नूतनीकरणीय मुदत जीवन विमा.",
-   "benefit": "Rs 2,00,000 life cover for an annual premium of Rs 436",
-   "benefit_mr": "वार्षिक ₹४३६ हप्त्यात ₹२,००,००० जीवन विमा संरक्षण",
-   "criteria": {
-    "min_age": 18,
-    "max_age": 50
-   },
-   "required_documents": [
-    {
-     "name": "Bank or post office savings account",
-     "name_mr": "बँक/पोस्ट ऑफिस बचत खाते"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Nominee details",
-     "name_mr": "नामनिर्देशित व्यक्तीचा तपशील"
-    }
-   ],
-   "level": "central",
-   "category": "Insurance",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2015-05-09",
-   "form_url": "https://jansuraksha.gov.in/",
-   "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2127981",
-   "confidence": "high",
-   "notes": "No income test. Requires a bank or post office account with auto-debit consent."
-  },
-  {
-   "id": "scheme_pmfby",
-   "name": "Pradhan Mantri Fasal Bima Yojana",
-   "name_mr": "प्रधानमंत्री पीक विमा योजना",
-   "description": "Subsidised crop insurance protecting farmers against loss from natural calamities, pests and disease.",
-   "description_mr": "नैसर्गिक आपत्ती, कीड व रोगामुळे होणाऱ्या पीक नुकसानीपासून शेतकऱ्यांना संरक्षण देणारा अनुदानित पीक विमा.",
-   "benefit": "Farmer pays 2% of premium for Kharif, 1.5% for Rabi and 5% for commercial crops; governments pay the rest",
-   "benefit_mr": "खरीपासाठी २%, रब्बीसाठी १.५% व नगदी पिकांसाठी ५% हप्ता शेतकरी भरतो; उर्वरित शासन भरते",
-   "criteria": {
-    "occupation_any": [
-     "farmer",
-     "agriculture",
-     "cultivator",
-     "शेतकरी",
-     "शेती"
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Land records (7/12 and 8A)",
-     "name_mr": "जमिनीचे ७/१२ व ८अ उतारे"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    },
-    {
-     "name": "Sowing declaration",
-     "name_mr": "पेरणी घोषणापत्र"
-    }
-   ],
-   "level": "central",
-   "category": "Agriculture",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2016-02-18",
-   "form_url": "https://pmfby.gov.in/",
-   "source_url": "https://www.pib.gov.in/PressNoteDetails.aspx?NoteId=155010&ModuleId=3&reg=3&lang=1",
-   "confidence": "high",
-   "notes": "Open to loanee and non-loanee farmers of any landholding size. No age or income test."
-  },
-  {
-   "id": "scheme_pmuy",
-   "name": "Pradhan Mantri Ujjwala Yojana",
-   "name_mr": "प्रधानमंत्री उज्ज्वला योजना",
-   "description": "Deposit-free LPG connection for adult women from poor households, replacing unsafe cooking fuels.",
-   "description_mr": "गरीब कुटुंबातील प्रौढ महिलांना अनामत रकमेशिवाय एलपीजी जोडणी, असुरक्षित इंधनास पर्याय.",
-   "benefit": "Rs 2,050 assistance for a 14.2 kg connection, plus free first refill and stove",
-   "benefit_mr": "१४.२ किलो जोडणीसाठी ₹२,०५० सहाय्य, पहिली मोफत रिफिल व शेगडीसह",
-   "criteria": {
-    "min_age": 18,
-    "gender": "Female",
-    "any_of": [
-     {
-      "requires_bpl": true
-     },
-     {
-      "category_any": [
-       "SC",
-       "ST"
-      ]
-     }
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "KYC application form",
-     "name_mr": "केवायसी अर्ज"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Ration card or address proof",
-     "name_mr": "शिधापत्रिका किंवा पत्ता पुरावा"
-    },
-    {
-     "name": "Bank account details",
-     "name_mr": "बँक खात्याचा तपशील"
-    }
-   ],
-   "level": "central",
-   "category": "Energy",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2016-05-01",
-   "form_url": "https://www.pmuy.gov.in/",
-   "source_url": "https://www.pmuy.gov.in/",
-   "confidence": "high",
-   "notes": "Poverty status is established by self-declaration rather than a numeric figure. Household must have no existing LPG connection."
-  },
-  {
-   "id": "scheme_pmay_g",
-   "name": "Pradhan Mantri Awas Yojana - Gramin",
-   "name_mr": "प्रधानमंत्री ग्रामीण आवास योजना",
-   "description": "Assistance to houseless rural households, and those in kutcha or dilapidated houses, to build a pucca house.",
-   "description_mr": "बेघर ग्रामीण कुटुंबांना व कच्च्या घरात राहणाऱ्यांना पक्के घर बांधण्यासाठी अर्थसहाय्य.",
-   "benefit": "Rs 1,20,000 per house in plain areas (Rs 1,30,000 in hilly areas), plus toilet and wage-labour convergence",
-   "benefit_mr": "सपाट भागात प्रति घर ₹१,२०,००० (डोंगराळ भागात ₹१,३०,०००), शौचालय व मजुरी सहाय्यासह",
-   "criteria": {
-    "requires_secc_listed": true
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "SECC-2011 beneficiary list entry",
-     "name_mr": "एसईसीसी-२०११ यादीतील नोंद"
-    },
-    {
-     "name": "Bank account passbook",
-     "name_mr": "बँक खाते पासबुक"
-    }
-   ],
-   "level": "central",
-   "category": "Housing",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2016-11-20",
-   "form_url": "https://pmayg.nic.in/",
-   "source_url": "https://rdd.maharashtra.gov.in/en/scheme/pradhan-mantri-awas-yojana-rural/",
-   "confidence": "high",
-   "notes": "Eligibility is SECC-2011 housing deprivation plus Gram Sabha verification. There is no income test."
-  },
-  {
-   "id": "scheme_pmmvy",
-   "name": "Pradhan Mantri Matru Vandana Yojana",
-   "name_mr": "प्रधानमंत्री मातृ वंदना योजना",
-   "description": "Maternity cash benefit for pregnant women and lactating mothers for their first living child.",
-   "description_mr": "पहिल्या जिवंत अपत्यासाठी गर्भवती व स्तनदा मातांना मातृत्व रोख लाभ.",
-   "benefit": "Rs 5,000 in three instalments, with a further Rs 1,000 available via Janani Suraksha Yojana",
-   "benefit_mr": "तीन हप्त्यांत ₹५,०००, तसेच जननी सुरक्षा योजनेतून अतिरिक्त ₹१,०००",
-   "criteria": {
-    "gender": "Female",
-    "min_age": 18,
-    "max_age": 49,
-    "manual_review": true
-   },
-   "required_documents": [
-    {
-     "name": "Mother and Child Protection card",
-     "name_mr": "माता व बाल संरक्षण कार्ड"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    }
-   ],
-   "level": "central",
-   "category": "Women and Child",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2017-01-01",
-   "form_url": "https://pmmvy.wcd.gov.in/",
-   "source_url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2022/jan/doc20221195901.pdf",
-   "confidence": "high",
-   "notes": "Restricted to the first living child and excludes women already receiving paid maternity leave in government employment. Neither condition is in the resident record, so it is flagged for officer review."
-  },
-  {
-   "id": "scheme_ab_pmjay",
-   "name": "Ayushman Bharat Pradhan Mantri Jan Arogya Yojana",
-   "name_mr": "आयुष्मान भारत - प्रधानमंत्री जन आरोग्य योजना",
-   "description": "Cashless hospitalisation cover for poor and vulnerable families identified through SECC data.",
-   "description_mr": "एसईसीसी आधारे निवडलेल्या गरीब व वंचित कुटुंबांसाठी कॅशलेस रुग्णालय उपचार संरक्षण.",
-   "benefit": "Rs 5,00,000 per family per year for hospitalisation at empanelled hospitals",
-   "benefit_mr": "संलग्न रुग्णालयांत प्रति कुटुंब दरवर्षी ₹५,००,००० पर्यंत उपचार",
-   "criteria": {
-    "requires_secc_listed": true
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Ration card / family ID",
-     "name_mr": "शिधापत्रिका / कुटुंब ओळखपत्र"
-    }
-   ],
-   "level": "central",
-   "category": "Health",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2018-09-23",
-   "form_url": "https://beneficiary.nha.gov.in/",
-   "source_url": "https://nha.gov.in/PM-JAY",
-   "confidence": "high",
-   "notes": "Real eligibility is a set of SECC deprivation codes (D1-D5, D7) or automatic-inclusion categories. Modelled here as SECC listing, which is an approximation."
-  },
-  {
-   "id": "scheme_saur_krushi_pump",
-   "name": "Mukhyamantri Saur Krushi Pump Yojana",
-   "name_mr": "मुख्यमंत्री सौर कृषी पंप योजना (मागेल त्याला सौर कृषी पंप योजना)",
-   "description": "Provides subsidised solar-powered agricultural water pumps to farmers who lack a grid electricity connection.",
-   "description_mr": "Provides subsidised solar-powered agricultural water pumps to farmers who lack a grid electricity connection.",
-   "benefit": "Solar pump at 90-95% government subsidy: farmer pays only 10% (General category) or 5% (SC/ST category) of pump cost, e.g. Rs. 16,560 (General) or Rs. 8,280 (SC/ST) for a 3HP pump; Rs. 24,710/12,355 for 5HP; Rs. 33,455/16,728 for 7.5HP.",
-   "benefit_mr": "Solar pump at 90-95% government subsidy: farmer pays only 10% (General category) or 5% (SC/ST category) of pump cost, e.g. Rs. 16,560 (General) or Rs. 8,280 (SC/ST) for a 3HP pump; Rs. 24,710/12,355 for 5HP; Rs. 33,455/16,728 for 7.5HP.",
-   "criteria": {
-    "occupation_any": [
-     "farmer",
-     "agriculture",
-     "शेतकरी",
-     "शेती"
-    ],
-    "manual_review": true
-   },
-   "required_documents": [
-    {
-     "name": "7/12 land extract",
-     "name_mr": "७/१२ उतारा"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Caste certificate (for SC/ST subsidy rate)",
-     "name_mr": "जातीचा दाखला (SC/ST सवलतीसाठी)"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    }
-   ],
-   "level": "state",
-   "category": "Agriculture",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "2019-01-01",
-   "form_url": "https://www.mahadiscom.in/solar/",
-   "source_url": "https://www.mahadiscom.in/solar/beneficiary-selection-criteria.html",
-   "confidence": "high",
-   "notes": "Eligibility depends on land-holding size (up to 5 acres = 3HP; above 5 acres = 5HP/7.5HP), existing electrification status, and water-source depth for 7.5HP pumps — none of which fit the given criteria keys (no land-holding or infrastructure-status field exists). SC/ST caste category changes the subsidy percentage, which also cannot be expressed by the criteria schema (it affects benefit amount, not eligibility pass/fail). Document list not itemized on the fetched page; inferred from standard MSKPY/MahaDISCOM application requirements — verify before production use."
-  },
-  {
-   "id": "scheme_pm_kisan",
-   "name": "Pradhan Mantri Kisan Samman Nidhi (PM-KISAN)",
-   "name_mr": "प्रधानमंत्री किसान सन्मान निधी योजना",
-   "description": "Direct income support to landholding farmer families to help meet agricultural input costs.",
-   "description_mr": "शेतीच्या निविष्ठा खर्चासाठी जमीनधारक शेतकरी कुटुंबांना थेट उत्पन्न सहाय्य.",
-   "benefit": "Rs 6,000 per year in three instalments of Rs 2,000",
-   "benefit_mr": "दरवर्षी ₹६,००० — ₹२,००० च्या तीन हप्त्यांमध्ये",
-   "criteria": {
-    "occupation_any": [
-     "farmer",
-     "agriculture",
-     "cultivator",
-     "शेतकरी",
-     "शेती"
-    ],
-    "min_land_hectares": 0.01
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank account passbook",
-     "name_mr": "बँक खाते पासबुक"
-    },
-    {
-     "name": "Land ownership record (7/12 extract)",
-     "name_mr": "जमिनीचा सातबारा उतारा"
-    }
-   ],
-   "level": "central",
-   "category": "Agriculture",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": "2019-02-24",
-   "form_url": "https://pmkisan.gov.in/",
-   "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2146932",
-   "confidence": "high",
-   "notes": "No numeric income ceiling published. Exclusions are categorical (income-tax payees, government employees, professionals, higher pensioners) and are not modelled."
-  },
-  {
-   "id": "scheme_lek_ladki",
-   "name": "Lek Ladki Yojana",
-   "name_mr": "लेक लाडकी योजना",
-   "description": "Staged cash benefit paid to a girl child from a low-income yellow/saffron ration card family, from birth through age 18.",
-   "description_mr": "Staged cash benefit paid to a girl child from a low-income yellow/saffron ration card family, from birth through age 18.",
-   "benefit": "Total of Rs. 1,01,000 paid in installments up to age 18 (installments at birth, school milestones, and on turning 18).",
-   "benefit_mr": "Total of Rs. 1,01,000 paid in installments up to age 18 (installments at birth, school milestones, and on turning 18).",
-   "criteria": {
-    "gender": "Female",
-    "max_income": 100000,
-    "ration_card_any": [
-     "Yellow",
-     "Orange"
-    ],
-    "manual_review": true
-   },
-   "required_documents": [
-    {
-     "name": "Girl's birth certificate",
-     "name_mr": "जन्म दाखला"
-    },
-    {
-     "name": "Income certificate",
-     "name_mr": "उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Aadhaar Card (child and parents)",
-     "name_mr": "आधार कार्ड (मुलगी व पालक)"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    },
-    {
-     "name": "Yellow/Saffron ration card",
-     "name_mr": "पिवळे/केशरी रेशन कार्ड"
-    },
-    {
-     "name": "Voter ID (for final installment)",
-     "name_mr": "मतदार ओळखपत्र (अंतिम हप्त्यासाठी)"
-    },
-    {
-     "name": "School enrollment/leaving certificate",
-     "name_mr": "शाळा प्रवेश/सोडल्याचा दाखला"
-    },
-    {
-     "name": "Family planning certificate (for later installments)",
-     "name_mr": "कुटुंब नियोजन प्रमाणपत्र"
-    }
-   ],
-   "level": "state",
-   "category": "Girl Child",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "2023-04-01",
-   "form_url": "https://womenchild.maharashtra.gov.in/",
-   "source_url": "https://www.zpbeed.gov.in/en/scheme/lek-ladki-yojana/",
-   "confidence": "high",
-   "notes": "Eligibility is restricted to families holding Yellow or Saffron (Orange) ration cards specifically, and to the first one or two daughters born on/after 1 April 2023 (with a family-planning-certificate condition for later births) — none of this ration-card/birth-order logic fits the given criteria keys. gender:Female here refers to the beneficiary child, not an adult applicant."
-  },
-  {
-   "id": "scheme_namo_shetkari",
-   "name": "Namo Shetkari Maha Samman Nidhi Yojana",
-   "name_mr": "नमो शेतकरी महासन्मान निधी योजना",
-   "description": "Maharashtra state top-up income support to farmer families, paid alongside the central PM-KISAN scheme.",
-   "description_mr": "Maharashtra state top-up income support to farmer families, paid alongside the central PM-KISAN scheme.",
-   "benefit": "Rs. 6,000 per year (paid in 3 installments of Rs. 2,000), matching the central PM-KISAN Rs. 6,000/year for a combined Rs. 12,000/year to eligible farmer families.",
-   "benefit_mr": "Rs. 6,000 per year (paid in 3 installments of Rs. 2,000), matching the central PM-KISAN Rs. 6,000/year for a combined Rs. 12,000/year to eligible farmer families.",
-   "criteria": {
-    "occupation_any": [
-     "farmer",
-     "agriculture",
-     "शेतकरी",
-     "शेती"
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "7/12 land extract",
-     "name_mr": "७/१२ उतारा"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank passbook (Aadhaar-linked)",
-     "name_mr": "आधार संलग्न बँक पासबुक"
-    }
-   ],
-   "level": "state",
-   "category": "Agriculture",
-   "status": "pending",
-   "is_government_feed": true,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "2023-05-30",
-   "form_url": "https://mahadbt.maharashtra.gov.in/",
-   "source_url": "https://en.vikaspedia.in/viewcontent/schemesall/state-specific-schemes/welfare-schemes-of-maharashtra/namo-shetkari-maha-samman-nidhi-yojana?lgn=en",
-   "confidence": "low",
-   "notes": "GAP: I could only confirm the Rs 6,000/year benefit figure, and only via Vikaspedia (a Government of India NIC-run reference portal, not one of the specifically-named Maharashtra sources) — a direct krishi.maharashtra.gov.in or mahadbt.maharashtra.gov.in page for this scheme could not be fetched in this session (repeated ROBOTS_DISALLOWED/SSL errors, detailed below). Land-holding limits, the exact PM-KISAN-registration linkage rule, and any income/exclusion criteria (e.g. income-tax payers, government employees are typically excluded from PM-KISAN-linked schemes) are NOT verified here and must be re-checked against an official source before use. occupation_any is a reasonable proxy but the real eligibility gate is 'landholding farmer family already registered in the PM-KISAN database as of a specific cutoff date,' which cannot be expressed by that key alone."
-  },
-  {
-   "id": "scheme_ladki_bahin",
-   "name": "Mukhyamantri Majhi Ladki Bahin Yojana",
-   "name_mr": "मुख्यमंत्री माझी लाडकी बहीण योजना",
-   "description": "Direct monthly cash transfer to eligible women to support their financial independence and health.",
-   "description_mr": "Direct monthly cash transfer to eligible women to support their financial independence and health.",
-   "benefit": "Rs. 1,500 per month via Direct Benefit Transfer (DBT) to an Aadhaar-linked bank account.",
-   "benefit_mr": "Rs. 1,500 per month via Direct Benefit Transfer (DBT) to an Aadhaar-linked bank account.",
-   "criteria": {
-    "min_age": 21,
-    "max_age": 65,
-    "max_income": 250000,
-    "gender": "Female",
-    "marital_status_any": [
-     "Married",
-     "Widowed",
-     "Divorced",
-     "Abandoned",
-     "Single"
-    ]
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Maharashtra domicile / residence certificate",
-     "name_mr": "महाराष्ट्र रहिवासी दाखला / अधिवास प्रमाणपत्र"
-    },
-    {
-     "name": "Income certificate",
-     "name_mr": "उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Aadhaar-linked bank passbook",
-     "name_mr": "आधार संलग्न बँक पासबुक"
-    },
-    {
-     "name": "Passport-size photograph",
-     "name_mr": "पासपोर्ट आकाराचे छायाचित्र"
-    },
-    {
-     "name": "Marriage/birth certificate (for marital-status categories)",
-     "name_mr": "विवाह/जन्म दाखला"
-    }
-   ],
-   "level": "state",
-   "category": "Women and Child",
-   "status": "pending",
-   "is_government_feed": true,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": "2024-06-28",
-   "form_url": "https://ladakibahin.maharashtra.gov.in/",
-   "source_url": "https://pune.gov.in/en/scheme/mukhyamantri-majhi-ladki-bahin-yojana/",
-   "confidence": "high",
-   "notes": "Eligibility also requires the woman to be married, widowed, divorced, abandoned/destitute, or the sole unmarried woman in the family — a marital-status condition not expressible with the given criteria keys. Document list above is the commonly cited set; the official application portal (ladakibahin.maharashtra.gov.in) returned a 403 error when fetched directly in this session, so the document list was corroborated only via the pune.gov.in district scheme page and general public knowledge, not read verbatim off the state portal's own document checklist."
-  },
-  {
-   "id": "scheme_ignoaps",
-   "name": "Indira Gandhi National Old Age Pension Scheme",
-   "name_mr": "इंदिरा गांधी राष्ट्रीय वृद्धापकाळ निवृत्तिवेतन योजना",
-   "description": "Social assistance pension for elderly persons from Below Poverty Line households.",
-   "description_mr": "दारिद्र्यरेषेखालील कुटुंबातील ज्येष्ठ नागरिकांसाठी सामाजिक सहाय्य निवृत्तिवेतन.",
-   "benefit": "Rs 1,500 per month (central share plus Maharashtra top-up)",
-   "benefit_mr": "दरमहा ₹१,५०० (केंद्र हिस्सा व महाराष्ट्र राज्याची भर)",
-   "criteria": {
-    "min_age": 60,
-    "requires_bpl": true
-   },
-   "required_documents": [
-    {
-     "name": "Age proof",
-     "name_mr": "वयाचा दाखला"
-    },
-    {
-     "name": "BPL certificate / ration card",
-     "name_mr": "दारिद्र्यरेषेखालील दाखला / शिधापत्रिका"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    }
-   ],
-   "level": "central",
-   "category": "Pension",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": null,
-   "form_url": "https://nsap.nic.in/",
-   "source_url": "https://www.pib.gov.in/PressNoteDetails.aspx?ModuleId=3&NoteId=155928&lang=2&reg=3",
-   "confidence": "medium",
-   "notes": "Central guideline says 60+. Maharashtra's own portal operates this band at 65+, bundling ages 60-64 into Sanjay Gandhi Niradhar. Confirm locally with the Tehsildar office before relying on the age used here."
-  },
-  {
-   "id": "scheme_ignwps",
-   "name": "Indira Gandhi National Widow Pension Scheme",
-   "name_mr": "इंदिरा गांधी राष्ट्रीय विधवा निवृत्तिवेतन योजना",
-   "description": "Social assistance pension for widows from Below Poverty Line households.",
-   "description_mr": "दारिद्र्यरेषेखालील कुटुंबातील विधवांसाठी सामाजिक सहाय्य निवृत्तिवेतन.",
-   "benefit": "Rs 1,500 per month (central share plus Maharashtra top-up)",
-   "benefit_mr": "दरमहा ₹१,५०० (केंद्र हिस्सा व महाराष्ट्र राज्याची भर)",
-   "criteria": {
-    "min_age": 40,
-    "max_age": 79,
-    "gender": "Female",
-    "marital_status_any": [
-     "Widowed"
-    ],
-    "requires_bpl": true
-   },
-   "required_documents": [
-    {
-     "name": "Husband's death certificate",
-     "name_mr": "पतीचा मृत्यू दाखला"
-    },
-    {
-     "name": "Age proof",
-     "name_mr": "वयाचा दाखला"
-    },
-    {
-     "name": "BPL certificate",
-     "name_mr": "दारिद्र्यरेषेखालील दाखला"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    }
-   ],
-   "level": "central",
-   "category": "Pension",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": null,
-   "form_url": "https://nsap.nic.in/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-widow-pension-scheme/",
-   "confidence": "high",
-   "notes": null
-  },
-  {
-   "id": "scheme_igndps",
-   "name": "Indira Gandhi National Disability Pension Scheme",
-   "name_mr": "इंदिरा गांधी राष्ट्रीय दिव्यांग निवृत्तिवेतन योजना",
-   "description": "Social assistance pension for persons with severe or multiple disabilities from BPL households.",
-   "description_mr": "दारिद्र्यरेषेखालील कुटुंबातील गंभीर किंवा बहुविध दिव्यांग व्यक्तींसाठी निवृत्तिवेतन.",
-   "benefit": "Rs 1,500 per month (central share plus Maharashtra top-up)",
-   "benefit_mr": "दरमहा ₹१,५०० (केंद्र हिस्सा व महाराष्ट्र राज्याची भर)",
-   "criteria": {
-    "min_age": 18,
-    "max_age": 79,
-    "min_disability_percent": 40,
-    "requires_bpl": true
-   },
-   "required_documents": [
-    {
-     "name": "Disability certificate",
-     "name_mr": "दिव्यांगत्व प्रमाणपत्र"
-    },
-    {
-     "name": "BPL certificate",
-     "name_mr": "दारिद्र्यरेषेखालील दाखला"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    }
-   ],
-   "level": "central",
-   "category": "Disability",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": null,
-   "form_url": "https://nsap.nic.in/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-disability-pension-scheme/",
-   "confidence": "medium",
-   "notes": "Official pages say 'severe or multiple disabilities' without publishing a percentage. The 40% threshold here follows the usual administrative convention and should be confirmed locally."
-  },
-  {
-   "id": "scheme_nfbs",
-   "name": "National Family Benefit Scheme",
-   "name_mr": "राष्ट्रीय कुटुंब लाभ योजना",
-   "description": "One-time assistance to a BPL household on the death of its primary breadwinner.",
-   "description_mr": "कुटुंबातील प्रमुख कमावत्या व्यक्तीच्या मृत्यूनंतर दारिद्र्यरेषेखालील कुटुंबास एकरकमी सहाय्य.",
-   "benefit": "One-time payment of Rs 20,000",
-   "benefit_mr": "एकवेळचे ₹२०,००० अर्थसहाय्य",
-   "criteria": {
-    "requires_bpl": true,
-    "manual_review": true
-   },
-   "required_documents": [
-    {
-     "name": "Death certificate of the breadwinner",
-     "name_mr": "कमावत्या व्यक्तीचा मृत्यू दाखला"
-    },
-    {
-     "name": "BPL certificate",
-     "name_mr": "दारिद्र्यरेषेखालील दाखला"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    }
-   ],
-   "level": "central",
-   "category": "Social Assistance",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": null,
-   "form_url": "https://nsap.nic.in/",
-   "source_url": "https://www.pib.gov.in/PressNoteDetails.aspx?ModuleId=3&NoteId=155928&lang=2&reg=3",
-   "confidence": "high",
-   "notes": "The 18-59 age rule applies to the deceased breadwinner, not the applicant, so it cannot be evaluated against a living resident record. Flagged for officer review."
-  },
-  {
-   "id": "scheme_rural_employment_guarantee",
-   "name": "Rural Employment Guarantee (MGNREGA / successor programme)",
-   "name_mr": "ग्रामीण रोजगार हमी योजना",
-   "description": "Guaranteed wage employment on rural public works for households whose adult members volunteer for unskilled manual work.",
-   "description_mr": "अकुशल शारीरिक कामासाठी इच्छुक प्रौढ सदस्य असलेल्या कुटुंबांना ग्रामीण सार्वजनिक कामांवर हमी रोजगार.",
-   "benefit": "Guaranteed days of wage employment per household per year at the notified Maharashtra wage rate",
-   "benefit_mr": "प्रति कुटुंब दरवर्षी हमी मजुरी रोजगार, महाराष्ट्रासाठी अधिसूचित दराने",
-   "criteria": {
-    "min_age": 18
-   },
-   "required_documents": [
-    {
-     "name": "Job card application",
-     "name_mr": "जॉब कार्ड अर्ज"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank or post office passbook",
-     "name_mr": "बँक/पोस्ट ऑफिस पासबुक"
-    },
-    {
-     "name": "Residence proof",
-     "name_mr": "रहिवासी पुरावा"
-    }
-   ],
-   "level": "central",
-   "category": "Employment",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": null,
-   "form_url": "https://www.dord.gov.in/",
-   "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2207187",
-   "confidence": "medium",
-   "notes": "VERIFY BEFORE CITING. Research indicated MGNREGA was repealed in December 2025 and replaced by a successor Act raising the guarantee to 125 days and moving to a project-based model. This has not been independently confirmed. The scheme is recorded under a neutral name until you verify the current statute and wage rate."
-  },
-  {
-   "id": "scheme_nmmss",
-   "name": "National Means-cum-Merit Scholarship Scheme",
-   "name_mr": "राष्ट्रीय साधन-सह-गुणवत्ता शिष्यवृत्ती योजना",
-   "description": "Merit and means scholarship helping economically weaker students continue study in classes IX to XII.",
-   "description_mr": "आर्थिकदृष्ट्या दुर्बल विद्यार्थ्यांना इयत्ता ९वी ते १२वी शिक्षण सुरू ठेवण्यासाठी गुणवत्ता-सह-साधन शिष्यवृत्ती.",
-   "benefit": "Rs 12,000 per year, paid monthly, for classes IX to XII",
-   "benefit_mr": "इयत्ता ९वी ते १२वी साठी दरवर्षी ₹१२,००० (मासिक स्वरूपात)",
-   "criteria": {
-    "max_income": 150000,
-    "min_age": 13,
-    "max_age": 18,
-    "manual_review": true
-   },
-   "required_documents": [
-    {
-     "name": "Class VII or VIII mark sheet",
-     "name_mr": "इयत्ता ७वी/८वी गुणपत्रिका"
-    },
-    {
-     "name": "Parental income certificate",
-     "name_mr": "पालकांचे उत्पन्न प्रमाणपत्र"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    }
-   ],
-   "level": "central",
-   "category": "Education",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of India",
-   "announced_on": null,
-   "form_url": "https://scholarships.gov.in/",
-   "source_url": "https://scholarships.gov.in/",
-   "confidence": "medium",
-   "notes": "Also requires passing a Mental Ability and Scholastic Aptitude Test with minimum marks. The exam gate cannot be evaluated from a resident record, so it is flagged for officer review."
-  },
-  {
-   "id": "scheme_disability_pension",
-   "name": "Indira Gandhi National Disability Pension Scheme (Maharashtra top-up)",
-   "name_mr": "इंदिरा गांधी राष्ट्रीय अपंग निवृत्तिवेतन योजना",
-   "description": "Monthly pension for persons with disabilities, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
-   "description_mr": "Monthly pension for persons with disabilities, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
-   "benefit": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
-   "benefit_mr": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
-   "criteria": {
-    "min_age": 18,
-    "max_age": 79,
-    "manual_review": true
-   },
-   "required_documents": [
-    {
-     "name": "Disability certificate",
-     "name_mr": "अपंगत्व प्रमाणपत्र"
-    },
-    {
-     "name": "Age proof",
-     "name_mr": "वयाचा दाखला"
-    },
-    {
-     "name": "Residence certificate",
-     "name_mr": "रहिवासी दाखला"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    }
-   ],
-   "level": "state",
-   "category": "Disability",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": null,
-   "form_url": "https://sas.mahait.org/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-disability-pension-scheme/",
-   "confidence": "medium",
-   "notes": "The fetched official page explicitly does NOT state an income limit or disability-percentage threshold for this specific scheme entry (unlike Sanjay Gandhi Niradhar/Shravan Bal, which state Rs 21,000/BPL). Under the central NSAP framework this scheme normally also requires BPL status and ≥80% disability, but since the Maharashtra SJSA page itself omitted these, max_income/disability-percentage were deliberately left out rather than invented — verify against nsap.nic.in guidelines before assuming a hard income cutoff. Document list not itemized on the official page; inferred from standard department practice."
-  },
-  {
-   "id": "scheme_widow_pension",
-   "name": "Indira Gandhi National Widow Pension Scheme (Maharashtra top-up)",
-   "name_mr": "इंदिरा गांधी राष्ट्रीय विधवा निवृत्तिवेतन योजना",
-   "description": "Monthly pension for widows below the poverty line, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
-   "description_mr": "Monthly pension for widows below the poverty line, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
-   "benefit": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
-   "benefit_mr": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
-   "criteria": {
-    "min_age": 40,
-    "max_age": 79,
-    "gender": "Female",
-    "marital_status_any": [
-     "Widowed"
-    ],
-    "requires_bpl": true
-   },
-   "required_documents": [
-    {
-     "name": "Husband's death certificate",
-     "name_mr": "पतीचा मृत्यू दाखला"
-    },
-    {
-     "name": "Age proof",
-     "name_mr": "वयाचा दाखला"
-    },
-    {
-     "name": "BPL certificate / Ration card",
-     "name_mr": "दारिद्र्यरेषेखालील (BPL) दाखला / रेशन कार्ड"
-    },
-    {
-     "name": "Residence certificate",
-     "name_mr": "रहिवासी दाखला"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    }
-   ],
-   "level": "state",
-   "category": "Pension",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": null,
-   "form_url": "https://sas.mahait.org/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-widow-pension-scheme/",
-   "confidence": "high",
-   "notes": "Eligibility is BPL-listed-family status, a categorical condition, NOT a numeric income figure — max_income was deliberately omitted rather than guessing a rupee equivalent for 'BPL'. Document list not itemized on official page; inferred from standard department practice."
-  },
-  {
-   "id": "scheme_ebc_shikshan_shulk",
-   "name": "Rajarshi Chhatrapati Shahu Maharaj Shikshan Shulk Shishyavrutti Yojana (EBC)",
-   "name_mr": "राजर्षी छत्रपती शाहू महाराज शिक्षण शुल्क शिष्यवृत्ती योजना",
-   "description": "Tuition and examination fee reimbursement scholarship for Economically Backward Class (General/SEBC category) students in higher education.",
-   "description_mr": "Tuition and examination fee reimbursement scholarship for Economically Backward Class (General/SEBC category) students in higher education.",
-   "benefit": "100% tuition fee (govt./aided institutions) for family income up to Rs 2.5 lakh; 50% tuition fee (all institution types) for income Rs 2.5-8 lakh for professional courses; 100% tuition + 100% exam fee for non-professional courses; 50% exam fee for professional courses.",
-   "benefit_mr": "100% tuition fee (govt./aided institutions) for family income up to Rs 2.5 lakh; 50% tuition fee (all institution types) for income Rs 2.5-8 lakh for professional courses; 100% tuition + 100% exam fee for non-professional courses; 50% exam fee for professional courses.",
-   "criteria": {
-    "max_income": 800000,
-    "category_any": [
-     "Open",
-     "SEBC"
-    ],
-    "manual_review": true
-   },
-   "required_documents": [
-    {
-     "name": "Domicile certificate",
-     "name_mr": "अधिवास प्रमाणपत्र"
-    },
-    {
-     "name": "Previous year's income certificate",
-     "name_mr": "मागील वर्षाचा उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Family declaration (first two children)",
-     "name_mr": "कुटुंब घोषणापत्र (पहिली दोन अपत्ये)"
-    },
-    {
-     "name": "Previous year mark sheet / attendance record",
-     "name_mr": "मागील वर्षाची गुणपत्रिका / हजेरी नोंद"
-    },
-    {
-     "name": "Admission/CAP allotment proof (professional courses)",
-     "name_mr": "प्रवेश/CAP वाटप पुरावा"
-    }
-   ],
-   "level": "state",
-   "category": "Education",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": null,
-   "form_url": "https://mahadbt.maharashtra.gov.in/",
-   "source_url": "https://mahadbt.maharashtra.gov.in/SchemeData/SchemeData?str=E9DDFA703C38E51A2D3C3A162F4DE21D",
-   "confidence": "high",
-   "notes": "Restricted to students admitted under General/SEBC category and to only the 'first two children' of a family — a category/birth-order rule the given criteria keys cannot express. Benefit tiers differently by sub-income-band (0-2.5L vs 2.5-8L) and by professional-vs-non-professional course, which a single max_income key flattens; a real implementation needs a tiered-benefit rule, not just an eligibility cutoff."
-  },
-  {
-   "id": "scheme_post_matric_sc",
-   "name": "Post-Matric Scholarship Scheme (Government of India, for SC students)",
-   "name_mr": "भारत सरकार मॅट्रिकोत्तर शिष्यवृत्ती योजना (अनुसूचित जाती)",
-   "description": "Centrally-sponsored, state-administered scholarship covering tuition, exam fees and maintenance allowance for Scheduled Caste students studying beyond Class 10.",
-   "description_mr": "Centrally-sponsored, state-administered scholarship covering tuition, exam fees and maintenance allowance for Scheduled Caste students studying beyond Class 10.",
-   "benefit": "Full tuition/exam/approved fees plus monthly maintenance allowance of Rs. 250-700 (non-hostel) or Rs. 400-1,350 (hostel), depending on course category, for family income up to Rs 2.5 lakh.",
-   "benefit_mr": "Full tuition/exam/approved fees plus monthly maintenance allowance of Rs. 250-700 (non-hostel) or Rs. 400-1,350 (hostel), depending on course category, for family income up to Rs 2.5 lakh.",
-   "criteria": {
-    "category_any": [
-     "SC"
-    ],
-    "max_income": 250000
-   },
-   "required_documents": [
-    {
-     "name": "Caste certificate (SC/Navbouddha)",
-     "name_mr": "जातीचा दाखला (अनुसूचित जाती/नवबौद्ध)"
-    },
-    {
-     "name": "Income certificate",
-     "name_mr": "उत्पन्नाचा दाखला"
-    },
-    {
-     "name": "Bonafide/admission certificate from institution",
-     "name_mr": "शैक्षणिक संस्थेचे बोनाफाईड/प्रवेश प्रमाणपत्र"
-    },
-    {
-     "name": "Aadhaar Card",
-     "name_mr": "आधार कार्ड"
-    },
-    {
-     "name": "Bank passbook",
-     "name_mr": "बँक पासबुक"
-    },
-    {
-     "name": "Previous year mark sheet",
-     "name_mr": "मागील वर्षाची गुणपत्रिका"
-    }
-   ],
-   "level": "state",
-   "category": "Education",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": null,
-   "form_url": "https://mahadbt.maharashtra.gov.in/",
-   "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/government-of-india-post-matric-scholarship-scheme/",
-   "confidence": "high",
-   "notes": "Caste category (SC/Navbouddha) is a hard gate the given schema cannot express. Minimum education level ('studying above 10th std.') also has no matching key. Document list not fully itemized on the official page; the list above is a reasonable standard set but should be checked against the current MahaDBT applicant instructions."
-  },
-  {
-   "id": "scheme_birsa_munda_krishi_kranti",
-   "name": "Birsa Munda Krishi Kranti Yojana",
-   "name_mr": "बिरसा मुंडा कृषी क्रांती योजना",
-   "description": "Irrigation and farm-infrastructure subsidy scheme (well, drip irrigation, solar pump, electric pump, borewell) for Scheduled Tribe farmers.",
-   "description_mr": "Irrigation and farm-infrastructure subsidy scheme (well, drip irrigation, solar pump, electric pump, borewell) for Scheduled Tribe farmers.",
-   "benefit": "New irrigation well up to Rs. 4,00,000; drip irrigation 90% subsidy capped at Rs. 97,000; solar pump 90% subsidy capped at Rs. 50,000; electric pump (up to 10HP) 90% subsidy capped at Rs. 40,000; borewell up to Rs. 50,000.",
-   "benefit_mr": "New irrigation well up to Rs. 4,00,000; drip irrigation 90% subsidy capped at Rs. 97,000; solar pump 90% subsidy capped at Rs. 50,000; electric pump (up to 10HP) 90% subsidy capped at Rs. 40,000; borewell up to Rs. 50,000.",
-   "criteria": {
-    "category_any": [
-     "ST"
-    ],
-    "occupation_any": [
-     "farmer",
-     "agriculture",
-     "शेतकरी",
-     "शेती"
-    ],
-    "min_land_hectares": 0.4,
-    "max_land_hectares": 6.0
-   },
-   "required_documents": [
-    {
-     "name": "Aadhaar Card (Aadhaar-linked bank account)",
-     "name_mr": "आधार कार्ड (आधार संलग्न बँक खाते)"
-    },
-    {
-     "name": "7/12 and 8-A land extracts",
-     "name_mr": "७/१२ व ८-अ उतारा"
-    },
-    {
-     "name": "Caste certificate (Scheduled Tribe)",
-     "name_mr": "जातीचा दाखला (अनुसूचित जमाती)"
-    }
-   ],
-   "level": "state",
-   "category": "Agriculture",
-   "status": "active",
-   "is_government_feed": false,
-   "source_gov": "Government of Maharashtra",
-   "announced_on": null,
-   "form_url": "https://mahadbt.maharashtra.gov.in/Farmer",
-   "source_url": "https://www.zpsatara.gov.in/en/scheme/birsa-munda-agricultural-revolution-scheme-for-the-year-2024-25/",
-   "confidence": "high",
-   "notes": "Eligibility requires land holding between 0.40 and 6.00 hectares in the farmer's own name (the 6-hectare ceiling is waived for BPL beneficiaries, and multiple ST farmers with sub-0.40-hectare fragmented holdings may apply jointly) — a land-area range and a BPL-conditional waiver that the given criteria keys cannot represent at all. Caste category (ST) is also a hard gate not expressible with the given keys. Sourced from a Zilla Parishad (Satara) portal since a direct krishi.maharashtra.gov.in/mahadbt.maharashtra.gov.in fetch was blocked in this session (see prose section below) — cross-check figures against the MahaDBT Farmer scheme page before production use."
-  }
- ],
- "grievances": [
-  {
-   "id": "grv_201",
-   "title": "Drinking Water Tube-well Leakage",
-   "titleMr": "पिण्याच्या पाण्याचे नळ जोडणी गळती",
-   "category": "Water",
-   "categoryMr": "पाणी पुरवठा",
-   "ward": 3,
-   "priority": "High",
-   "priorityMr": "उच्च",
-   "status": "Pending",
-   "statusMr": "प्रलंबित",
-   "submittedDate": "2026-08-08",
-   "description": "The primary tube-well near the Loni Kalbhor Maruti Temple has been leaking water for 3 days, causing waterlogging and low pressure in Ward 3 houses.",
-   "descriptionMr": "लोणी काळभोर मारुती मंदिराजवळील मुख्य कूपनलिका गेल्या ३ दिवसांपासून गळती होत आहे, ज्यामुळे रस्ता चिखलमय झाला आहे आणि वॉर्ड ३ मधील घरांमध्ये कमी दाबाने पाणी येत आहे.",
-   "deptName": "Water Supply and Sanitation Department",
-   "deptNameMr": "पाणी पुरवठा आणि स्वच्छता विभाग",
-   "coordinates": [
-    18.4911,
-    73.9811
-   ]
-  },
-  {
-   "id": "grv_202",
-   "title": "Street Light Malfunction on Main Road",
-   "titleMr": "मुख्य रस्त्यावरील स्ट्रीट लाईट बंद असणे",
-   "category": "Electricity",
-   "categoryMr": "विद्युत पुरवठा",
-   "ward": 1,
-   "priority": "Medium",
-   "priorityMr": "मध्यम",
-   "status": "In Progress",
-   "statusMr": "सुरू असलेले",
-   "submittedDate": "2026-08-05",
-   "description": "A cluster of 4 street lights on the primary school access road are not working. Creating safety issues in the evening.",
-   "descriptionMr": "प्राथमिक शाळेच्या प्रवेश रस्त्यावरील ४ स्ट्रीट लाईट चालू नाहीत. संध्याकाळी सुरक्षिततेची अडचण निर्माण होत आहे.",
-   "deptName": "MSEB Rural Division (Panchayat Wing)",
-   "deptNameMr": "एमएसईबी ग्रामीण विभाग (पंचायत शाखा)",
-   "coordinates": [
-    18.4888,
-    73.979
-   ]
-  },
-  {
-   "id": "grv_203",
-   "title": "Potholes on Temple Main Access Way",
-   "titleMr": "मंदिराच्या मुख्य रस्त्यावर पडलेले खड्डे",
-   "category": "Roads",
-   "categoryMr": "रस्ते / दळणवळण",
-   "ward": 3,
-   "priority": "High",
-   "priorityMr": "उच्च",
-   "status": "Pending",
-   "statusMr": "प्रलंबित",
-   "submittedDate": "2026-08-09",
-   "description": "Heavy rain has created deep potholes on the concrete link road in Ward 3. Motorcyclists are slipping frequently.",
-   "descriptionMr": "मुसळधार पावसामुळे वॉर्ड ३ मधील काँक्रीट लिंक रोडवर खोल खड्डे पडले आहेत. दुचाकीस्वार घसरून पडत आहेत.",
-   "deptName": "Public Works Department (Rural Roads)",
-   "deptNameMr": "सार्वजनिक बांधकाम विभाग (ग्रामीण रस्ते)",
-   "coordinates": [
-    18.4898,
-    73.9818
-   ]
-  },
-  {
-   "id": "grv_204",
-   "title": "Clogged Open Drain near Weekly Market",
-   "titleMr": "आठवडे बाजाराजवळील उघडे गटार तुंबले",
-   "category": "Sanitation",
-   "categoryMr": "स्वच्छता आणि कचरा व्यवस्थापन",
-   "ward": 2,
-   "priority": "Critical",
-   "priorityMr": "अति-तात्काळ",
-   "status": "Pending",
-   "statusMr": "प्रलंबित",
-   "submittedDate": "2026-08-09",
-   "description": "Plastic waste has clogged the drainage line near the weekly market square. Wastewater is overflowing onto the market stalls, causing health hazard.",
-   "descriptionMr": "आठवडे बाजाराच्या चौकातील गटाराच्या वाहिनीमध्ये प्लास्टिक कचरा अडकल्याने पाणी तुंबले आहे. सांडपाणी बाजारातील दुकानांमध्ये पसरत असून दुर्गंधी पसरली आहे.",
-   "deptName": "Panchayat Health & Sanitation Cell",
-   "deptNameMr": "पंचायत आरोग्य व स्वच्छता कक्ष",
-   "coordinates": [
-    18.4915,
-    73.98
-   ]
-  },
-  {
-   "id": "grv_205",
-   "title": "Primary Health Sub-centre Medicine Shortage",
-   "titleMr": "प्राथमिक आरोग्य उपकेंद्रात औषधांचा तुटवडा",
-   "category": "Health",
-   "categoryMr": "आरोग्य सुविधा",
-   "ward": 4,
-   "priority": "Medium",
-   "priorityMr": "मध्यम",
-   "status": "Resolved",
-   "statusMr": "निवारण झाले",
-   "submittedDate": "2026-07-28",
-   "description": "Basic medicines for fever and anti-venoms were out of stock. Standard replenishment request raised.",
-   "descriptionMr": "ताप आणि सर्पदंशावरील मूलभूत औषधांचा साठा संपला होता. औषध पुरवठ्याची मागणी पूर्ण करण्यात आली आहे.",
-   "deptName": "District Health Administration Office",
-   "deptNameMr": "जिल्हा आरोग्य प्रशासन कार्यालय",
-   "coordinates": [
-    18.4928,
-    73.9824
-   ]
-  }
- ],
- "projects": [
-  {
-   "id": "proj_301",
-   "name": "Village Concrete Road Construction",
-   "nameMr": "गाव अंतर्गत सिमेंट काँक्रीट रस्ता बांधकाम",
-   "progress": 68,
-   "budget": 1000000,
-   "utilized": 720000,
-   "status": "Delayed",
-   "statusMr": "विलंब झालेला",
-   "ward": 3,
-   "location": "Ward 3, Shivapur Road To School Lane",
-   "locationMr": "वॉर्ड ३, शिवापूर रस्ता ते शाळा गल्ली",
-   "description": "Upgrading the muddy lane to a full-width durable cement concrete road with standard side drainage blocks.",
-   "descriptionMr": "चिखलाची गल्ली सर्व रुंदीच्या मजबूत सिमेंट काँक्रीट रस्त्यामध्ये बाजूच्या गटारांसह अद्ययावत करणे.",
-   "coordinates": [
-    18.4901,
-    73.9814
-   ]
-  },
-  {
-   "id": "proj_302",
-   "name": "Gram Panchayat Digital Center Setup",
-   "nameMr": "ग्रामपंचायत डिजिटल सेवा केंद्र उभारणी",
-   "progress": 100,
-   "budget": 350000,
-   "utilized": 345000,
-   "status": "Completed",
-   "statusMr": "पूर्ण झालेले",
-   "ward": 2,
-   "location": "Ward 2, Main Gram Panchayat Building",
-   "locationMr": "वॉर्ड २, मुख्य ग्रामपंचायत कार्यालय इमारत",
-   "description": "Equipping the office with high speed fiber internet, citizen service kiosks, printers and computers for digital certificates delivery.",
-   "descriptionMr": "डिजिटल प्रमाणपत्रे वितरणासाठी कार्यालयात हाय-स्पीड फायबर इंटरनेट, नागरी सेवा किओस्क, प्रिंटर आणि संगणक सुसज्ज करणे.",
-   "coordinates": [
-    18.4907,
-    73.9806
-   ]
-  },
-  {
-   "id": "proj_303",
-   "name": "Water Tank and Pipeline Installation",
-   "nameMr": "पाण्याची टाकी आणि मुख्य वाहिनी जोडणी",
-   "progress": 45,
-   "budget": 1500000,
-   "utilized": 950000,
-   "status": "Ongoing",
-   "statusMr": "सुरू असलेले",
-   "ward": 1,
-   "location": "Ward 1, Hilltop Site & Colony Extension",
-   "locationMr": "वॉर्ड १, टेकडी परिसर आणि वसाहत विस्तार",
-   "description": "Constructing a 50,000-liter overhead storage tank and laying PVC water pipes to 120 new housing units.",
-   "descriptionMr": "५०,००० लिटर क्षमतेची उंचावरील पाण्याची टाकी बांधणे आणि १२० नवीन घरांना पीव्हीसी पाण्याचे पाईप्स टाकणे.",
-   "coordinates": [
-    18.4881,
-    73.9781
-   ]
-  },
-  {
-   "id": "proj_304",
-   "name": "Primary School Boundary Wall & Smart Classroom",
-   "nameMr": "प्राथमिक शाळा सुरक्षा भिंत आणि स्मार्ट वर्गखोली",
-   "progress": 90,
-   "budget": 600000,
-   "utilized": 580000,
-   "status": "Ongoing",
-   "statusMr": "सुरू असलेले",
-   "ward": 2,
-   "location": "Ward 2, Khed Primary ZP School",
-   "locationMr": "वॉर्ड २, खेड प्राथमिक जिल्हा परिषद शाळा",
-   "description": "Building an outer security compound wall and setting up a projector and computer lab for student learning.",
-   "descriptionMr": "बाहेरील सुरक्षा कंपाऊंड भिंत बांधणे आणि विद्यार्थ्यांच्या शिक्षणासाठी प्रोजेक्टर आणि संगणक लॅब उभारणे.",
-   "coordinates": [
-    18.4894,
-    73.9797
-   ]
-  }
- ],
- "sabha": {
-  "id": "sabha_401",
-  "date": "2026-08-04",
-  "title": "Loni Kalbhor Gram Sabha Monsoon Session",
-  "titleMr": "लोणी काळभोर ग्रामसभा पावसाळी अधिवेशन बैठक",
-  "summary": "The assembly focused on local monsoon preparedness. Key discussions revolved around the drainage overflow in Ward 2 weekly market, repairing the potholes in the main Ward 3 road before festival season, installing additional LED streetlights on school lanes for security, and checking pipeline expansion under ongoing water projects.",
-  "summaryMr": "या बैठकीत प्रामुख्याने पावसाळ्यातील पूर्वतयारी आणि स्थानिक समस्यांवर लक्ष केंद्रित करण्यात आले. वॉर्ड २ मधील आठवडे बाजारातील गटार तुंबण्याची समस्या, सणासुदीच्या काळापूर्वी वॉर्ड ३ मधील रस्त्यावरील खड्डे दुरुस्त करणे, सुरक्षेसाठी शाळेच्या गल्लीत नवीन एलईडी दिवे बसवणे आणि सुरू असलेल्या पाणी पुरवठा प्रकल्पाच्या पाईपलाईन विस्ताराची तपासणी करणे या विषयांवर सखोल चर्चा झाली.",
-  "decisions": [
-   "Approve ₹10,000 emergency fund for manual desilting of the weekly market drains.",
-   "Formally instruct the Junior Engineer to expedite estimation and repair of the Ward 3 road potholes.",
-   "Purchase 20 new LED streetlight luminaires using the unutilized general development fund."
   ],
-  "decisionsMr": [
-   "आठवडे बाजारातील गटारे स्वच्छ करण्यासाठी ₹१०,००० चा आपत्कालीन निधी मंजूर केला.",
-   "वॉर्ड ३ मधील रस्त्यावरील खड्डे दुरुस्तीचा अंदाज आणि काम त्वरित सुरू करण्यासाठी कनिष्ठ अभियंत्यांना निर्देश दिले.",
-   "न वापरलेल्या सामान्य विकास निधीमधून २० नवीन एलईडी पथदिवे खरेदी करण्यास मंजुरी दिली."
+  "schemes": [
+    {
+      "id": "scheme_sanjay_gandhi_niradhar",
+      "name": "Sanjay Gandhi Niradhar Anudan Yojana",
+      "name_mr": "संजय गांधी निराधार अनुदान योजना",
+      "description": "Monthly cash assistance to destitute men, women, orphans, disabled persons, and other listed vulnerable categories with no means of support.",
+      "description_mr": "Monthly cash assistance to destitute men, women, orphans, disabled persons, and other listed vulnerable categories with no means of support.",
+      "benefit": "Rs. 1,500 per month (single beneficiary); rate is higher per NSAP-linked category when combined with central top-up.",
+      "benefit_mr": "Rs. 1,500 per month (single beneficiary); rate is higher per NSAP-linked category when combined with central top-up.",
+      "criteria": {
+        "min_age": 18,
+        "max_age": 65,
+        "any_of": [
+          {
+            "max_income": 21000
+          },
+          {
+            "requires_bpl": true
+          }
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Age proof",
+          "name_mr": "वयाचा दाखला"
+        },
+        {
+          "name": "Income certificate",
+          "name_mr": "उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Residence certificate",
+          "name_mr": "रहिवासी दाखला"
+        },
+        {
+          "name": "BPL certificate / Ration card",
+          "name_mr": "दारिद्र्यरेषेखालील (BPL) दाखला / रेशन कार्ड"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        },
+        {
+          "name": "Passport-size photograph",
+          "name_mr": "पासपोर्ट आकाराचे छायाचित्र"
+        }
+      ],
+      "level": "state",
+      "category": "Social Assistance",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "1980-04-01",
+      "form_url": "https://sas.mahait.org/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/sanjay-gandhi-niradhar-anudan-yojana/",
+      "confidence": "high",
+      "notes": "Official page states income ceiling as EITHER family annual income up to Rs 21,000 OR being on the BPL list — this OR condition cannot be expressed by max_income alone. Age range (18-65) applies to the general destitute category; several sub-categories (disabled, terminally ill, abuse survivors, unmarried women 35+, prisoners' wives) have no stated age band on this page. Document list is NOT itemized on the official page — the list above is the standard document set used across Social Justice Dept. (SJSA) anudan schemes and should be verified before production use."
+    },
+    {
+      "id": "scheme_shravanbal_nivruttivetan",
+      "name": "Shravan Bal Seva Rajya Nivruttivetan Yojana",
+      "name_mr": "श्रावणबाळ सेवा राज्य निवृत्तिवेतन योजना",
+      "description": "State old-age pension for senior citizens who are below the poverty line or below a low income threshold.",
+      "description_mr": "State old-age pension for senior citizens who are below the poverty line or below a low income threshold.",
+      "benefit": "Rs. 1,500 per month per beneficiary.",
+      "benefit_mr": "Rs. 1,500 per month per beneficiary.",
+      "criteria": {
+        "min_age": 65,
+        "any_of": [
+          {
+            "max_income": 21000
+          },
+          {
+            "requires_bpl": true
+          }
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "Age proof",
+          "name_mr": "वयाचा दाखला"
+        },
+        {
+          "name": "Income certificate",
+          "name_mr": "उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Residence certificate",
+          "name_mr": "रहिवासी दाखला"
+        },
+        {
+          "name": "BPL certificate / Ration card",
+          "name_mr": "दारिद्र्यरेषेखालील (BPL) दाखला / रेशन कार्ड"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        }
+      ],
+      "level": "state",
+      "category": "Pension",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "1995-04-01",
+      "form_url": "https://sas.mahait.org/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/shravan-bal-rajya-nivruttivetan-yojana/",
+      "confidence": "high",
+      "notes": "Same OR-condition caveat as Sanjay Gandhi Niradhar (BPL listing OR income <Rs 21,000). Document list not itemized on official page; inferred from standard SJSA anudan application format."
+    },
+    {
+      "id": "scheme_ramai_awas",
+      "name": "Ramai Awas Yojana",
+      "name_mr": "रमाई आवास योजना",
+      "description": "Housing subsidy scheme to construct pucca houses for Scheduled Caste and Neo-Buddhist families.",
+      "description_mr": "Housing subsidy scheme to construct pucca houses for Scheduled Caste and Neo-Buddhist families.",
+      "benefit": "Rs. 1.32 lakh in plain rural areas (incl. Rs 12,000 for toilet); Rs. 1.42 lakh in hilly/Naxal-affected areas; Rs. 2.50 lakh in Municipal Council/Corporation areas.",
+      "benefit_mr": "Rs. 1.32 lakh in plain rural areas (incl. Rs 12,000 for toilet); Rs. 1.42 lakh in hilly/Naxal-affected areas; Rs. 2.50 lakh in Municipal Council/Corporation areas.",
+      "criteria": {
+        "category_any": [
+          "SC"
+        ],
+        "max_income": 120000
+      },
+      "required_documents": [
+        {
+          "name": "Caste certificate (SC/Neo-Buddhist)",
+          "name_mr": "जातीचा दाखला (अनुसूचित जाती/नवबौद्ध)"
+        },
+        {
+          "name": "Income certificate",
+          "name_mr": "उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Property/plot ownership proof",
+          "name_mr": "मालमत्ता/भूखंड मालकी पुरावा"
+        },
+        {
+          "name": "Property tax / utility bill",
+          "name_mr": "मालमत्ता कर / उपयोगिता बिल"
+        },
+        {
+          "name": "Ration card",
+          "name_mr": "रेशन कार्ड"
+        },
+        {
+          "name": "Voter ID",
+          "name_mr": "मतदार ओळखपत्र"
+        },
+        {
+          "name": "Local authority (Gram Panchayat) certification",
+          "name_mr": "स्थानिक प्राधिकरण (ग्रामपंचायत) दाखला"
+        }
+      ],
+      "level": "state",
+      "category": "Housing",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "2008-04-01",
+      "form_url": "https://sjsa.maharashtra.gov.in/en/scheme/ramai-awas-yojana-rural-urban/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/ramai-awas-yojana-rural-urban/",
+      "confidence": "high",
+      "notes": "max_income of Rs 1,20,000 applies to RURAL areas specifically (relevant for a Gram Panchayat context); the urban ceiling is Rs 3,00,000 and cannot be represented alongside the rural figure with a single max_income key — pick per area type. Caste category (SC/Neo-Buddhist) is a hard eligibility gate that cannot be expressed with the given keys; also requires the applicant NOT be on the SECC-2011 priority list (i.e., not already eligible under PMAY-G), a mutual-exclusion rule the schema cannot represent. No dedicated online application URL was found — selection runs through the Gram Sabha, so form_url points to the informational page, not an application form."
+    },
+    {
+      "id": "scheme_mjpjay",
+      "name": "Mahatma Jyotirao Phule Jan Arogya Yojana",
+      "name_mr": "महात्मा जोतिराव फुले जन आरोग्य योजना",
+      "description": "Cashless health insurance scheme providing free surgeries and treatments through empanelled network hospitals for economically weaker ration-card holding families.",
+      "description_mr": "Cashless health insurance scheme providing free surgeries and treatments through empanelled network hospitals for economically weaker ration-card holding families.",
+      "benefit": "Cashless hospitalisation cover of Rs. 1,50,000 per family per year (floater); renal transplant capped at Rs. 2,50,000 including one year of immunosuppressive therapy.",
+      "benefit_mr": "Cashless hospitalisation cover of Rs. 1,50,000 per family per year (floater); renal transplant capped at Rs. 2,50,000 including one year of immunosuppressive therapy.",
+      "criteria": {
+        "ration_card_any": [
+          "Yellow",
+          "Orange",
+          "AAY",
+          "Annapurna"
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "MJPJAY/RGJAY Health Card (if issued)",
+          "name_mr": "आरोग्य कार्ड"
+        },
+        {
+          "name": "Yellow or Orange Ration Card with Aadhaar number",
+          "name_mr": "पिवळे/केशरी रेशन कार्ड (आधार क्रमांकासह)"
+        },
+        {
+          "name": "Government photo ID (interim, until health card issued)",
+          "name_mr": "शासकीय छायाचित्र ओळखपत्र"
+        },
+        {
+          "name": "Birth certificate (for newborns)",
+          "name_mr": "जन्म दाखला (नवजात बालकांसाठी)"
+        }
+      ],
+      "level": "state",
+      "category": "Health",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "2012-07-02",
+      "form_url": "https://www.jeevandayee.gov.in/",
+      "source_url": "https://www.jeevandayee.gov.in/MJPJAY/RGJAY.jsp",
+      "confidence": "medium",
+      "notes": "IMPORTANT GAP: the fetched official page describes the scheme's original 2013-era structure (Yellow/Orange/Antyodaya/Annapurna card holders, explicitly limited to 8 districts, White card holders excluded). Since 2020 MJPJAY has been merged with Ayushman Bharat-PMJAY (AB-MJPJAY) and public reporting indicates it now covers all ration-card categories statewide across all 36 districts — but I could not locate and fetch a current official maharashtra.gov.in/jeevandayee.gov.in page confirming the present-day statewide/all-category rules within the allowed source list in this session. Do NOT use the '8 districts' or 'White card excluded' facts for a current-year product without re-verifying against a current jeevandayee.gov.in or NHA page. No numeric age/income eligibility exists for this scheme — eligibility is entirely ration-card-category based, which cannot be expressed with the given criteria keys."
+    },
+    {
+      "id": "scheme_shabari_awas",
+      "name": "Shabari Awas Yojana",
+      "name_mr": "शबरी आवास योजना",
+      "description": "Housing subsidy scheme to construct pucca houses for homeless Scheduled Tribe families.",
+      "description_mr": "Housing subsidy scheme to construct pucca houses for homeless Scheduled Tribe families.",
+      "benefit": "Rs. 1.20 lakh for construction of a 269 sq. ft. house.",
+      "benefit_mr": "Rs. 1.20 lakh for construction of a 269 sq. ft. house.",
+      "criteria": {
+        "category_any": [
+          "ST"
+        ],
+        "max_income": 120000
+      },
+      "required_documents": [
+        {
+          "name": "Caste certificate (Scheduled Tribe)",
+          "name_mr": "जातीचा दाखला (अनुसूचित जमाती)"
+        },
+        {
+          "name": "Income certificate",
+          "name_mr": "उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Residence certificate (15 years Maharashtra domicile)",
+          "name_mr": "रहिवासी दाखला (१५ वर्षे महाराष्ट्र वास्तव्य)"
+        },
+        {
+          "name": "Landlessness/homelessness declaration",
+          "name_mr": "भूमिहीन/निवारा नसल्याचे स्वयंघोषणापत्र"
+        }
+      ],
+      "level": "state",
+      "category": "Housing",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "2013-04-01",
+      "form_url": "https://akolazp.gov.in/en/scheme/shabari-aawas-yojana/",
+      "source_url": "https://akolazp.gov.in/en/scheme/shabari-aawas-yojana/",
+      "confidence": "medium",
+      "notes": "Sourced from a Zilla Parishad (Akola) district government page rather than a direct state tribal-development-department page, since the department's own scheme page could not be reached in this session — treat as high-confidence on the numeric facts (matches the same figures used across multiple ZP portals) but re-verify against adivasi.maharashtra.gov.in before production use. Caste category (ST) is a hard gate not expressible with the given keys. No online application URL found; applications are typically routed through the Gram Panchayat/ITDP office, not a web portal."
+    },
+    {
+      "id": "scheme_sbm_g",
+      "name": "Swachh Bharat Mission - Gramin (household toilet incentive)",
+      "name_mr": "स्वच्छ भारत मिशन (ग्रामीण)",
+      "description": "Construction incentive for eligible rural households to build and use an individual household toilet.",
+      "description_mr": "पात्र ग्रामीण कुटुंबांना वैयक्तिक शौचालय बांधण्यासाठी प्रोत्साहन अनुदान.",
+      "benefit": "Rs 12,000 incentive per household for a twin-pit toilet",
+      "benefit_mr": "दुहेरी खड्डा शौचालयासाठी प्रति कुटुंब ₹१२,००० प्रोत्साहन",
+      "criteria": {
+        "any_of": [
+          {
+            "requires_bpl": true
+          },
+          {
+            "category_any": [
+              "SC",
+              "ST"
+            ]
+          },
+          {
+            "max_land_hectares": 2.0,
+            "occupation_any": [
+              "farmer",
+              "agriculture",
+              "शेतकरी"
+            ]
+          },
+          {
+            "min_disability_percent": 40
+          }
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "BPL certificate or category proof",
+          "name_mr": "दारिद्र्यरेषेखालील दाखला किंवा प्रवर्ग प्रमाणपत्र"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        }
+      ],
+      "level": "central",
+      "category": "Sanitation",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2014-10-02",
+      "form_url": "https://swachhbharatmission.ddws.gov.in/",
+      "source_url": "https://swachhbharatmission.ddws.gov.in/faq",
+      "confidence": "high",
+      "notes": "All BPL households qualify, plus listed above-poverty-line categories. Modelled as an any_of group; the woman-headed-household path is covered by is_head plus gender in practice but is not encoded here."
+    },
+    {
+      "id": "scheme_ssy",
+      "name": "Sukanya Samriddhi Yojana",
+      "name_mr": "सुकन्या समृद्धी योजना",
+      "description": "A government-guaranteed savings account for a girl child, maturing 21 years after opening.",
+      "description_mr": "मुलीच्या नावे शासन हमी असलेले बचत खाते, उघडल्यापासून २१ वर्षांनी परिपक्व.",
+      "benefit": "Deposits of Rs 250 to Rs 1,50,000 a year at the notified SSY interest rate",
+      "benefit_mr": "दरवर्षी ₹२५० ते ₹१,५०,००० ठेव, अधिसूचित व्याजदरासह",
+      "criteria": {
+        "max_age": 10,
+        "gender": "Female"
+      },
+      "required_documents": [
+        {
+          "name": "Girl child's birth certificate",
+          "name_mr": "मुलीचा जन्म दाखला"
+        },
+        {
+          "name": "Guardian's Aadhaar Card",
+          "name_mr": "पालकाचे आधार कार्ड"
+        },
+        {
+          "name": "Address proof",
+          "name_mr": "पत्ता पुरावा"
+        }
+      ],
+      "level": "central",
+      "category": "Girl Child",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2015-01-22",
+      "form_url": "https://www.indiapost.gov.in/Financial/Pages/Content/Sukanya-Samriddhi-Account.aspx",
+      "source_url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2022/jan/doc20221207101.pdf",
+      "confidence": "high",
+      "notes": "Limited to two girl children per family, with narrow exceptions for twins. Sibling count is not modelled."
+    },
+    {
+      "id": "scheme_pmjjby",
+      "name": "Pradhan Mantri Jeevan Jyoti Bima Yojana",
+      "name_mr": "प्रधानमंत्री जीवन ज्योती विमा योजना",
+      "description": "Government-backed renewable annual term life cover for bank and post office account holders.",
+      "description_mr": "बँक व पोस्ट खातेधारकांसाठी शासन पुरस्कृत वार्षिक नूतनीकरणीय मुदत जीवन विमा.",
+      "benefit": "Rs 2,00,000 life cover for an annual premium of Rs 436",
+      "benefit_mr": "वार्षिक ₹४३६ हप्त्यात ₹२,००,००० जीवन विमा संरक्षण",
+      "criteria": {
+        "min_age": 18,
+        "max_age": 50
+      },
+      "required_documents": [
+        {
+          "name": "Bank or post office savings account",
+          "name_mr": "बँक/पोस्ट ऑफिस बचत खाते"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Nominee details",
+          "name_mr": "नामनिर्देशित व्यक्तीचा तपशील"
+        }
+      ],
+      "level": "central",
+      "category": "Insurance",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2015-05-09",
+      "form_url": "https://jansuraksha.gov.in/",
+      "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2127981",
+      "confidence": "high",
+      "notes": "No income test. Requires a bank or post office account with auto-debit consent."
+    },
+    {
+      "id": "scheme_pmfby",
+      "name": "Pradhan Mantri Fasal Bima Yojana",
+      "name_mr": "प्रधानमंत्री पीक विमा योजना",
+      "description": "Subsidised crop insurance protecting farmers against loss from natural calamities, pests and disease.",
+      "description_mr": "नैसर्गिक आपत्ती, कीड व रोगामुळे होणाऱ्या पीक नुकसानीपासून शेतकऱ्यांना संरक्षण देणारा अनुदानित पीक विमा.",
+      "benefit": "Farmer pays 2% of premium for Kharif, 1.5% for Rabi and 5% for commercial crops; governments pay the rest",
+      "benefit_mr": "खरीपासाठी २%, रब्बीसाठी १.५% व नगदी पिकांसाठी ५% हप्ता शेतकरी भरतो; उर्वरित शासन भरते",
+      "criteria": {
+        "occupation_any": [
+          "farmer",
+          "agriculture",
+          "cultivator",
+          "शेतकरी",
+          "शेती"
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Land records (7/12 and 8A)",
+          "name_mr": "जमिनीचे ७/१२ व ८अ उतारे"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        },
+        {
+          "name": "Sowing declaration",
+          "name_mr": "पेरणी घोषणापत्र"
+        }
+      ],
+      "level": "central",
+      "category": "Agriculture",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2016-02-18",
+      "form_url": "https://pmfby.gov.in/",
+      "source_url": "https://www.pib.gov.in/PressNoteDetails.aspx?NoteId=155010&ModuleId=3&reg=3&lang=1",
+      "confidence": "high",
+      "notes": "Open to loanee and non-loanee farmers of any landholding size. No age or income test."
+    },
+    {
+      "id": "scheme_pmuy",
+      "name": "Pradhan Mantri Ujjwala Yojana",
+      "name_mr": "प्रधानमंत्री उज्ज्वला योजना",
+      "description": "Deposit-free LPG connection for adult women from poor households, replacing unsafe cooking fuels.",
+      "description_mr": "गरीब कुटुंबातील प्रौढ महिलांना अनामत रकमेशिवाय एलपीजी जोडणी, असुरक्षित इंधनास पर्याय.",
+      "benefit": "Rs 2,050 assistance for a 14.2 kg connection, plus free first refill and stove",
+      "benefit_mr": "१४.२ किलो जोडणीसाठी ₹२,०५० सहाय्य, पहिली मोफत रिफिल व शेगडीसह",
+      "criteria": {
+        "min_age": 18,
+        "gender": "Female",
+        "any_of": [
+          {
+            "requires_bpl": true
+          },
+          {
+            "category_any": [
+              "SC",
+              "ST"
+            ]
+          }
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "KYC application form",
+          "name_mr": "केवायसी अर्ज"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Ration card or address proof",
+          "name_mr": "शिधापत्रिका किंवा पत्ता पुरावा"
+        },
+        {
+          "name": "Bank account details",
+          "name_mr": "बँक खात्याचा तपशील"
+        }
+      ],
+      "level": "central",
+      "category": "Energy",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2016-05-01",
+      "form_url": "https://www.pmuy.gov.in/",
+      "source_url": "https://www.pmuy.gov.in/",
+      "confidence": "high",
+      "notes": "Poverty status is established by self-declaration rather than a numeric figure. Household must have no existing LPG connection."
+    },
+    {
+      "id": "scheme_pmay_g",
+      "name": "Pradhan Mantri Awas Yojana - Gramin",
+      "name_mr": "प्रधानमंत्री ग्रामीण आवास योजना",
+      "description": "Assistance to houseless rural households, and those in kutcha or dilapidated houses, to build a pucca house.",
+      "description_mr": "बेघर ग्रामीण कुटुंबांना व कच्च्या घरात राहणाऱ्यांना पक्के घर बांधण्यासाठी अर्थसहाय्य.",
+      "benefit": "Rs 1,20,000 per house in plain areas (Rs 1,30,000 in hilly areas), plus toilet and wage-labour convergence",
+      "benefit_mr": "सपाट भागात प्रति घर ₹१,२०,००० (डोंगराळ भागात ₹१,३०,०००), शौचालय व मजुरी सहाय्यासह",
+      "criteria": {
+        "requires_secc_listed": true
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "SECC-2011 beneficiary list entry",
+          "name_mr": "एसईसीसी-२०११ यादीतील नोंद"
+        },
+        {
+          "name": "Bank account passbook",
+          "name_mr": "बँक खाते पासबुक"
+        }
+      ],
+      "level": "central",
+      "category": "Housing",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2016-11-20",
+      "form_url": "https://pmayg.nic.in/",
+      "source_url": "https://rdd.maharashtra.gov.in/en/scheme/pradhan-mantri-awas-yojana-rural/",
+      "confidence": "high",
+      "notes": "Eligibility is SECC-2011 housing deprivation plus Gram Sabha verification. There is no income test."
+    },
+    {
+      "id": "scheme_pmmvy",
+      "name": "Pradhan Mantri Matru Vandana Yojana",
+      "name_mr": "प्रधानमंत्री मातृ वंदना योजना",
+      "description": "Maternity cash benefit for pregnant women and lactating mothers for their first living child.",
+      "description_mr": "पहिल्या जिवंत अपत्यासाठी गर्भवती व स्तनदा मातांना मातृत्व रोख लाभ.",
+      "benefit": "Rs 5,000 in three instalments, with a further Rs 1,000 available via Janani Suraksha Yojana",
+      "benefit_mr": "तीन हप्त्यांत ₹५,०००, तसेच जननी सुरक्षा योजनेतून अतिरिक्त ₹१,०००",
+      "criteria": {
+        "gender": "Female",
+        "min_age": 18,
+        "max_age": 49,
+        "manual_review": true
+      },
+      "required_documents": [
+        {
+          "name": "Mother and Child Protection card",
+          "name_mr": "माता व बाल संरक्षण कार्ड"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        }
+      ],
+      "level": "central",
+      "category": "Women and Child",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2017-01-01",
+      "form_url": "https://pmmvy.wcd.gov.in/",
+      "source_url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2022/jan/doc20221195901.pdf",
+      "confidence": "high",
+      "notes": "Restricted to the first living child and excludes women already receiving paid maternity leave in government employment. Neither condition is in the resident record, so it is flagged for officer review."
+    },
+    {
+      "id": "scheme_ab_pmjay",
+      "name": "Ayushman Bharat Pradhan Mantri Jan Arogya Yojana",
+      "name_mr": "आयुष्मान भारत - प्रधानमंत्री जन आरोग्य योजना",
+      "description": "Cashless hospitalisation cover for poor and vulnerable families identified through SECC data.",
+      "description_mr": "एसईसीसी आधारे निवडलेल्या गरीब व वंचित कुटुंबांसाठी कॅशलेस रुग्णालय उपचार संरक्षण.",
+      "benefit": "Rs 5,00,000 per family per year for hospitalisation at empanelled hospitals",
+      "benefit_mr": "संलग्न रुग्णालयांत प्रति कुटुंब दरवर्षी ₹५,००,००० पर्यंत उपचार",
+      "criteria": {
+        "requires_secc_listed": true
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Ration card / family ID",
+          "name_mr": "शिधापत्रिका / कुटुंब ओळखपत्र"
+        }
+      ],
+      "level": "central",
+      "category": "Health",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2018-09-23",
+      "form_url": "https://beneficiary.nha.gov.in/",
+      "source_url": "https://nha.gov.in/PM-JAY",
+      "confidence": "high",
+      "notes": "Real eligibility is a set of SECC deprivation codes (D1-D5, D7) or automatic-inclusion categories. Modelled here as SECC listing, which is an approximation."
+    },
+    {
+      "id": "scheme_saur_krushi_pump",
+      "name": "Mukhyamantri Saur Krushi Pump Yojana",
+      "name_mr": "मुख्यमंत्री सौर कृषी पंप योजना (मागेल त्याला सौर कृषी पंप योजना)",
+      "description": "Provides subsidised solar-powered agricultural water pumps to farmers who lack a grid electricity connection.",
+      "description_mr": "Provides subsidised solar-powered agricultural water pumps to farmers who lack a grid electricity connection.",
+      "benefit": "Solar pump at 90-95% government subsidy: farmer pays only 10% (General category) or 5% (SC/ST category) of pump cost, e.g. Rs. 16,560 (General) or Rs. 8,280 (SC/ST) for a 3HP pump; Rs. 24,710/12,355 for 5HP; Rs. 33,455/16,728 for 7.5HP.",
+      "benefit_mr": "Solar pump at 90-95% government subsidy: farmer pays only 10% (General category) or 5% (SC/ST category) of pump cost, e.g. Rs. 16,560 (General) or Rs. 8,280 (SC/ST) for a 3HP pump; Rs. 24,710/12,355 for 5HP; Rs. 33,455/16,728 for 7.5HP.",
+      "criteria": {
+        "occupation_any": [
+          "farmer",
+          "agriculture",
+          "शेतकरी",
+          "शेती"
+        ],
+        "manual_review": true
+      },
+      "required_documents": [
+        {
+          "name": "7/12 land extract",
+          "name_mr": "७/१२ उतारा"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Caste certificate (for SC/ST subsidy rate)",
+          "name_mr": "जातीचा दाखला (SC/ST सवलतीसाठी)"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        }
+      ],
+      "level": "state",
+      "category": "Agriculture",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "2019-01-01",
+      "form_url": "https://www.mahadiscom.in/solar/",
+      "source_url": "https://www.mahadiscom.in/solar/beneficiary-selection-criteria.html",
+      "confidence": "high",
+      "notes": "Eligibility depends on land-holding size (up to 5 acres = 3HP; above 5 acres = 5HP/7.5HP), existing electrification status, and water-source depth for 7.5HP pumps — none of which fit the given criteria keys (no land-holding or infrastructure-status field exists). SC/ST caste category changes the subsidy percentage, which also cannot be expressed by the criteria schema (it affects benefit amount, not eligibility pass/fail). Document list not itemized on the fetched page; inferred from standard MSKPY/MahaDISCOM application requirements — verify before production use."
+    },
+    {
+      "id": "scheme_pm_kisan",
+      "name": "Pradhan Mantri Kisan Samman Nidhi (PM-KISAN)",
+      "name_mr": "प्रधानमंत्री किसान सन्मान निधी योजना",
+      "description": "Direct income support to landholding farmer families to help meet agricultural input costs.",
+      "description_mr": "शेतीच्या निविष्ठा खर्चासाठी जमीनधारक शेतकरी कुटुंबांना थेट उत्पन्न सहाय्य.",
+      "benefit": "Rs 6,000 per year in three instalments of Rs 2,000",
+      "benefit_mr": "दरवर्षी ₹६,००० — ₹२,००० च्या तीन हप्त्यांमध्ये",
+      "criteria": {
+        "occupation_any": [
+          "farmer",
+          "agriculture",
+          "cultivator",
+          "शेतकरी",
+          "शेती"
+        ],
+        "min_land_hectares": 0.01
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank account passbook",
+          "name_mr": "बँक खाते पासबुक"
+        },
+        {
+          "name": "Land ownership record (7/12 extract)",
+          "name_mr": "जमिनीचा सातबारा उतारा"
+        }
+      ],
+      "level": "central",
+      "category": "Agriculture",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": "2019-02-24",
+      "form_url": "https://pmkisan.gov.in/",
+      "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2146932",
+      "confidence": "high",
+      "notes": "No numeric income ceiling published. Exclusions are categorical (income-tax payees, government employees, professionals, higher pensioners) and are not modelled."
+    },
+    {
+      "id": "scheme_lek_ladki",
+      "name": "Lek Ladki Yojana",
+      "name_mr": "लेक लाडकी योजना",
+      "description": "Staged cash benefit paid to a girl child from a low-income yellow/saffron ration card family, from birth through age 18.",
+      "description_mr": "Staged cash benefit paid to a girl child from a low-income yellow/saffron ration card family, from birth through age 18.",
+      "benefit": "Total of Rs. 1,01,000 paid in installments up to age 18 (installments at birth, school milestones, and on turning 18).",
+      "benefit_mr": "Total of Rs. 1,01,000 paid in installments up to age 18 (installments at birth, school milestones, and on turning 18).",
+      "criteria": {
+        "gender": "Female",
+        "max_income": 100000,
+        "ration_card_any": [
+          "Yellow",
+          "Orange"
+        ],
+        "manual_review": true
+      },
+      "required_documents": [
+        {
+          "name": "Girl's birth certificate",
+          "name_mr": "जन्म दाखला"
+        },
+        {
+          "name": "Income certificate",
+          "name_mr": "उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Aadhaar Card (child and parents)",
+          "name_mr": "आधार कार्ड (मुलगी व पालक)"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        },
+        {
+          "name": "Yellow/Saffron ration card",
+          "name_mr": "पिवळे/केशरी रेशन कार्ड"
+        },
+        {
+          "name": "Voter ID (for final installment)",
+          "name_mr": "मतदार ओळखपत्र (अंतिम हप्त्यासाठी)"
+        },
+        {
+          "name": "School enrollment/leaving certificate",
+          "name_mr": "शाळा प्रवेश/सोडल्याचा दाखला"
+        },
+        {
+          "name": "Family planning certificate (for later installments)",
+          "name_mr": "कुटुंब नियोजन प्रमाणपत्र"
+        }
+      ],
+      "level": "state",
+      "category": "Girl Child",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "2023-04-01",
+      "form_url": "https://womenchild.maharashtra.gov.in/",
+      "source_url": "https://www.zpbeed.gov.in/en/scheme/lek-ladki-yojana/",
+      "confidence": "high",
+      "notes": "Eligibility is restricted to families holding Yellow or Saffron (Orange) ration cards specifically, and to the first one or two daughters born on/after 1 April 2023 (with a family-planning-certificate condition for later births) — none of this ration-card/birth-order logic fits the given criteria keys. gender:Female here refers to the beneficiary child, not an adult applicant."
+    },
+    {
+      "id": "scheme_namo_shetkari",
+      "name": "Namo Shetkari Maha Samman Nidhi Yojana",
+      "name_mr": "नमो शेतकरी महासन्मान निधी योजना",
+      "description": "Maharashtra state top-up income support to farmer families, paid alongside the central PM-KISAN scheme.",
+      "description_mr": "Maharashtra state top-up income support to farmer families, paid alongside the central PM-KISAN scheme.",
+      "benefit": "Rs. 6,000 per year (paid in 3 installments of Rs. 2,000), matching the central PM-KISAN Rs. 6,000/year for a combined Rs. 12,000/year to eligible farmer families.",
+      "benefit_mr": "Rs. 6,000 per year (paid in 3 installments of Rs. 2,000), matching the central PM-KISAN Rs. 6,000/year for a combined Rs. 12,000/year to eligible farmer families.",
+      "criteria": {
+        "occupation_any": [
+          "farmer",
+          "agriculture",
+          "शेतकरी",
+          "शेती"
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "7/12 land extract",
+          "name_mr": "७/१२ उतारा"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank passbook (Aadhaar-linked)",
+          "name_mr": "आधार संलग्न बँक पासबुक"
+        }
+      ],
+      "level": "state",
+      "category": "Agriculture",
+      "status": "pending",
+      "is_government_feed": true,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "2023-05-30",
+      "form_url": "https://mahadbt.maharashtra.gov.in/",
+      "source_url": "https://en.vikaspedia.in/viewcontent/schemesall/state-specific-schemes/welfare-schemes-of-maharashtra/namo-shetkari-maha-samman-nidhi-yojana?lgn=en",
+      "confidence": "low",
+      "notes": "GAP: I could only confirm the Rs 6,000/year benefit figure, and only via Vikaspedia (a Government of India NIC-run reference portal, not one of the specifically-named Maharashtra sources) — a direct krishi.maharashtra.gov.in or mahadbt.maharashtra.gov.in page for this scheme could not be fetched in this session (repeated ROBOTS_DISALLOWED/SSL errors, detailed below). Land-holding limits, the exact PM-KISAN-registration linkage rule, and any income/exclusion criteria (e.g. income-tax payers, government employees are typically excluded from PM-KISAN-linked schemes) are NOT verified here and must be re-checked against an official source before use. occupation_any is a reasonable proxy but the real eligibility gate is 'landholding farmer family already registered in the PM-KISAN database as of a specific cutoff date,' which cannot be expressed by that key alone."
+    },
+    {
+      "id": "scheme_ladki_bahin",
+      "name": "Mukhyamantri Majhi Ladki Bahin Yojana",
+      "name_mr": "मुख्यमंत्री माझी लाडकी बहीण योजना",
+      "description": "Direct monthly cash transfer to eligible women to support their financial independence and health.",
+      "description_mr": "Direct monthly cash transfer to eligible women to support their financial independence and health.",
+      "benefit": "Rs. 1,500 per month via Direct Benefit Transfer (DBT) to an Aadhaar-linked bank account.",
+      "benefit_mr": "Rs. 1,500 per month via Direct Benefit Transfer (DBT) to an Aadhaar-linked bank account.",
+      "criteria": {
+        "min_age": 21,
+        "max_age": 65,
+        "max_income": 250000,
+        "gender": "Female",
+        "marital_status_any": [
+          "Married",
+          "Widowed",
+          "Divorced",
+          "Abandoned",
+          "Single"
+        ]
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Maharashtra domicile / residence certificate",
+          "name_mr": "महाराष्ट्र रहिवासी दाखला / अधिवास प्रमाणपत्र"
+        },
+        {
+          "name": "Income certificate",
+          "name_mr": "उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Aadhaar-linked bank passbook",
+          "name_mr": "आधार संलग्न बँक पासबुक"
+        },
+        {
+          "name": "Passport-size photograph",
+          "name_mr": "पासपोर्ट आकाराचे छायाचित्र"
+        },
+        {
+          "name": "Marriage/birth certificate (for marital-status categories)",
+          "name_mr": "विवाह/जन्म दाखला"
+        }
+      ],
+      "level": "state",
+      "category": "Women and Child",
+      "status": "pending",
+      "is_government_feed": true,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": "2024-06-28",
+      "form_url": "https://ladakibahin.maharashtra.gov.in/",
+      "source_url": "https://pune.gov.in/en/scheme/mukhyamantri-majhi-ladki-bahin-yojana/",
+      "confidence": "high",
+      "notes": "Eligibility also requires the woman to be married, widowed, divorced, abandoned/destitute, or the sole unmarried woman in the family — a marital-status condition not expressible with the given criteria keys. Document list above is the commonly cited set; the official application portal (ladakibahin.maharashtra.gov.in) returned a 403 error when fetched directly in this session, so the document list was corroborated only via the pune.gov.in district scheme page and general public knowledge, not read verbatim off the state portal's own document checklist."
+    },
+    {
+      "id": "scheme_ignoaps",
+      "name": "Indira Gandhi National Old Age Pension Scheme",
+      "name_mr": "इंदिरा गांधी राष्ट्रीय वृद्धापकाळ निवृत्तिवेतन योजना",
+      "description": "Social assistance pension for elderly persons from Below Poverty Line households.",
+      "description_mr": "दारिद्र्यरेषेखालील कुटुंबातील ज्येष्ठ नागरिकांसाठी सामाजिक सहाय्य निवृत्तिवेतन.",
+      "benefit": "Rs 1,500 per month (central share plus Maharashtra top-up)",
+      "benefit_mr": "दरमहा ₹१,५०० (केंद्र हिस्सा व महाराष्ट्र राज्याची भर)",
+      "criteria": {
+        "min_age": 60,
+        "requires_bpl": true
+      },
+      "required_documents": [
+        {
+          "name": "Age proof",
+          "name_mr": "वयाचा दाखला"
+        },
+        {
+          "name": "BPL certificate / ration card",
+          "name_mr": "दारिद्र्यरेषेखालील दाखला / शिधापत्रिका"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        }
+      ],
+      "level": "central",
+      "category": "Pension",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": null,
+      "form_url": "https://nsap.nic.in/",
+      "source_url": "https://www.pib.gov.in/PressNoteDetails.aspx?ModuleId=3&NoteId=155928&lang=2&reg=3",
+      "confidence": "medium",
+      "notes": "Central guideline says 60+. Maharashtra's own portal operates this band at 65+, bundling ages 60-64 into Sanjay Gandhi Niradhar. Confirm locally with the Tehsildar office before relying on the age used here."
+    },
+    {
+      "id": "scheme_ignwps",
+      "name": "Indira Gandhi National Widow Pension Scheme",
+      "name_mr": "इंदिरा गांधी राष्ट्रीय विधवा निवृत्तिवेतन योजना",
+      "description": "Social assistance pension for widows from Below Poverty Line households.",
+      "description_mr": "दारिद्र्यरेषेखालील कुटुंबातील विधवांसाठी सामाजिक सहाय्य निवृत्तिवेतन.",
+      "benefit": "Rs 1,500 per month (central share plus Maharashtra top-up)",
+      "benefit_mr": "दरमहा ₹१,५०० (केंद्र हिस्सा व महाराष्ट्र राज्याची भर)",
+      "criteria": {
+        "min_age": 40,
+        "max_age": 79,
+        "gender": "Female",
+        "marital_status_any": [
+          "Widowed"
+        ],
+        "requires_bpl": true
+      },
+      "required_documents": [
+        {
+          "name": "Husband's death certificate",
+          "name_mr": "पतीचा मृत्यू दाखला"
+        },
+        {
+          "name": "Age proof",
+          "name_mr": "वयाचा दाखला"
+        },
+        {
+          "name": "BPL certificate",
+          "name_mr": "दारिद्र्यरेषेखालील दाखला"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        }
+      ],
+      "level": "central",
+      "category": "Pension",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": null,
+      "form_url": "https://nsap.nic.in/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-widow-pension-scheme/",
+      "confidence": "high",
+      "notes": null
+    },
+    {
+      "id": "scheme_igndps",
+      "name": "Indira Gandhi National Disability Pension Scheme",
+      "name_mr": "इंदिरा गांधी राष्ट्रीय दिव्यांग निवृत्तिवेतन योजना",
+      "description": "Social assistance pension for persons with severe or multiple disabilities from BPL households.",
+      "description_mr": "दारिद्र्यरेषेखालील कुटुंबातील गंभीर किंवा बहुविध दिव्यांग व्यक्तींसाठी निवृत्तिवेतन.",
+      "benefit": "Rs 1,500 per month (central share plus Maharashtra top-up)",
+      "benefit_mr": "दरमहा ₹१,५०० (केंद्र हिस्सा व महाराष्ट्र राज्याची भर)",
+      "criteria": {
+        "min_age": 18,
+        "max_age": 79,
+        "min_disability_percent": 40,
+        "requires_bpl": true
+      },
+      "required_documents": [
+        {
+          "name": "Disability certificate",
+          "name_mr": "दिव्यांगत्व प्रमाणपत्र"
+        },
+        {
+          "name": "BPL certificate",
+          "name_mr": "दारिद्र्यरेषेखालील दाखला"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        }
+      ],
+      "level": "central",
+      "category": "Disability",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": null,
+      "form_url": "https://nsap.nic.in/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-disability-pension-scheme/",
+      "confidence": "medium",
+      "notes": "Official pages say 'severe or multiple disabilities' without publishing a percentage. The 40% threshold here follows the usual administrative convention and should be confirmed locally."
+    },
+    {
+      "id": "scheme_nfbs",
+      "name": "National Family Benefit Scheme",
+      "name_mr": "राष्ट्रीय कुटुंब लाभ योजना",
+      "description": "One-time assistance to a BPL household on the death of its primary breadwinner.",
+      "description_mr": "कुटुंबातील प्रमुख कमावत्या व्यक्तीच्या मृत्यूनंतर दारिद्र्यरेषेखालील कुटुंबास एकरकमी सहाय्य.",
+      "benefit": "One-time payment of Rs 20,000",
+      "benefit_mr": "एकवेळचे ₹२०,००० अर्थसहाय्य",
+      "criteria": {
+        "requires_bpl": true,
+        "manual_review": true
+      },
+      "required_documents": [
+        {
+          "name": "Death certificate of the breadwinner",
+          "name_mr": "कमावत्या व्यक्तीचा मृत्यू दाखला"
+        },
+        {
+          "name": "BPL certificate",
+          "name_mr": "दारिद्र्यरेषेखालील दाखला"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        }
+      ],
+      "level": "central",
+      "category": "Social Assistance",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": null,
+      "form_url": "https://nsap.nic.in/",
+      "source_url": "https://www.pib.gov.in/PressNoteDetails.aspx?ModuleId=3&NoteId=155928&lang=2&reg=3",
+      "confidence": "high",
+      "notes": "The 18-59 age rule applies to the deceased breadwinner, not the applicant, so it cannot be evaluated against a living resident record. Flagged for officer review."
+    },
+    {
+      "id": "scheme_rural_employment_guarantee",
+      "name": "Rural Employment Guarantee (MGNREGA / successor programme)",
+      "name_mr": "ग्रामीण रोजगार हमी योजना",
+      "description": "Guaranteed wage employment on rural public works for households whose adult members volunteer for unskilled manual work.",
+      "description_mr": "अकुशल शारीरिक कामासाठी इच्छुक प्रौढ सदस्य असलेल्या कुटुंबांना ग्रामीण सार्वजनिक कामांवर हमी रोजगार.",
+      "benefit": "Guaranteed days of wage employment per household per year at the notified Maharashtra wage rate",
+      "benefit_mr": "प्रति कुटुंब दरवर्षी हमी मजुरी रोजगार, महाराष्ट्रासाठी अधिसूचित दराने",
+      "criteria": {
+        "min_age": 18
+      },
+      "required_documents": [
+        {
+          "name": "Job card application",
+          "name_mr": "जॉब कार्ड अर्ज"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank or post office passbook",
+          "name_mr": "बँक/पोस्ट ऑफिस पासबुक"
+        },
+        {
+          "name": "Residence proof",
+          "name_mr": "रहिवासी पुरावा"
+        }
+      ],
+      "level": "central",
+      "category": "Employment",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": null,
+      "form_url": "https://www.dord.gov.in/",
+      "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2207187",
+      "confidence": "medium",
+      "notes": "VERIFY BEFORE CITING. Research indicated MGNREGA was repealed in December 2025 and replaced by a successor Act raising the guarantee to 125 days and moving to a project-based model. This has not been independently confirmed. The scheme is recorded under a neutral name until you verify the current statute and wage rate."
+    },
+    {
+      "id": "scheme_nmmss",
+      "name": "National Means-cum-Merit Scholarship Scheme",
+      "name_mr": "राष्ट्रीय साधन-सह-गुणवत्ता शिष्यवृत्ती योजना",
+      "description": "Merit and means scholarship helping economically weaker students continue study in classes IX to XII.",
+      "description_mr": "आर्थिकदृष्ट्या दुर्बल विद्यार्थ्यांना इयत्ता ९वी ते १२वी शिक्षण सुरू ठेवण्यासाठी गुणवत्ता-सह-साधन शिष्यवृत्ती.",
+      "benefit": "Rs 12,000 per year, paid monthly, for classes IX to XII",
+      "benefit_mr": "इयत्ता ९वी ते १२वी साठी दरवर्षी ₹१२,००० (मासिक स्वरूपात)",
+      "criteria": {
+        "max_income": 150000,
+        "min_age": 13,
+        "max_age": 18,
+        "manual_review": true
+      },
+      "required_documents": [
+        {
+          "name": "Class VII or VIII mark sheet",
+          "name_mr": "इयत्ता ७वी/८वी गुणपत्रिका"
+        },
+        {
+          "name": "Parental income certificate",
+          "name_mr": "पालकांचे उत्पन्न प्रमाणपत्र"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        }
+      ],
+      "level": "central",
+      "category": "Education",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of India",
+      "announced_on": null,
+      "form_url": "https://scholarships.gov.in/",
+      "source_url": "https://scholarships.gov.in/",
+      "confidence": "medium",
+      "notes": "Also requires passing a Mental Ability and Scholastic Aptitude Test with minimum marks. The exam gate cannot be evaluated from a resident record, so it is flagged for officer review."
+    },
+    {
+      "id": "scheme_disability_pension",
+      "name": "Indira Gandhi National Disability Pension Scheme (Maharashtra top-up)",
+      "name_mr": "इंदिरा गांधी राष्ट्रीय अपंग निवृत्तिवेतन योजना",
+      "description": "Monthly pension for persons with disabilities, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
+      "description_mr": "Monthly pension for persons with disabilities, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
+      "benefit": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
+      "benefit_mr": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
+      "criteria": {
+        "min_age": 18,
+        "max_age": 79,
+        "manual_review": true
+      },
+      "required_documents": [
+        {
+          "name": "Disability certificate",
+          "name_mr": "अपंगत्व प्रमाणपत्र"
+        },
+        {
+          "name": "Age proof",
+          "name_mr": "वयाचा दाखला"
+        },
+        {
+          "name": "Residence certificate",
+          "name_mr": "रहिवासी दाखला"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        }
+      ],
+      "level": "state",
+      "category": "Disability",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": null,
+      "form_url": "https://sas.mahait.org/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-disability-pension-scheme/",
+      "confidence": "medium",
+      "notes": "The fetched official page explicitly does NOT state an income limit or disability-percentage threshold for this specific scheme entry (unlike Sanjay Gandhi Niradhar/Shravan Bal, which state Rs 21,000/BPL). Under the central NSAP framework this scheme normally also requires BPL status and ≥80% disability, but since the Maharashtra SJSA page itself omitted these, max_income/disability-percentage were deliberately left out rather than invented — verify against nsap.nic.in guidelines before assuming a hard income cutoff. Document list not itemized on the official page; inferred from standard department practice."
+    },
+    {
+      "id": "scheme_widow_pension",
+      "name": "Indira Gandhi National Widow Pension Scheme (Maharashtra top-up)",
+      "name_mr": "इंदिरा गांधी राष्ट्रीय विधवा निवृत्तिवेतन योजना",
+      "description": "Monthly pension for widows below the poverty line, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
+      "description_mr": "Monthly pension for widows below the poverty line, funded jointly by the central NSAP scheme and Maharashtra's Sanjay Gandhi Niradhar Yojana.",
+      "benefit": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
+      "benefit_mr": "Rs. 1,500 per month total (Rs. 300 Central Government + Rs. 1,200 State Government top-up).",
+      "criteria": {
+        "min_age": 40,
+        "max_age": 79,
+        "gender": "Female",
+        "marital_status_any": [
+          "Widowed"
+        ],
+        "requires_bpl": true
+      },
+      "required_documents": [
+        {
+          "name": "Husband's death certificate",
+          "name_mr": "पतीचा मृत्यू दाखला"
+        },
+        {
+          "name": "Age proof",
+          "name_mr": "वयाचा दाखला"
+        },
+        {
+          "name": "BPL certificate / Ration card",
+          "name_mr": "दारिद्र्यरेषेखालील (BPL) दाखला / रेशन कार्ड"
+        },
+        {
+          "name": "Residence certificate",
+          "name_mr": "रहिवासी दाखला"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        }
+      ],
+      "level": "state",
+      "category": "Pension",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": null,
+      "form_url": "https://sas.mahait.org/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/indira-gandhi-national-widow-pension-scheme/",
+      "confidence": "high",
+      "notes": "Eligibility is BPL-listed-family status, a categorical condition, NOT a numeric income figure — max_income was deliberately omitted rather than guessing a rupee equivalent for 'BPL'. Document list not itemized on official page; inferred from standard department practice."
+    },
+    {
+      "id": "scheme_ebc_shikshan_shulk",
+      "name": "Rajarshi Chhatrapati Shahu Maharaj Shikshan Shulk Shishyavrutti Yojana (EBC)",
+      "name_mr": "राजर्षी छत्रपती शाहू महाराज शिक्षण शुल्क शिष्यवृत्ती योजना",
+      "description": "Tuition and examination fee reimbursement scholarship for Economically Backward Class (General/SEBC category) students in higher education.",
+      "description_mr": "Tuition and examination fee reimbursement scholarship for Economically Backward Class (General/SEBC category) students in higher education.",
+      "benefit": "100% tuition fee (govt./aided institutions) for family income up to Rs 2.5 lakh; 50% tuition fee (all institution types) for income Rs 2.5-8 lakh for professional courses; 100% tuition + 100% exam fee for non-professional courses; 50% exam fee for professional courses.",
+      "benefit_mr": "100% tuition fee (govt./aided institutions) for family income up to Rs 2.5 lakh; 50% tuition fee (all institution types) for income Rs 2.5-8 lakh for professional courses; 100% tuition + 100% exam fee for non-professional courses; 50% exam fee for professional courses.",
+      "criteria": {
+        "max_income": 800000,
+        "category_any": [
+          "Open",
+          "SEBC"
+        ],
+        "manual_review": true
+      },
+      "required_documents": [
+        {
+          "name": "Domicile certificate",
+          "name_mr": "अधिवास प्रमाणपत्र"
+        },
+        {
+          "name": "Previous year's income certificate",
+          "name_mr": "मागील वर्षाचा उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Family declaration (first two children)",
+          "name_mr": "कुटुंब घोषणापत्र (पहिली दोन अपत्ये)"
+        },
+        {
+          "name": "Previous year mark sheet / attendance record",
+          "name_mr": "मागील वर्षाची गुणपत्रिका / हजेरी नोंद"
+        },
+        {
+          "name": "Admission/CAP allotment proof (professional courses)",
+          "name_mr": "प्रवेश/CAP वाटप पुरावा"
+        }
+      ],
+      "level": "state",
+      "category": "Education",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": null,
+      "form_url": "https://mahadbt.maharashtra.gov.in/",
+      "source_url": "https://mahadbt.maharashtra.gov.in/SchemeData/SchemeData?str=E9DDFA703C38E51A2D3C3A162F4DE21D",
+      "confidence": "high",
+      "notes": "Restricted to students admitted under General/SEBC category and to only the 'first two children' of a family — a category/birth-order rule the given criteria keys cannot express. Benefit tiers differently by sub-income-band (0-2.5L vs 2.5-8L) and by professional-vs-non-professional course, which a single max_income key flattens; a real implementation needs a tiered-benefit rule, not just an eligibility cutoff."
+    },
+    {
+      "id": "scheme_post_matric_sc",
+      "name": "Post-Matric Scholarship Scheme (Government of India, for SC students)",
+      "name_mr": "भारत सरकार मॅट्रिकोत्तर शिष्यवृत्ती योजना (अनुसूचित जाती)",
+      "description": "Centrally-sponsored, state-administered scholarship covering tuition, exam fees and maintenance allowance for Scheduled Caste students studying beyond Class 10.",
+      "description_mr": "Centrally-sponsored, state-administered scholarship covering tuition, exam fees and maintenance allowance for Scheduled Caste students studying beyond Class 10.",
+      "benefit": "Full tuition/exam/approved fees plus monthly maintenance allowance of Rs. 250-700 (non-hostel) or Rs. 400-1,350 (hostel), depending on course category, for family income up to Rs 2.5 lakh.",
+      "benefit_mr": "Full tuition/exam/approved fees plus monthly maintenance allowance of Rs. 250-700 (non-hostel) or Rs. 400-1,350 (hostel), depending on course category, for family income up to Rs 2.5 lakh.",
+      "criteria": {
+        "category_any": [
+          "SC"
+        ],
+        "max_income": 250000
+      },
+      "required_documents": [
+        {
+          "name": "Caste certificate (SC/Navbouddha)",
+          "name_mr": "जातीचा दाखला (अनुसूचित जाती/नवबौद्ध)"
+        },
+        {
+          "name": "Income certificate",
+          "name_mr": "उत्पन्नाचा दाखला"
+        },
+        {
+          "name": "Bonafide/admission certificate from institution",
+          "name_mr": "शैक्षणिक संस्थेचे बोनाफाईड/प्रवेश प्रमाणपत्र"
+        },
+        {
+          "name": "Aadhaar Card",
+          "name_mr": "आधार कार्ड"
+        },
+        {
+          "name": "Bank passbook",
+          "name_mr": "बँक पासबुक"
+        },
+        {
+          "name": "Previous year mark sheet",
+          "name_mr": "मागील वर्षाची गुणपत्रिका"
+        }
+      ],
+      "level": "state",
+      "category": "Education",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": null,
+      "form_url": "https://mahadbt.maharashtra.gov.in/",
+      "source_url": "https://sjsa.maharashtra.gov.in/en/scheme/government-of-india-post-matric-scholarship-scheme/",
+      "confidence": "high",
+      "notes": "Caste category (SC/Navbouddha) is a hard gate the given schema cannot express. Minimum education level ('studying above 10th std.') also has no matching key. Document list not fully itemized on the official page; the list above is a reasonable standard set but should be checked against the current MahaDBT applicant instructions."
+    },
+    {
+      "id": "scheme_birsa_munda_krishi_kranti",
+      "name": "Birsa Munda Krishi Kranti Yojana",
+      "name_mr": "बिरसा मुंडा कृषी क्रांती योजना",
+      "description": "Irrigation and farm-infrastructure subsidy scheme (well, drip irrigation, solar pump, electric pump, borewell) for Scheduled Tribe farmers.",
+      "description_mr": "Irrigation and farm-infrastructure subsidy scheme (well, drip irrigation, solar pump, electric pump, borewell) for Scheduled Tribe farmers.",
+      "benefit": "New irrigation well up to Rs. 4,00,000; drip irrigation 90% subsidy capped at Rs. 97,000; solar pump 90% subsidy capped at Rs. 50,000; electric pump (up to 10HP) 90% subsidy capped at Rs. 40,000; borewell up to Rs. 50,000.",
+      "benefit_mr": "New irrigation well up to Rs. 4,00,000; drip irrigation 90% subsidy capped at Rs. 97,000; solar pump 90% subsidy capped at Rs. 50,000; electric pump (up to 10HP) 90% subsidy capped at Rs. 40,000; borewell up to Rs. 50,000.",
+      "criteria": {
+        "category_any": [
+          "ST"
+        ],
+        "occupation_any": [
+          "farmer",
+          "agriculture",
+          "शेतकरी",
+          "शेती"
+        ],
+        "min_land_hectares": 0.4,
+        "max_land_hectares": 6.0
+      },
+      "required_documents": [
+        {
+          "name": "Aadhaar Card (Aadhaar-linked bank account)",
+          "name_mr": "आधार कार्ड (आधार संलग्न बँक खाते)"
+        },
+        {
+          "name": "7/12 and 8-A land extracts",
+          "name_mr": "७/१२ व ८-अ उतारा"
+        },
+        {
+          "name": "Caste certificate (Scheduled Tribe)",
+          "name_mr": "जातीचा दाखला (अनुसूचित जमाती)"
+        }
+      ],
+      "level": "state",
+      "category": "Agriculture",
+      "status": "active",
+      "is_government_feed": false,
+      "source_gov": "Government of Maharashtra",
+      "announced_on": null,
+      "form_url": "https://mahadbt.maharashtra.gov.in/Farmer",
+      "source_url": "https://www.zpsatara.gov.in/en/scheme/birsa-munda-agricultural-revolution-scheme-for-the-year-2024-25/",
+      "confidence": "high",
+      "notes": "Eligibility requires land holding between 0.40 and 6.00 hectares in the farmer's own name (the 6-hectare ceiling is waived for BPL beneficiaries, and multiple ST farmers with sub-0.40-hectare fragmented holdings may apply jointly) — a land-area range and a BPL-conditional waiver that the given criteria keys cannot represent at all. Caste category (ST) is also a hard gate not expressible with the given keys. Sourced from a Zilla Parishad (Satara) portal since a direct krishi.maharashtra.gov.in/mahadbt.maharashtra.gov.in fetch was blocked in this session (see prose section below) — cross-check figures against the MahaDBT Farmer scheme page before production use."
+    }
   ],
-  "actionItems": [
-   {
-    "action": "Submit Ward 3 Road Pothole Repair Estimate",
-    "actionMr": "वॉर्ड ३ रस्ता खड्डे दुरुस्तीचा अंदाजपत्रक सादर करणे",
-    "responsible": "Mr. S. V. Joshi (ZP Junior Engineer)",
-    "responsibleMr": "श्री. एस. व्ही. जोशी (कनिष्ठ अभियंता)",
-    "deadline": "2026-08-15",
-    "status": "In Progress",
-    "statusMr": "सुरू असलेले"
-   },
-   {
-    "action": "Organize Cleaning Campaign for Weekly Market",
-    "actionMr": "आठवडे बाजार स्वच्छता मोहीम आयोजित करणे",
-    "responsible": "Gram Sevak (Village Officer)",
-    "responsibleMr": "ग्रामसेवक (गाव अधिकारी)",
-    "deadline": "2026-08-12",
-    "status": "Pending",
-    "statusMr": "प्रलंबित"
-   },
-   {
-    "action": "Verify Pipeline Laying in Ward 1 Hilltop Site",
-    "actionMr": "वॉर्ड १ टेकडी परिसरातील पाईपलाईन अंथरण्याचे काम तपासणे",
-    "responsible": "Water Committee Convener",
-    "responsibleMr": "पाणी समितीचे समन्वयक",
-    "deadline": "2026-08-20",
-    "status": "Pending",
-    "statusMr": "प्रलंबित"
-   }
+  "grievances": [
+    {
+      "id": "grv_201",
+      "title": "Drinking Water Tube-well Leakage",
+      "titleMr": "पिण्याच्या पाण्याचे नळ जोडणी गळती",
+      "category": "Water",
+      "categoryMr": "पाणी पुरवठा",
+      "ward": 3,
+      "priority": "High",
+      "priorityMr": "उच्च",
+      "status": "Pending",
+      "statusMr": "प्रलंबित",
+      "submittedDate": "2026-08-08",
+      "description": "The primary tube-well near the Loni Kalbhor Maruti Temple has been leaking water for 3 days, causing waterlogging and low pressure in Ward 3 houses.",
+      "descriptionMr": "लोणी काळभोर मारुती मंदिराजवळील मुख्य कूपनलिका गेल्या ३ दिवसांपासून गळती होत आहे, ज्यामुळे रस्ता चिखलमय झाला आहे आणि वॉर्ड ३ मधील घरांमध्ये कमी दाबाने पाणी येत आहे.",
+      "deptName": "Water Supply and Sanitation Department",
+      "deptNameMr": "पाणी पुरवठा आणि स्वच्छता विभाग",
+      "coordinates": [
+        18.4911,
+        73.9811
+      ],
+      "citizenName": "Priyanka Deshmukh",
+      "phone": "9860112301"
+    },
+    {
+      "id": "grv_202",
+      "title": "Street Light Malfunction on Main Road",
+      "titleMr": "मुख्य रस्त्यावरील स्ट्रीट लाईट बंद असणे",
+      "category": "Electricity",
+      "categoryMr": "विद्युत पुरवठा",
+      "ward": 1,
+      "priority": "Medium",
+      "priorityMr": "मध्यम",
+      "status": "In Progress",
+      "statusMr": "सुरू असलेले",
+      "submittedDate": "2026-08-05",
+      "description": "A cluster of 4 street lights on the primary school access road are not working. Creating safety issues in the evening.",
+      "descriptionMr": "प्राथमिक शाळेच्या प्रवेश रस्त्यावरील ४ स्ट्रीट लाईट चालू नाहीत. संध्याकाळी सुरक्षिततेची अडचण निर्माण होत आहे.",
+      "deptName": "MSEB Rural Division (Panchayat Wing)",
+      "deptNameMr": "एमएसईबी ग्रामीण विभाग (पंचायत शाखा)",
+      "coordinates": [
+        18.4888,
+        73.979
+      ],
+      "citizenName": "Vitthal Jadhav",
+      "phone": "9860112302"
+    },
+    {
+      "id": "grv_203",
+      "title": "Potholes on Temple Main Access Way",
+      "titleMr": "मंदिराच्या मुख्य रस्त्यावर पडलेले खड्डे",
+      "category": "Roads",
+      "categoryMr": "रस्ते / दळणवळण",
+      "ward": 3,
+      "priority": "High",
+      "priorityMr": "उच्च",
+      "status": "Pending",
+      "statusMr": "प्रलंबित",
+      "submittedDate": "2026-08-09",
+      "description": "Heavy rain has created deep potholes on the concrete link road in Ward 3. Motorcyclists are slipping frequently.",
+      "descriptionMr": "मुसळधार पावसामुळे वॉर्ड ३ मधील काँक्रीट लिंक रोडवर खोल खड्डे पडले आहेत. दुचाकीस्वार घसरून पडत आहेत.",
+      "deptName": "Public Works Department (Rural Roads)",
+      "deptNameMr": "सार्वजनिक बांधकाम विभाग (ग्रामीण रस्ते)",
+      "coordinates": [
+        18.4898,
+        73.9818
+      ],
+      "citizenName": "Sunil Ghadge",
+      "phone": "9860112303"
+    },
+    {
+      "id": "grv_204",
+      "title": "Clogged Open Drain near Weekly Market",
+      "titleMr": "आठवडे बाजाराजवळील उघडे गटार तुंबले",
+      "category": "Sanitation",
+      "categoryMr": "स्वच्छता आणि कचरा व्यवस्थापन",
+      "ward": 2,
+      "priority": "Critical",
+      "priorityMr": "अति-तात्काळ",
+      "status": "Pending",
+      "statusMr": "प्रलंबित",
+      "submittedDate": "2026-08-09",
+      "description": "Plastic waste has clogged the drainage line near the weekly market square. Wastewater is overflowing onto the market stalls, causing health hazard.",
+      "descriptionMr": "आठवडे बाजाराच्या चौकातील गटाराच्या वाहिनीमध्ये प्लास्टिक कचरा अडकल्याने पाणी तुंबले आहे. सांडपाणी बाजारातील दुकानांमध्ये पसरत असून दुर्गंधी पसरली आहे.",
+      "deptName": "Panchayat Health & Sanitation Cell",
+      "deptNameMr": "पंचायत आरोग्य व स्वच्छता कक्ष",
+      "coordinates": [
+        18.4915,
+        73.98
+      ],
+      "citizenName": "Savita Patil",
+      "phone": "9860112304"
+    },
+    {
+      "id": "grv_205",
+      "title": "Primary Health Sub-centre Medicine Shortage",
+      "titleMr": "प्राथमिक आरोग्य उपकेंद्रात औषधांचा तुटवडा",
+      "category": "Health",
+      "categoryMr": "आरोग्य सुविधा",
+      "ward": 4,
+      "priority": "Medium",
+      "priorityMr": "मध्यम",
+      "status": "Resolved",
+      "statusMr": "निवारण झाले",
+      "submittedDate": "2026-07-28",
+      "description": "Basic medicines for fever and anti-venoms were out of stock. Standard replenishment request raised.",
+      "descriptionMr": "ताप आणि सर्पदंशावरील मूलभूत औषधांचा साठा संपला होता. औषध पुरवठ्याची मागणी पूर्ण करण्यात आली आहे.",
+      "deptName": "District Health Administration Office",
+      "deptNameMr": "जिल्हा आरोग्य प्रशासन कार्यालय",
+      "coordinates": [
+        18.4928,
+        73.9824
+      ],
+      "citizenName": "Ramesh Shinde",
+      "phone": "9860112305"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj_301",
+      "name": "Village Concrete Road Construction",
+      "nameMr": "गाव अंतर्गत सिमेंट काँक्रीट रस्ता बांधकाम",
+      "progress": 68,
+      "budget": 1000000,
+      "utilized": 720000,
+      "status": "Delayed",
+      "statusMr": "विलंब झालेला",
+      "ward": 3,
+      "location": "Ward 3, Shivapur Road To School Lane",
+      "locationMr": "वॉर्ड ३, शिवापूर रस्ता ते शाळा गल्ली",
+      "description": "Upgrading the muddy lane to a full-width durable cement concrete road with standard side drainage blocks.",
+      "descriptionMr": "चिखलाची गल्ली सर्व रुंदीच्या मजबूत सिमेंट काँक्रीट रस्त्यामध्ये बाजूच्या गटारांसह अद्ययावत करणे.",
+      "coordinates": [
+        18.4901,
+        73.9814
+      ]
+    },
+    {
+      "id": "proj_302",
+      "name": "Gram Panchayat Digital Center Setup",
+      "nameMr": "ग्रामपंचायत डिजिटल सेवा केंद्र उभारणी",
+      "progress": 100,
+      "budget": 350000,
+      "utilized": 345000,
+      "status": "Completed",
+      "statusMr": "पूर्ण झालेले",
+      "ward": 2,
+      "location": "Ward 2, Main Gram Panchayat Building",
+      "locationMr": "वॉर्ड २, मुख्य ग्रामपंचायत कार्यालय इमारत",
+      "description": "Equipping the office with high speed fiber internet, citizen service kiosks, printers and computers for digital certificates delivery.",
+      "descriptionMr": "डिजिटल प्रमाणपत्रे वितरणासाठी कार्यालयात हाय-स्पीड फायबर इंटरनेट, नागरी सेवा किओस्क, प्रिंटर आणि संगणक सुसज्ज करणे.",
+      "coordinates": [
+        18.4907,
+        73.9806
+      ]
+    },
+    {
+      "id": "proj_303",
+      "name": "Water Tank and Pipeline Installation",
+      "nameMr": "पाण्याची टाकी आणि मुख्य वाहिनी जोडणी",
+      "progress": 45,
+      "budget": 1500000,
+      "utilized": 950000,
+      "status": "Ongoing",
+      "statusMr": "सुरू असलेले",
+      "ward": 1,
+      "location": "Ward 1, Hilltop Site & Colony Extension",
+      "locationMr": "वॉर्ड १, टेकडी परिसर आणि वसाहत विस्तार",
+      "description": "Constructing a 50,000-liter overhead storage tank and laying PVC water pipes to 120 new housing units.",
+      "descriptionMr": "५०,००० लिटर क्षमतेची उंचावरील पाण्याची टाकी बांधणे आणि १२० नवीन घरांना पीव्हीसी पाण्याचे पाईप्स टाकणे.",
+      "coordinates": [
+        18.4881,
+        73.9781
+      ]
+    },
+    {
+      "id": "proj_304",
+      "name": "Primary School Boundary Wall & Smart Classroom",
+      "nameMr": "प्राथमिक शाळा सुरक्षा भिंत आणि स्मार्ट वर्गखोली",
+      "progress": 90,
+      "budget": 600000,
+      "utilized": 580000,
+      "status": "Ongoing",
+      "statusMr": "सुरू असलेले",
+      "ward": 2,
+      "location": "Ward 2, Khed Primary ZP School",
+      "locationMr": "वॉर्ड २, खेड प्राथमिक जिल्हा परिषद शाळा",
+      "description": "Building an outer security compound wall and setting up a projector and computer lab for student learning.",
+      "descriptionMr": "बाहेरील सुरक्षा कंपाऊंड भिंत बांधणे आणि विद्यार्थ्यांच्या शिक्षणासाठी प्रोजेक्टर आणि संगणक लॅब उभारणे.",
+      "coordinates": [
+        18.4894,
+        73.9797
+      ]
+    }
+  ],
+  "sabha": {
+    "id": "sabha_401",
+    "date": "2026-08-04",
+    "title": "Loni Kalbhor Gram Sabha Monsoon Session",
+    "titleMr": "लोणी काळभोर ग्रामसभा पावसाळी अधिवेशन बैठक",
+    "summary": "The assembly focused on local monsoon preparedness. Key discussions revolved around the drainage overflow in Ward 2 weekly market, repairing the potholes in the main Ward 3 road before festival season, installing additional LED streetlights on school lanes for security, and checking pipeline expansion under ongoing water projects.",
+    "summaryMr": "या बैठकीत प्रामुख्याने पावसाळ्यातील पूर्वतयारी आणि स्थानिक समस्यांवर लक्ष केंद्रित करण्यात आले. वॉर्ड २ मधील आठवडे बाजारातील गटार तुंबण्याची समस्या, सणासुदीच्या काळापूर्वी वॉर्ड ३ मधील रस्त्यावरील खड्डे दुरुस्त करणे, सुरक्षेसाठी शाळेच्या गल्लीत नवीन एलईडी दिवे बसवणे आणि सुरू असलेल्या पाणी पुरवठा प्रकल्पाच्या पाईपलाईन विस्ताराची तपासणी करणे या विषयांवर सखोल चर्चा झाली.",
+    "decisions": [
+      "Approve ₹10,000 emergency fund for manual desilting of the weekly market drains.",
+      "Formally instruct the Junior Engineer to expedite estimation and repair of the Ward 3 road potholes.",
+      "Purchase 20 new LED streetlight luminaires using the unutilized general development fund."
+    ],
+    "decisionsMr": [
+      "आठवडे बाजारातील गटारे स्वच्छ करण्यासाठी ₹१०,००० चा आपत्कालीन निधी मंजूर केला.",
+      "वॉर्ड ३ मधील रस्त्यावरील खड्डे दुरुस्तीचा अंदाज आणि काम त्वरित सुरू करण्यासाठी कनिष्ठ अभियंत्यांना निर्देश दिले.",
+      "न वापरलेल्या सामान्य विकास निधीमधून २० नवीन एलईडी पथदिवे खरेदी करण्यास मंजुरी दिली."
+    ],
+    "actionItems": [
+      {
+        "action": "Submit Ward 3 Road Pothole Repair Estimate",
+        "actionMr": "वॉर्ड ३ रस्ता खड्डे दुरुस्तीचा अंदाजपत्रक सादर करणे",
+        "responsible": "Mr. S. V. Joshi (ZP Junior Engineer)",
+        "responsibleMr": "श्री. एस. व्ही. जोशी (कनिष्ठ अभियंता)",
+        "deadline": "2026-08-15",
+        "status": "In Progress",
+        "statusMr": "सुरू असलेले"
+      },
+      {
+        "action": "Organize Cleaning Campaign for Weekly Market",
+        "actionMr": "आठवडे बाजार स्वच्छता मोहीम आयोजित करणे",
+        "responsible": "Gram Sevak (Village Officer)",
+        "responsibleMr": "ग्रामसेवक (गाव अधिकारी)",
+        "deadline": "2026-08-12",
+        "status": "Pending",
+        "statusMr": "प्रलंबित"
+      },
+      {
+        "action": "Verify Pipeline Laying in Ward 1 Hilltop Site",
+        "actionMr": "वॉर्ड १ टेकडी परिसरातील पाईपलाईन अंथरण्याचे काम तपासणे",
+        "responsible": "Water Committee Convener",
+        "responsibleMr": "पाणी समितीचे समन्वयक",
+        "deadline": "2026-08-20",
+        "status": "Pending",
+        "statusMr": "प्रलंबित"
+      }
+    ]
+  },
+  "docs": [
+    {
+      "id": "doc_101",
+      "citizenName": "Savita Patil",
+      "docType": "Income Certificate",
+      "docTypeMr": "उत्पन्नाचा दाखला",
+      "fileName": "income_certificate_savita.pdf",
+      "submittedDate": "2026-08-09",
+      "status": "Pending Verification",
+      "statusMr": "पडताळणी प्रलंबित"
+    },
+    {
+      "id": "doc_102",
+      "citizenName": "Amit Shinde",
+      "docType": "Land ownership 7/12 Extract",
+      "docTypeMr": "७/१२ उतारा",
+      "fileName": "7_12_extract_amit.pdf",
+      "submittedDate": "2026-08-10",
+      "status": "Pending Verification",
+      "statusMr": "पडताळणी प्रलंबित"
+    },
+    {
+      "id": "doc_103",
+      "citizenName": "Anandrao Patil",
+      "docType": "Land ownership 7/12 Extract",
+      "docTypeMr": "७/१२ उतारा",
+      "fileName": "7_12_extract_anandrao.pdf",
+      "submittedDate": "2026-08-08",
+      "status": "Verified",
+      "statusMr": "पडताळणी पूर्ण"
+    }
+  ],
+  "facilities": [
+    {
+      "id": "fac_1",
+      "name": "Zilla Parishad Primary School",
+      "nameMr": "जिल्हा परिषद प्राथमिक शाळा",
+      "type": "school",
+      "coordinates": [
+        18.4891,
+        73.9794
+      ],
+      "details": "Grades 1-7, 185 students enrolled"
+    },
+    {
+      "id": "fac_2",
+      "name": "Loni Kalbhor Primary Health Sub-centre",
+      "nameMr": "लोणी काळभोर प्राथमिक आरोग्य उपकेंद्र",
+      "type": "health",
+      "coordinates": [
+        18.4931,
+        73.9819
+      ],
+      "details": "OPD, basic emergency beds, vaccine distribution"
+    },
+    {
+      "id": "fac_3",
+      "name": "Public Drinking Water Well & Purifier",
+      "nameMr": "सार्वजनिक विहीर आणि जलशुद्धीकरण केंद्र",
+      "type": "water",
+      "coordinates": [
+        18.4906,
+        73.9809
+      ],
+      "details": "RO treatment unit, capacity 10,000 LPD"
+    },
+    {
+      "id": "fac_4",
+      "name": "Anganwadi Child Care Center",
+      "nameMr": "अंगणवाडी बाल संगोपन केंद्र",
+      "type": "health",
+      "coordinates": [
+        18.4896,
+        73.9784
+      ],
+      "details": "Serving 45 children, midday meal kitchen"
+    },
+    {
+      "id": "fac_5",
+      "name": "Water Tank Hilltop Station",
+      "nameMr": "टेकडीवरील पाण्याची टाकी",
+      "type": "water",
+      "coordinates": [
+        18.4879,
+        73.9779
+      ],
+      "details": "Distribution source for Ward 1"
+    }
   ]
- },
- "docs": [
-  {
-   "id": "doc_101",
-   "citizenName": "Savita Patil",
-   "docType": "Income Certificate",
-   "docTypeMr": "उत्पन्नाचा दाखला",
-   "fileName": "income_certificate_savita.pdf",
-   "submittedDate": "2026-08-09",
-   "status": "Pending Verification",
-   "statusMr": "पडताळणी प्रलंबित"
-  },
-  {
-   "id": "doc_102",
-   "citizenName": "Amit Shinde",
-   "docType": "Land ownership 7/12 Extract",
-   "docTypeMr": "७/१२ उतारा",
-   "fileName": "7_12_extract_amit.pdf",
-   "submittedDate": "2026-08-10",
-   "status": "Pending Verification",
-   "statusMr": "पडताळणी प्रलंबित"
-  },
-  {
-   "id": "doc_103",
-   "citizenName": "Anandrao Patil",
-   "docType": "Land ownership 7/12 Extract",
-   "docTypeMr": "७/१२ उतारा",
-   "fileName": "7_12_extract_anandrao.pdf",
-   "submittedDate": "2026-08-08",
-   "status": "Verified",
-   "statusMr": "पडताळणी पूर्ण"
-  }
- ],
- "facilities": [
-  {
-   "id": "fac_1",
-   "name": "Zilla Parishad Primary School",
-   "nameMr": "जिल्हा परिषद प्राथमिक शाळा",
-   "type": "school",
-   "coordinates": [
-    18.4891,
-    73.9794
-   ],
-   "details": "Grades 1-7, 185 students enrolled"
-  },
-  {
-   "id": "fac_2",
-   "name": "Loni Kalbhor Primary Health Sub-centre",
-   "nameMr": "लोणी काळभोर प्राथमिक आरोग्य उपकेंद्र",
-   "type": "health",
-   "coordinates": [
-    18.4931,
-    73.9819
-   ],
-   "details": "OPD, basic emergency beds, vaccine distribution"
-  },
-  {
-   "id": "fac_3",
-   "name": "Public Drinking Water Well & Purifier",
-   "nameMr": "सार्वजनिक विहीर आणि जलशुद्धीकरण केंद्र",
-   "type": "water",
-   "coordinates": [
-    18.4906,
-    73.9809
-   ],
-   "details": "RO treatment unit, capacity 10,000 LPD"
-  },
-  {
-   "id": "fac_4",
-   "name": "Anganwadi Child Care Center",
-   "nameMr": "अंगणवाडी बाल संगोपन केंद्र",
-   "type": "health",
-   "coordinates": [
-    18.4896,
-    73.9784
-   ],
-   "details": "Serving 45 children, midday meal kitchen"
-  },
-  {
-   "id": "fac_5",
-   "name": "Water Tank Hilltop Station",
-   "nameMr": "टेकडीवरील पाण्याची टाकी",
-   "type": "water",
-   "coordinates": [
-    18.4879,
-    73.9779
-   ],
-   "details": "Distribution source for Ward 1"
-  }
- ]
 }
