@@ -668,6 +668,77 @@ class KnowledgeChunk(Base, TimestampMixin):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Audit trail
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AuditEvent(Base):
+    """One accountable action: who did what, to whose record, and when.
+
+    The system already recorded a complaint's history and, since sign-in
+    throttling, every authentication attempt. Neither answers the question a
+    resident is most entitled to ask — *who has been reading my file* — and
+    neither says who rejected a document or approved an account.
+
+    **What is recorded, and what deliberately is not.** Every change of state by
+    an authenticated user, and every read that names one individual. Not list
+    endpoints: an officer opening the resident directory is their job and
+    happens on every page load, so recording it buries the events that matter
+    under traffic. That is a real limit rather than an oversight — this trail
+    answers "who opened Savita's file", not "who could have".
+
+    **No request bodies.** Only the method, the path, the outcome and the record
+    named. A body would put a resident's income, a document's contents or a new
+    password into a table whose whole purpose is to be kept and read later.
+
+    The trail is itself sensitive: it says who looked at whom. Reading it is
+    admin-only, and `services.audit.prune()` drops rows past a year.
+    """
+
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        # How the trail is actually read: everything touching one record, and
+        # everything one person did, both newest first.
+        Index("ix_audit_entity_time", "entity_type", "entity_id", "created_at"),
+        Index("ix_audit_actor_time", "actor_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+
+    # Null only if the account was deleted afterwards; the denormalised email
+    # and role survive that, because an audit row that cannot say who acted is
+    # not an audit row.
+    actor_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    actor_email: Mapped[str | None] = mapped_column(String(255))
+    actor_role: Mapped[str | None] = mapped_column(String(20))
+
+    # 'read' for a request that named one record, otherwise the HTTP verb
+    # lowercased — 'post', 'patch', 'delete'.
+    action: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    method: Mapped[str] = mapped_column(String(10), nullable=False)
+    path: Mapped[str] = mapped_column(String(500), nullable=False)
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # The record acted on, derived from the path: ('citizen', 'cit_102').
+    # Null when the request named no single record.
+    entity_type: Mapped[str | None] = mapped_column(String(40), index=True)
+    entity_id: Mapped[str | None] = mapped_column(String(64), index=True)
+
+    # Which Gram Panchayat the actor was working in, so a district admin can
+    # filter the trail the same way every other list here is scoped.
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="SET NULL"), index=True
+    )
+
+    ip: Mapped[str | None] = mapped_column(String(64))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False, index=True
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Password resets
 # ─────────────────────────────────────────────────────────────────────────────
 

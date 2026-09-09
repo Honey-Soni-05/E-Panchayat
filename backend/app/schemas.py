@@ -116,6 +116,28 @@ class PasswordChange(ApiModel):
     new_password: str = Field(min_length=8)
 
 
+class AuditEventOut(ApiModel):
+    """One entry in the audit trail.
+
+    No request body is carried, because none is stored — see the note on
+    `AuditEvent` in `models.py`.
+    """
+
+    id: str
+    actor_id: str | None = None
+    actor_email: str | None = None
+    actor_role: str | None = None
+    action: str
+    method: str
+    path: str
+    status_code: int
+    entity_type: str | None = None
+    entity_id: str | None = None
+    village_id: str | None = None
+    ip: str | None = None
+    created_at: datetime
+
+
 class PasswordResetIssued(ApiModel):
     """What the officer sees after issuing a reset — once.
 

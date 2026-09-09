@@ -234,6 +234,26 @@ export interface TokenPair {
   expiresIn: number;
 }
 
+/** One entry in the audit trail. Carries no request body, because none is
+ *  stored — the table is kept and read later, which is the last place a
+ *  resident's income or a password being set should end up. */
+export interface AuditEvent {
+  id: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  actorRole: Role | null;
+  /** 'read' for a request that named one record, otherwise the HTTP verb. */
+  action: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  entityType: string | null;
+  entityId: string | null;
+  villageId: string | null;
+  ip: string | null;
+  createdAt: string;
+}
+
 /** The one and only time a reset code is readable. Only its hash is stored, so
  *  there is no endpoint that can show it again — losing it means issuing
  *  another, which voids this one. */
@@ -744,6 +764,26 @@ export const api = {
       body: { approve: boolean; citizenId?: string; reviewNote?: string },
     ): Promise<RegistrationRequest> =>
       request(`/auth/registrations/${id}/decision`, { method: 'POST', body }),
+  },
+
+  /** The audit trail. Admin only — it records who opened whose file, which is
+   *  more revealing than most of what it describes. Written by middleware on
+   *  the server; there is no way to add to or delete from it here. */
+  audit: {
+    events: (filters: {
+      entityType?: string;
+      entityId?: string;
+      actorId?: string;
+      action?: string;
+      limit?: number;
+    } = {}): Promise<AuditEvent[]> => {
+      const query = new URLSearchParams(
+        Object.entries(filters)
+          .filter(([, v]) => v !== undefined && v !== '')
+          .map(([k, v]) => [k, String(v)]),
+      ).toString();
+      return request(`/audit/events${query ? `?${query}` : ''}`);
+    },
   },
 
   villages: {

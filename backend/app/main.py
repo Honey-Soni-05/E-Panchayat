@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.router import api_router
 from app.core.config import settings
 from app.db.session import engine
+from app.services.audit import AuditMiddleware
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -39,6 +40,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Added after CORS, so it runs inside it: a request rejected by the CORS layer
+# never reached a route and has nothing to attribute. Registering it as
+# middleware rather than calling it from each route is deliberate — a trail
+# assembled from per-route calls is only as complete as the last person to add
+# a route remembered to be. See `services/audit.py`.
+app.add_middleware(AuditMiddleware)
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 

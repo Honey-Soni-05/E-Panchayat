@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.routes import (
     analytics,
     assistant,
+    audit,
     auth,
     citizens,
     documents,
@@ -26,3 +27,4 @@ api_router.include_router(documents.router)
 api_router.include_router(sabha.router)
 api_router.include_router(analytics.router)
 api_router.include_router(assistant.router)
+api_router.include_router(audit.router)

@@ -358,6 +358,46 @@ Known gap: a resident must reach the office. There is no way to start a reset
 from the portal, because there is no channel to deliver a code over. That is a
 missing integration, not a missing design.
 
+### Audit trail
+
+`audit_events` records who did what, to whose record, and when — so a resident
+can be told who opened their file, and an officer who rejected a document can be
+asked why.
+
+It is written by **middleware**, not by calls at the top of each route. That is
+the design decision worth defending: a trail assembled from `audit.record(...)`
+lines scattered through the routers is only as complete as the last person to
+add a route remembered to be, and the endpoint that gets forgotten is always the
+new one nobody reviewed. Here a request is recorded because it was *served*, so
+a router added next term is covered without its author knowing the module
+exists.
+
+| Recorded | Not recorded |
+|---|---|
+| Every state change by a signed-in user | Anything unauthenticated — there is nobody to attribute it to |
+| Every read that names one record | List endpoints |
+| Refused attempts, with their status code | Request bodies, ever |
+
+Two of those are deliberate limits rather than gaps:
+
+- **List endpoints are not recorded.** An officer opens the resident directory
+  on every page load; recording that buries the events worth finding. The trail
+  answers "who opened Savita's file", not "who could have".
+- **No request bodies.** This table is designed to be kept and read later, which
+  is the last place a resident's income, a document's contents, or a password
+  being set should end up. Method, path, outcome and the record named answer the
+  question without holding any of that.
+
+Reading it is **admin only**, and that is a privacy decision rather than a
+hierarchy one: the trail says which residents an officer's colleagues have been
+looking at, which is more revealing than most of what it describes. There is no
+endpoint to edit or delete an event — a trail its subjects can amend is not one
+— and `services.audit.prune()` drops rows past a year.
+
+Recording can never break a request: a failure to write the trail is logged and
+swallowed. Losing one audit row is bad; refusing a resident's grievance because
+the audit table is full is worse.
+
 ---
 
 ## Privacy: what leaves this server
