@@ -71,7 +71,7 @@ For the report and the viva. Every line here survives being clicked on.
 | Transcript reader | Real text extraction plus an LLM call with a response schema. |
 | Scheme reader | Same, with a closed criteria vocabulary and a mandatory human approval gate. |
 | Vector storage | Embeddings stored as JSON, cosine similarity computed in Python. Correct at village scale (67 chunks — villages, schemes, projects, facilities, grievances and meetings, no residents); see `KnowledgeChunk` in `app/models.py` for what changes at district scale. |
-| GIS map | Leaflet over OpenStreetMap tiles. No API key, no account. Markers are drawn from the API's own coordinates; the basemap is the only external dependency, and the screen says so when it fails to load. |
+| GIS map | Leaflet over OpenStreetMap tiles. No API key, no account. Markers are drawn from the API's own coordinates; the basemap is the only external dependency, and the screen says so when it fails to load. 18 of the 23 villages have a verified centre point — see below. |
 
 Things this system does **not** have, stated plainly: no trained or fine-tuned
 model of our own, no OCR for scanned documents, no Aadhaar or DigiLocker
@@ -122,6 +122,24 @@ Everything lives in `backend/.env`, which is gitignored and must stay that way.
 | `GEMINI_MODEL` | Pin a specific model. Google retires names, and the failure is confusing — see below |
 | `CORS_ORIGINS` | Exact frontend origin, comma-separated, no trailing slash |
 | `SEED_DEFAULT_PASSWORD` | Password given to every demo account |
+
+### Village coordinates
+
+18 of the 23 villages carry a centre point, taken from OpenStreetMap's geocoder
+and checked to fall inside a bounding box around Haveli taluka. The check is
+the part that matters: several of these names exist elsewhere in Maharashtra,
+and a name match alone would have put Nanded or Narhe in the wrong district.
+
+Five are still null — Kadamwak Wasti, Alandi Mhatobachi, Wadhu Khurd,
+Kondhanpur and Uruli Devachi — because OSM does not carry them under any
+spelling the sources record. The map handles that: with no centre it fits
+itself to whatever records are plotted, and says so on screen.
+
+Wadhu Khurd is the one worth explaining. A search for `Vadhu` does return a
+village inside the box, but Vadhu Budruk and Vadhu Khurd are two distinct
+villages a few hundred metres apart, and the box cannot tell them apart. It is
+left null rather than confidently placed on possibly the wrong one — an
+unplaced village is honest, a misplaced one is not.
 
 ### When the assistant stops using its model
 

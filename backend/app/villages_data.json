@@ -17,130 +17,130 @@
     "name_mr": "वाघोली",
     "lgd_code": 556327,
     "census_code_2011": 556327,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.58,
+    "longitude": 73.9828,
     "population_2011": 33479,
     "households_2011": 7743,
     "confidence": "high",
     "gram_panchayat_status": "merged_into_pmc_2021",
-    "notes": "Census Town (CT). Population/households cross-verified (census2011.co.in subdistrict table and etrace.in both report 33,479 / matching household count). Officially merged into Pune Municipal Corporation in the June 2021 merger of 23 fringe villages (confirmed by Wikipedia and multiple news reports, and by PMC splitting Wagholi into election wards). The March-2022 LGD snapshot used here still lists an active local-body code (185785), which appears to be administrative lag rather than evidence the Gram Panchayat still functions -- treat Wagholi as NOT having an independent GP today."
+    "notes": "Census Town (CT). Population/households cross-verified (census2011.co.in subdistrict table and etrace.in both report 33,479 / matching household count). Officially merged into Pune Municipal Corporation in the June 2021 merger of 23 fringe villages (confirmed by Wikipedia and multiple news reports, and by PMC splitting Wagholi into election wards). The March-2022 LGD snapshot used here still lists an active local-body code (185785), which appears to be administrative lag rather than evidence the Gram Panchayat still functions -- treat Wagholi as NOT having an independent GP today. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Lonikand",
     "name_mr": "लोणीकंद",
     "lgd_code": 556222,
     "census_code_2011": 556222,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.5946,
+    "longitude": 74.0322,
     "population_2011": 7944,
     "households_2011": 1820,
     "confidence": "high",
     "gram_panchayat_status": "active",
-    "notes": "Independent Gram Panchayat (LGD local body 185741, 'LONIKAND'). Population/households from Wikipedia infobox, consistent with LGD listing as a standalone village."
+    "notes": "Independent Gram Panchayat (LGD local body 185741, 'LONIKAND'). Population/households from Wikipedia infobox, consistent with LGD listing as a standalone village. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Manjari Budruk",
     "name_mr": "मांजरी बुद्रुक",
     "lgd_code": 556232,
     "census_code_2011": 556232,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.5122,
+    "longitude": 73.9719,
     "population_2011": 36820,
     "households_2011": 8401,
     "confidence": "medium",
     "gram_panchayat_status": "uncertain_possibly_merged_2021",
-    "notes": "Named explicitly ('Manjari Budruk') in the December 2020 draft notification and the June 2021 list of 23 villages merged into PMC (per Wikipedia). The March-2022 LGD snapshot still shows an active local body code (185746), the same lag pattern seen with Wagholi -- current GP status should be re-verified locally before use."
+    "notes": "Named explicitly ('Manjari Budruk') in the December 2020 draft notification and the June 2021 list of 23 villages merged into PMC (per Wikipedia). The March-2022 LGD snapshot still shows an active local body code (185746), the same lag pattern seen with Wagholi -- current GP status should be re-verified locally before use. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Manjari Khurd",
     "name_mr": "मांजरी खुर्द",
     "lgd_code": 556209,
     "census_code_2011": 556209,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.5258,
+    "longitude": 73.992,
     "population_2011": 4559,
     "households_2011": 895,
     "confidence": "medium",
     "gram_panchayat_status": "active",
-    "notes": "Not named in either the 2017 or 2021 PMC merger lists found; LGD shows active local body 185747 'MANJARI KH.'. Distinct from neighboring Manjari Budruk, which is on the 2021 merger list."
+    "notes": "Not named in either the 2017 or 2021 PMC merger lists found; LGD shows active local body 185747 'MANJARI KH.'. Distinct from neighboring Manjari Budruk, which is on the 2021 merger list. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Theur",
     "name_mr": "थेऊर",
     "lgd_code": 556313,
     "census_code_2011": 556313,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.5243,
+    "longitude": 74.0465,
     "population_2011": 9674,
     "households_2011": 2018,
     "confidence": "medium",
     "gram_panchayat_status": "active",
-    "notes": "Independent GP (LGD local body 185774, 'THEUR'). Site of the Chintamani Ganesh temple. Population/households from a single secondary census aggregator (villageinfo.org), not independently cross-checked."
+    "notes": "Independent GP (LGD local body 185774, 'THEUR'). Site of the Chintamani Ganesh temple. Population/households from a single secondary census aggregator (villageinfo.org), not independently cross-checked. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Uruli Kanchan",
     "name_mr": "उरुळी कांचन",
     "lgd_code": 556319,
     "census_code_2011": 556319,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4872,
+    "longitude": 74.133,
     "population_2011": 30305,
     "households_2011": 6693,
     "confidence": "medium",
     "gram_panchayat_status": "active",
-    "notes": "Independent GP (LGD local body 185778, 'URULIKANCHAN'). Population/households corroborated by both Wikipedia and its LGD listing, but the underlying census figures both ultimately trace to the same Census 2011 PCA table (not fully independent sources)."
+    "notes": "Independent GP (LGD local body 185778, 'URULIKANCHAN'). Population/households corroborated by both Wikipedia and its LGD listing, but the underlying census figures both ultimately trace to the same Census 2011 PCA table (not fully independent sources). Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Kesnand",
     "name_mr": "केसनांद",
     "lgd_code": 556225,
     "census_code_2011": 556225,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.5727,
+    "longitude": 74.0219,
     "population_2011": 4718,
     "households_2011": 972,
     "confidence": "medium",
     "gram_panchayat_status": "active",
-    "notes": "Independent GP (LGD local body 185726, 'KESNAND'). Population/households from a single secondary census aggregator (villageinfo.org)."
+    "notes": "Independent GP (LGD local body 185726, 'KESNAND'). Population/households from a single secondary census aggregator (villageinfo.org). Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Phursungi",
     "name_mr": "फुरसुंगी",
     "lgd_code": 556292,
     "census_code_2011": 556292,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4572,
+    "longitude": 74.0022,
     "population_2011": 66062,
     "households_2011": 15595,
     "confidence": "medium",
     "gram_panchayat_status": "merged_into_pmc_2017",
-    "notes": "Merged into Pune Municipal Corporation in the July 2017 round of 11 villages (Wikipedia). LGD's March-2022 record for Phursungi/Fursungi (village code 556292) carries NO local-body code, i.e. no separate Gram Panchayat -- this is internally consistent with the merger. The population figure (66,062) is sourced from Wikipedia's current article text and its vintage/boundary is not certain to be the strict 2011 census village boundary given rapid post-merger growth; treat with caution and re-verify against the official Census 2011 Village Directory PDF if exact 2011 figures matter."
+    "notes": "Merged into Pune Municipal Corporation in the July 2017 round of 11 villages (Wikipedia). LGD's March-2022 record for Phursungi/Fursungi (village code 556292) carries NO local-body code, i.e. no separate Gram Panchayat -- this is internally consistent with the merger. The population figure (66,062) is sourced from Wikipedia's current article text and its vintage/boundary is not certain to be the strict 2011 census village boundary given rapid post-merger growth; treat with caution and re-verify against the official Census 2011 Village Directory PDF if exact 2011 figures matter. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Undri",
     "name_mr": "उंड्री",
     "lgd_code": 556245,
     "census_code_2011": 556245,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4523,
+    "longitude": 73.9163,
     "population_2011": 7970,
     "households_2011": 2048,
     "confidence": "medium",
     "gram_panchayat_status": "merged_into_pmc_2017",
-    "notes": "Merged into PMC in the July 2017 round of 11 villages. LGD's March-2022 record shows NO local-body code, confirming no independent GP today."
+    "notes": "Merged into PMC in the July 2017 round of 11 villages. LGD's March-2022 record shows NO local-body code, confirming no independent GP today. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Shewalwadi",
     "name_mr": "शेवाळवाडी",
     "lgd_code": 556291,
     "census_code_2011": 556291,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4955,
+    "longitude": 73.9714,
     "population_2011": 4059,
     "households_2011": 891,
     "confidence": "medium",
     "gram_panchayat_status": "uncertain_possibly_merged_2021",
-    "notes": "Named ('Shewalewadi') in the June 2021 list of 23 villages merged into PMC. LGD's March-2022 snapshot still shows an active local body code (185766) -- same lag caveat as Wagholi/Manjari Budruk; verify current status locally."
+    "notes": "Named ('Shewalewadi') in the June 2021 list of 23 villages merged into PMC. LGD's March-2022 snapshot still shows an active local body code (185766) -- same lag caveat as Wagholi/Manjari Budruk; verify current status locally. Coordinates from OpenStreetMap (Nominatim) matched on 'Shewalewadi', checked to fall within Haveli taluka."
   },
   {
     "name": "Kadamwak Wasti",
@@ -173,13 +173,13 @@
     "name_mr": "तुळापूर",
     "lgd_code": 556210,
     "census_code_2011": 556210,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.6699,
+    "longitude": 73.9954,
     "population_2011": 2686,
     "households_2011": 510,
     "confidence": "medium",
     "gram_panchayat_status": "active",
-    "notes": "Independent GP (LGD local body 185775, 'TULAPUR'). Historic site associated with Sambhaji Maharaj. Population/households from a single secondary aggregator (villageinfo.org)."
+    "notes": "Independent GP (LGD local body 185775, 'TULAPUR'). Historic site associated with Sambhaji Maharaj. Population/households from a single secondary aggregator (villageinfo.org). Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Wadhu Khurd",
@@ -212,65 +212,65 @@
     "name_mr": "औताडवाडी हांडेवाडी",
     "lgd_code": 556295,
     "census_code_2011": 556295,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4851,
+    "longitude": 73.9317,
     "population_2011": 2556,
     "households_2011": 563,
     "confidence": "medium",
     "gram_panchayat_status": "uncertain_possibly_merged_2021",
-    "notes": "Named ('Autade-Handewadi') in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (237301, 'OUTADE-HANDEWADI') -- same lag caveat as Wagholi. Population cross-checked between census2011.co.in and villageinfo.in (both report 2,556)."
+    "notes": "Named ('Autade-Handewadi') in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (237301, 'OUTADE-HANDEWADI') -- same lag caveat as Wagholi. Population cross-checked between census2011.co.in and villageinfo.in (both report 2,556). Coordinates from OpenStreetMap (Nominatim) matched on 'Handewadi', checked to fall within Haveli taluka."
   },
   {
     "name": "Khadakwasla",
     "name_mr": "खडकवासला",
     "lgd_code": 556246,
     "census_code_2011": 556246,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4392,
+    "longitude": 73.7758,
     "population_2011": 9469,
     "households_2011": 2253,
     "confidence": "medium",
     "gram_panchayat_status": "uncertain_possibly_merged_2021",
-    "notes": "Named in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (185727) -- same lag caveat. Well known for the Khadakwasla dam."
+    "notes": "Named in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (185727) -- same lag caveat. Well known for the Khadakwasla dam. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Nanded",
     "name_mr": "नांदेड",
     "lgd_code": 556237,
     "census_code_2011": 556237,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4563,
+    "longitude": 73.786,
     "population_2011": 11371,
     "households_2011": 2669,
     "confidence": "medium",
     "gram_panchayat_status": "uncertain_possibly_merged_2021",
-    "notes": "Named in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (185748) -- same lag caveat. Note: this is a village in Haveli taluka, Pune district -- unrelated to the city/district of Nanded in Maharashtra."
+    "notes": "Named in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (185748) -- same lag caveat. Note: this is a village in Haveli taluka, Pune district -- unrelated to the city/district of Nanded in Maharashtra. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Kirkitwadi",
     "name_mr": "किरकिटवाडी",
     "lgd_code": 556239,
     "census_code_2011": 556239,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.447,
+    "longitude": 73.789,
     "population_2011": 8941,
     "households_2011": 2233,
     "confidence": "medium",
     "gram_panchayat_status": "uncertain_possibly_merged_2021",
-    "notes": "Named ('Kirkatwadi') in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (185732) -- same lag caveat. Population cross-checked between census2011.co.in and villageinfo.in."
+    "notes": "Named ('Kirkatwadi') in the June 2021 PMC merger list. LGD's March-2022 snapshot still shows an active local body code (185732) -- same lag caveat. Population cross-checked between census2011.co.in and villageinfo.in. Coordinates from OpenStreetMap (Nominatim) matched on 'Kirkatwadi', checked to fall within Haveli taluka."
   },
   {
     "name": "Narhe",
     "name_mr": "नऱ्हे",
     "lgd_code": 556241,
     "census_code_2011": 556241,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.4462,
+    "longitude": 73.8256,
     "population_2011": 16174,
     "households_2011": 4176,
     "confidence": "medium",
     "gram_panchayat_status": "uncertain_possibly_merged_2021",
-    "notes": "LGD lists this village as 'Nahre' (local body 185750 'NARHE'). Named ('Narhe') in the June 2021 PMC merger list -- same lag caveat as Wagholi."
+    "notes": "LGD lists this village as 'Nahre' (local body 185750 'NARHE'). Named ('Narhe') in the June 2021 PMC merger list -- same lag caveat as Wagholi. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   },
   {
     "name": "Uruli Devachi",
@@ -290,12 +290,12 @@
     "name_mr": "वडगाव शिंदे",
     "lgd_code": 556208,
     "census_code_2011": 556208,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 18.6176,
+    "longitude": 73.9453,
     "population_2011": 3069,
     "households_2011": 591,
     "confidence": "medium",
     "gram_panchayat_status": "active",
-    "notes": "Independent GP (LGD local body 185782, 'VADGAON-SHINDE'). Not named in either merger list found."
+    "notes": "Independent GP (LGD local body 185782, 'VADGAON-SHINDE'). Not named in either merger list found. Coordinates from OpenStreetMap (Nominatim), checked to fall within Haveli taluka."
   }
 ]
