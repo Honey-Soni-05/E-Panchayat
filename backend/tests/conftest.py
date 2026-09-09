@@ -18,6 +18,15 @@ os.environ["SECRET_KEY"] = "test-only-key"
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["SEED_DEFAULT_PASSWORD"] = "Test@12345"
 
+# The whole suite arrives from one TestClient address, so the real per-IP limit
+# would trip partway through and fail tests that have nothing to do with it.
+# Raised here rather than switched off, so the throttling code still runs on
+# every sign-in the suite makes; `test_rate_limit.py` lowers these to real
+# values for its own tests.
+os.environ["LOGIN_MAX_FAILURES_PER_EMAIL"] = "500"
+os.environ["LOGIN_MAX_FAILURES_PER_IP"] = "5000"
+os.environ["REGISTER_MAX_PER_IP_PER_HOUR"] = "500"
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.db.base import Base  # noqa: E402

@@ -27,6 +27,26 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-2.5-flash"
     GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
 
+    # ── Sign-in throttling ──────────────────────────────────────────────────
+    #
+    # Two limits over the same window, because they stop different attacks.
+    # The per-email limit stops one account being ground through a password
+    # list. The per-IP limit stops one source spraying a common password across
+    # many accounts, which the per-email limit never sees.
+    #
+    # The per-email limit means someone who knows an officer's address can lock
+    # it for the window by failing five sign-ins. That is a real cost and it is
+    # the accepted trade: the alternative is leaving an unmetered password
+    # oracle open. Keeping the window short is what makes it bearable, and a
+    # deployment that cares would add a CAPTCHA or an out-of-band unlock rather
+    # than raise these numbers.
+    LOGIN_WINDOW_MINUTES: int = 15
+    LOGIN_MAX_FAILURES_PER_EMAIL: int = 5
+    LOGIN_MAX_FAILURES_PER_IP: int = 20
+    # Applications are cheap to file and land in an officer's queue, so this
+    # caps how much noise one source can put there.
+    REGISTER_MAX_PER_IP_PER_HOUR: int = 5
+
     # CORS — comma separated in the environment
     CORS_ORIGINS: str = "http://localhost:5173"
 

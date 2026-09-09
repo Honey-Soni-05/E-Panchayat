@@ -19,6 +19,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     Numeric,
@@ -652,3 +653,67 @@ class KnowledgeChunk(Base, TimestampMixin):
     # Set to the source row's updated_at when embedded, so re-indexing can skip
     # anything unchanged.
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sign-in attempts
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AuthAttempt(Base):
+    """One sign-in attempt, successful or not.
+
+    Two jobs, which is why it is a table rather than a counter in memory.
+
+    It throttles. `services.ratelimit` counts recent failures against this table
+    to decide whether to accept another attempt, so `/auth/login` stops being an
+    unlimited password oracle. Keeping the count in the database rather than in
+    the process matters on this deployment specifically: the API sleeps after
+    fifteen minutes of inactivity, and an in-memory counter would be cleared by
+    every cold start — which is to say, by waiting.
+
+    It is also the audit trail for authentication. A failed sign-in is the event
+    a Panchayat most needs a record of, and the row survives long enough to
+    answer "who has been trying to get into this officer's account".
+
+    The email is stored exactly as it was typed (lowercased), whether or not any
+    such account exists. That is deliberate: throttling only known accounts
+    would turn the throttle itself into a way to discover which emails are
+    registered — a slow response for real accounts and a fast one for the rest.
+
+    No password or token is stored here, successful attempt or not.
+    """
+
+    __tablename__ = "auth_attempts"
+    __table_args__ = (
+        # The shape of the throttle's own two queries: recent failures for one
+        # email, and recent failures from one source. Declared here as well as
+        # in the migration so the two cannot drift — `alembic check` compares
+        # them, and caught exactly that when these were only in the migration.
+        Index("ix_auth_attempts_email_outcome_time", "email", "outcome", "created_at"),
+        Index("ix_auth_attempts_ip_outcome_time", "ip", "outcome", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+
+    # As typed, lowercased. Not a foreign key — most failures name no real account.
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+
+    # Best-effort, and spoofable behind a proxy that does not strip the header.
+    # The per-email limit is the guarantee; this one narrows the blast radius.
+    ip: Mapped[str | None] = mapped_column(String(64), index=True)
+
+    successful: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # 'ok' | 'bad_password' | 'no_account' | 'inactive'
+    # | 'registration_pending' | 'registration_rejected' | 'rate_limited'
+    outcome: Mapped[str] = mapped_column(String(30), nullable=False)
+
+    # Set only when the attempt matched a real account, so a successful sign-in
+    # can be tied to a user without inventing one for a failure that did not.
+    user_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False, index=True
+    )

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,6 +21,7 @@ from app.core.security import (
 )
 from app.db.session import get_db
 from app.models import Citizen, RegistrationRequest, User
+from app.services import ratelimit
 from app.schemas import (
     LoginRequest,
     PasswordChange,
@@ -45,8 +46,21 @@ def _issue(user: User) -> TokenPair:
 
 
 @router.post("/login", response_model=TokenPair)
-def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
+def login(
+    body: LoginRequest, request: Request, db: Session = Depends(get_db)
+) -> TokenPair:
     email = body.email.lower()
+    ip = ratelimit.client_ip(request)
+
+    # Before the password is checked, not after: a throttled attempt should not
+    # get to spend a bcrypt verification, and should not be told whether the
+    # address it named exists.
+    try:
+        ratelimit.check_login_allowed(db, email, ip)
+    except HTTPException:
+        ratelimit.record(db, email=email, ip=ip, outcome="rate_limited")
+        raise
+
     user = db.scalar(select(User).where(User.email == email))
 
     # Same message and same work either way, so the response can't be used to
@@ -62,7 +76,13 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
             .order_by(RegistrationRequest.created_at.desc())
         )
         if pending and verify_password(body.password, pending.hashed_password):
+            # They proved the password, so this is not a guess and must not
+            # count toward a lockout — otherwise an applicant checking on their
+            # own application would throttle themselves out of it.
             if pending.status == "pending":
+                ratelimit.record(
+                    db, email=email, ip=ip, outcome="registration_pending"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=(
@@ -70,6 +90,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
                         "office. You will be able to sign in once it is approved."
                     ),
                 )
+            ratelimit.record(db, email=email, ip=ip, outcome="registration_rejected")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
@@ -77,11 +98,22 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
                     + (pending.review_note or "Contact the Panchayat office for details.")
                 ),
             )
+        ratelimit.record(
+            db,
+            email=email,
+            ip=ip,
+            outcome="bad_password" if user else "no_account",
+            user_id=user.id if user else None,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password.",
         )
     if not user.is_active:
+        # Correct password, disabled account. Recorded, but not a guess.
+        ratelimit.record(
+            db, email=email, ip=ip, outcome="inactive", user_id=user.id
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This account has been deactivated. Contact the Panchayat office.",
@@ -89,6 +121,9 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
 
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
+    ratelimit.record(
+        db, email=email, ip=ip, outcome="ok", successful=True, user_id=user.id
+    )
     return _issue(user)
 
 
@@ -216,7 +251,9 @@ def _registration_out(db: Session, req: RegistrationRequest) -> RegistrationOut:
 
 
 @router.post("/register", status_code=status.HTTP_202_ACCEPTED)
-def register(body: RegistrationCreate, db: Session = Depends(get_db)) -> dict:
+def register(
+    body: RegistrationCreate, request: Request, db: Session = Depends(get_db)
+) -> dict:
     """Apply for a citizen account. Always returns the same acknowledgement.
 
     The response deliberately says nothing about whether the email is already
@@ -224,6 +261,11 @@ def register(body: RegistrationCreate, db: Session = Depends(get_db)) -> dict:
     hold accounts.
     """
     email = body.email.lower().strip()
+    ip = ratelimit.client_ip(request)
+    # An application is unauthenticated and lands in an officer's queue, so it
+    # is the one endpoint here a script could use to bury real applicants.
+    ratelimit.check_registration_allowed(db, ip)
+
     acknowledgement = {
         "status": "pending",
         "message": (
@@ -258,6 +300,9 @@ def register(body: RegistrationCreate, db: Session = Depends(get_db)) -> dict:
         )
     )
     db.commit()
+    # Counted only when an application was actually created. The two early
+    # returns above write nothing, so there is nothing there to throttle.
+    ratelimit.record(db, email=email, ip=ip, outcome="registration_filed")
     return acknowledgement
 
 

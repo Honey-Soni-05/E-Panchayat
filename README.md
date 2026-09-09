@@ -280,6 +280,43 @@ hooks (`useQuery`, `useMutation`), and an auth context. No Redux, no React Query
   exists, so it cannot be used to discover who holds an account.
 - The Gemini key is server-side only.
 
+### Sign-in throttling
+
+`/auth/login` is metered, because otherwise it is an unlimited password oracle:
+slow per guess, but free to repeat. Five wrong guesses against one address, or
+twenty from one source, and further attempts get a `429` for the rest of a
+fifteen-minute window. The thresholds are settings, not constants.
+
+The count lives in the `auth_attempts` table rather than in the process. That is
+specific to this deployment: the API sleeps after fifteen minutes of inactivity,
+so an in-memory counter would be cleared by every cold start — the throttle
+could be reset by waiting rather than defeated, and the sleep window is about
+the length of the lockout.
+
+Three details that are easy to get wrong, and are tested:
+
+- **A refusal does not extend the lockout.** Only a genuinely wrong guess counts,
+  so a throttled retry cannot renew the window. Otherwise a lockout would never
+  expire — for the honest user as much as the attacker.
+- **Unknown addresses are throttled identically to real ones.** Metering only
+  real accounts would make the throttle answer the question the login response
+  carefully refuses: whether an address is registered.
+- **An applicant checking a pending application is not throttled.** They prove
+  their password every time, so it is not a guess.
+
+The honest cost: someone who knows an officer's address can spend five
+deliberate failures to lock it for fifteen minutes. That is the accepted trade
+against leaving the oracle open, and the short window is what makes it bearable.
+A production deployment would add a CAPTCHA or an out-of-band unlock rather than
+raise the numbers.
+
+`auth_attempts` also doubles as the authentication audit trail — it records
+successes, not only failures, so it can answer "who signed in" as well as "who
+has been trying". It pairs an email with an IP, which is personal data, so
+`services.ratelimit.prune()` drops anything older than ninety days. Nothing
+calls it automatically; there is no scheduler here, and claiming an enforced
+retention policy that nothing enforces would be worse than running it by hand.
+
 ---
 
 ## Privacy: what leaves this server
