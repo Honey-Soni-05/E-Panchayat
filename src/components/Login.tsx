@@ -12,6 +12,7 @@ import {
   MapPin,
   CheckCircle2,
   Info,
+  KeyRound,
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth';
@@ -39,7 +40,13 @@ const DEMO_ACCOUNTS = {
 } as const;
 
 type DemoRole = keyof typeof DEMO_ACCOUNTS;
-type Mode = 'signin' | 'register';
+/**
+ * 'recover' is reached by a link under the sign-in form rather than a third
+ * tab. A resident needs it perhaps once, and only after a trip to the Panchayat
+ * office to be identified — giving it equal billing with signing in would
+ * suggest it is something you can start from here, which it is not.
+ */
+type Mode = 'signin' | 'register' | 'recover';
 
 const field =
   'w-full pl-9 pr-3 py-2 border border-slate-200 rounded text-slate-800 font-medium ' +
@@ -70,6 +77,17 @@ export const Login: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<string | null>(null);
 
+  // Redeeming a code issued at the Panchayat counter. The code permits setting
+  // a password; the password itself is chosen here and never reaches the
+  // officer who handed the code over.
+  const [recover, setRecover] = useState({
+    email: '',
+    code: '',
+    password: '',
+    confirm: '',
+  });
+  const [recovered, setRecovered] = useState(false);
+
   const isEnglish = i18n.language === 'en';
   const toggleLanguage = () => i18n.changeLanguage(isEnglish ? 'mr' : 'en');
 
@@ -96,6 +114,32 @@ export const Login: React.FC = () => {
     clearError();
     setFormError(null);
     setSubmitted(null);
+    setRecovered(false);
+  };
+
+  const handleRecover = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError(null);
+
+    if (recover.password !== recover.confirm) {
+      setFormError(
+        isEnglish ? 'The two passwords do not match.' : 'दोन्ही संकेतशब्द जुळत नाहीत.',
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await api.auth.resetPassword(recover.email, recover.code, recover.password);
+      setRecovered(true);
+      // Carry the address over so signing in is one field, not two.
+      setEmail(recover.email);
+      setPassword('');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,7 +226,13 @@ export const Login: React.FC = () => {
               {t('auth.portal_title')}
             </h1>
             <p className="text-xs text-slate-500 font-medium">
-              {mode === 'signin' ? t('auth.subtitle') : t('auth.register_subtitle')}
+              {mode === 'signin'
+                ? t('auth.subtitle')
+                : mode === 'recover'
+                  ? isEnglish
+                    ? 'Set a new password using a code from the Panchayat office'
+                    : 'ग्रामपंचायत कार्यालयातील कोड वापरून नवीन संकेतशब्द ठरवा'
+                  : t('auth.register_subtitle')}
             </p>
           </div>
 
@@ -295,6 +345,19 @@ export const Login: React.FC = () => {
               </form>
 
               <div className="pt-4 border-t border-slate-100 space-y-3">
+                {/* Deliberately understated: this is not a self-service reset,
+                    and offering it as one would send residents looking for an
+                    email that is never sent. */}
+                <p className="text-[11px] text-slate-500 text-center leading-relaxed m-0">
+                  {isEnglish ? 'Cannot sign in? ' : 'साइन इन करता येत नाही? '}
+                  <button
+                    type="button"
+                    onClick={() => switchMode('recover')}
+                    className="font-bold text-govnavy hover:underline"
+                  >
+                    {isEnglish ? 'I have a reset code' : 'माझ्याकडे रीसेट कोड आहे'}
+                  </button>
+                </p>
                 <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-medium">
                   <ShieldCheck size={14} className="text-govgreen" />
                   <span>{t('auth.jwt_note')}</span>
@@ -310,6 +373,161 @@ export const Login: React.FC = () => {
                 </p>
               </div>
             </>
+          ) : mode === 'recover' ? (
+            recovered ? (
+              <div className="space-y-4 text-center">
+                <CheckCircle2 size={40} className="mx-auto text-govgreen" />
+                <p className="text-sm font-bold text-govblue-900 m-0">
+                  {isEnglish ? 'Your password is set' : 'तुमचा संकेतशब्द तयार झाला'}
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed m-0">
+                  {isEnglish
+                    ? 'Sign in with it now. Any other device that was signed in to this account has been signed out.'
+                    : 'आता त्याने साइन इन करा. या खात्यावर साइन इन असलेली इतर कोणतीही उपकरणे साइन आउट झाली आहेत.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => switchMode('signin')}
+                  className="w-full py-2.5 bg-govnavy hover:bg-govblue-700 text-white rounded font-bold text-xs sm:text-sm transition-all shadow-md"
+                >
+                  {isEnglish ? 'Go to sign in' : 'साइन इनकडे जा'}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="p-3 rounded bg-govblue-50 border border-govnavy/15 text-[11px] text-slate-600 leading-relaxed text-left">
+                  {isEnglish
+                    ? 'Reset codes are issued at the Gram Panchayat office, in person, once an officer has identified you against the village register. Nothing is sent by email or SMS — there is no such service on this system.'
+                    : 'रीसेट कोड ग्रामपंचायत कार्यालयात, प्रत्यक्ष हजर राहून दिला जातो — अधिकाऱ्याने गावाच्या नोंदवहीत तुमची ओळख पटवल्यानंतर. ईमेल किंवा एसएमएसने काहीही पाठवले जात नाही.'}
+                </div>
+
+                {formError && (
+                  <div
+                    role="alert"
+                    className="p-3 rounded bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold leading-relaxed"
+                  >
+                    {formError}
+                  </div>
+                )}
+
+                <form
+                  onSubmit={handleRecover}
+                  className="space-y-4 text-xs font-bold text-slate-500 text-left"
+                >
+                  <div className="space-y-1.5">
+                    <label htmlFor="rec-email" className="block">
+                      {t('auth.email')}
+                    </label>
+                    <div className="relative">
+                      <Mail size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        id="rec-email"
+                        type="email"
+                        required
+                        value={recover.email}
+                        onChange={(e) => setRecover({ ...recover, email: e.target.value })}
+                        placeholder="savita@citizen.panchayat.gov.in"
+                        className={field}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="rec-code" className="block">
+                      {isEnglish ? 'Reset code' : 'रीसेट कोड'}
+                    </label>
+                    <div className="relative">
+                      <KeyRound size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        id="rec-code"
+                        required
+                        value={recover.code}
+                        onChange={(e) => setRecover({ ...recover, code: e.target.value })}
+                        placeholder="XXXXX-XXXXX"
+                        autoCapitalize="characters"
+                        spellCheck={false}
+                        className={`${field} font-mono tracking-widest uppercase`}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium m-0">
+                      {isEnglish
+                        ? 'Capitals and the dash do not matter.'
+                        : 'लहान-मोठी अक्षरे किंवा डॅश यांनी फरक पडत नाही.'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="rec-password" className="block">
+                      {isEnglish ? 'New password' : 'नवीन संकेतशब्द'}
+                    </label>
+                    <div className="relative">
+                      <Lock size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        id="rec-password"
+                        type="password"
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                        value={recover.password}
+                        onChange={(e) =>
+                          setRecover({ ...recover, password: e.target.value })
+                        }
+                        placeholder="••••••••"
+                        className={field}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="rec-confirm" className="block">
+                      {isEnglish ? 'Confirm new password' : 'संकेतशब्दाची खात्री करा'}
+                    </label>
+                    <div className="relative">
+                      <Lock size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        id="rec-confirm"
+                        type="password"
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                        value={recover.confirm}
+                        onChange={(e) =>
+                          setRecover({ ...recover, confirm: e.target.value })
+                        }
+                        placeholder="••••••••"
+                        className={field}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-2.5 bg-govnavy hover:bg-govblue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-md mt-4"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>{isEnglish ? 'Setting password' : 'संकेतशब्द तयार होत आहे'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{isEnglish ? 'Set my password' : 'माझा संकेतशब्द ठरवा'}</span>
+                        <ArrowRight size={14} />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <button
+                  type="button"
+                  onClick={() => switchMode('signin')}
+                  className="w-full text-[11px] font-bold text-slate-500 hover:text-govnavy transition-colors"
+                >
+                  {isEnglish ? '← Back to sign in' : '← साइन इनकडे परत'}
+                </button>
+              </>
+            )
           ) : submitted ? (
             <div className="space-y-4 text-center">
               <CheckCircle2 size={40} className="mx-auto text-govgreen" />

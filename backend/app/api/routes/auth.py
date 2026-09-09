@@ -597,9 +597,27 @@ def decide_registration(
 
 @router.get("/users", response_model=list[UserOut])
 def list_users(
-    _: User = Depends(require_admin), db: Session = Depends(get_db)
+    user: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> list[User]:
-    return list(db.scalars(select(User).order_by(User.email)))
+    """The portal accounts this user may act on.
+
+    Admin-only until the password reset needed it. An officer may reset a
+    resident of their own village, but had no way to find that resident's
+    account: the reset takes a user id, and the only endpoint that could
+    produce one was closed to them. An officer at the counter with a resident
+    in front of them could not complete the flow the feature exists for.
+
+    So the list is scoped to exactly what the reset itself permits. An officer
+    sees the resident accounts of their own village and nothing else — not
+    other officers, not admins, not a neighbouring Gram Panchayat's residents.
+    An admin sees everything. The two rules are deliberately the same, so the
+    list can never offer an account that the reset would then refuse.
+    """
+    stmt = select(User).order_by(User.email)
+    scope = village_scope(user)
+    if scope is not None:
+        stmt = stmt.where(User.role == "citizen", User.village_id == scope)
+    return list(db.scalars(stmt))
 
 
 @router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)

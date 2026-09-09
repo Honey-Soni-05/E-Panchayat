@@ -85,6 +85,48 @@ def _step_over_the_second_boundary() -> None:
     time.sleep(1.0 - (time.time() % 1.0) + 0.01)
 
 
+# ── Finding the account to reset ─────────────────────────────────────────────
+
+def test_an_officer_can_list_the_accounts_they_may_reset(client, officer):
+    """Without this the feature is unusable: the reset takes a user id, and an
+    officer at the counter with a resident in front of them had no endpoint
+    that would tell them one."""
+    resp = client.get(f"{API}/auth/users", headers=officer)
+    assert resp.status_code == 200, resp.text
+    accounts = resp.json()
+    assert accounts, "an officer sees none of their own residents' accounts"
+    assert all(a["role"] == "citizen" for a in accounts)
+    assert all(a["villageId"] == HOME for a in accounts)
+
+
+def test_the_list_offers_nothing_the_reset_would_refuse(client, officer):
+    """The list and the permission check have to agree, or an officer is shown
+    an account and then told they may not touch it."""
+    listed = client.get(f"{API}/auth/users", headers=officer).json()
+    emails = {a["email"] for a in listed}
+
+    assert "admin@panchayat.gov.in" not in emails
+    assert "officer@panchayat.gov.in" not in emails
+    assert "officer.theur@panchayat.gov.in" not in emails
+
+    for account in listed:
+        resp = _issue(client, officer, account["id"])
+        assert resp.status_code == 200, (
+            f'{account["email"]} was listed but the reset refused it'
+        )
+        _restore(account["email"])
+
+
+def test_an_admin_still_sees_every_account(client, admin):
+    accounts = client.get(f"{API}/auth/users", headers=admin).json()
+    roles = {a["role"] for a in accounts}
+    assert {"admin", "officer", "citizen"} <= roles
+
+
+def test_a_citizen_cannot_list_accounts(client, citizen):
+    assert client.get(f"{API}/auth/users", headers=citizen).status_code == 403
+
+
 # ── Issuing ──────────────────────────────────────────────────────────────────
 
 def test_an_officer_can_issue_a_code_for_their_own_resident(client, officer, savita):

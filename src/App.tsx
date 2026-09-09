@@ -31,6 +31,8 @@ import { CitizenGrievances } from './components/CitizenGrievances';
 import { DistrictOverview } from './components/DistrictOverview';
 import { SchemeBrowser } from './components/SchemeBrowser';
 import { RegistrationReview } from './components/RegistrationReview';
+import { AccountRecovery } from './components/AccountRecovery';
+import { AuditTrail } from './components/AuditTrail';
 import { Login } from './components/Login';
 
 // Import i18n initialization
@@ -119,6 +121,12 @@ function App() {
         return <AIAssistant />;
       case 'analytics':
         return <Analytics />;
+      case 'recovery':
+        return <AccountRecovery />;
+      case 'audit':
+        // Admin only. The server refuses anyone else, so this is the tab
+        // matching the rule rather than the rule itself.
+        return isAdmin ? <AuditTrail /> : <Dashboard setCurrentTab={setCurrentTab} />;
       default:
         return <Dashboard setCurrentTab={setCurrentTab} />;
     }

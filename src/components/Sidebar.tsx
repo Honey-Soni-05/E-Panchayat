@@ -15,7 +15,9 @@ import {
   Globe,
   LogOut,
   FolderOpen,
-  UserPlus
+  UserPlus,
+  KeyRound,
+  ScrollText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -66,6 +68,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'gis_map', label: t('nav.gis_map'), icon: Map },
     { id: 'ai_assistant', label: t('nav.ai_assistant'), icon: Bot, isAI: true },
     { id: 'analytics', label: t('nav.analytics'), icon: BarChart3 },
+    {
+      id: 'recovery',
+      label: i18n.language === 'en' ? 'Account Recovery' : 'खाते पुनर्प्राप्ती',
+      icon: KeyRound,
+    },
+    // The audit trail says which residents an officer's colleagues have been
+    // looking at, so it is admin-only — a privacy boundary rather than a
+    // seniority one. The server refuses an officer regardless; hiding the tab
+    // just stops it being a dead end.
+    ...(role === 'admin'
+      ? [{
+          id: 'audit',
+          label: i18n.language === 'en' ? 'Audit Trail' : 'लेखापरीक्षण नोंद',
+          icon: ScrollText,
+        }]
+      : []),
   ];
 
   return (

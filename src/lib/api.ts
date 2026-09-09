@@ -732,6 +732,12 @@ export const api = {
         body: { currentPassword, newPassword },
       }),
 
+    /** The portal accounts this user may act on. Scoped server-side to exactly
+     *  what the password reset permits: an officer sees the resident accounts
+     *  of their own village, an admin sees everything. The two rules match, so
+     *  nothing listed here can be refused by `issuePasswordReset`. */
+    users: (): Promise<User[]> => request('/auth/users'),
+
     /** Officer or admin: issue a one-time reset code for someone who cannot
      *  sign in. The code is in this response and nowhere else readable, so it
      *  has to be written down before the screen is closed. Issuing another
