@@ -65,6 +65,26 @@ _ENTITY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 # Never recorded: no user behind them, or so frequent they would drown the rest.
 _IGNORED = re.compile(r"^/(health|docs|redoc|openapi\.json|favicon\.ico)")
 
+# POSTs that change nothing. They use POST because the query travels in the
+# body, not because they write anything, so the verb is a transport detail
+# rather than a fact about the request.
+#
+# The assistant is the case that forced this. The UI calls /ask and /context
+# together for every question — one for the answer, one for the "what I looked
+# at" panel — so a single question wrote two rows, neither naming a record.
+# After a few minutes of use the trail was almost entirely these, and the
+# events it exists for were pages down. That is the same argument this module
+# already makes for not recording list endpoints.
+#
+# Nothing is lost that the trail was answering: neither request names a
+# resident, and reading the assistant's own answer about your own file is not
+# the access an audit trail is for. Access to a resident's actual record still
+# goes through /citizens/{id} and is recorded there.
+#
+# Default is to record. A new endpoint has to be named here to be exempt, so
+# forgetting this list makes the trail noisier, never emptier.
+_READ_ONLY_POSTS = re.compile(r"/assistant/(ask|context)$")
+
 
 def identify(path: str) -> tuple[str | None, str | None]:
     """Which single record this path names, if any.
@@ -97,13 +117,19 @@ def _actor(request: Request) -> tuple[str | None, str | None]:
     return payload.get("sub"), payload.get("role")
 
 
-def _should_record(method: str, status_code: int, entity_id: str | None) -> bool:
+def _should_record(
+    method: str, path: str, status_code: int, entity_id: str | None
+) -> bool:
     # A refused request is worth recording — an officer trying to open another
     # village's resident is exactly what a trail is for — but an unauthenticated
     # one has nobody to attribute it to, and the caller drops those already.
     if status_code >= 500:
         return False
     if method in ("POST", "PUT", "PATCH", "DELETE"):
+        # ...unless the verb is only how the query got there. Such a request is
+        # judged as the read it is, which means it needs to name a record.
+        if _READ_ONLY_POSTS.search(path):
+            return entity_id is not None
         return True
     # Reads only when they name one record.
     return method == "GET" and entity_id is not None
@@ -115,7 +141,7 @@ def record_request(
     path = request.url.path
     entity_type, entity_id = identify(path)
 
-    if not _should_record(request.method, response.status_code, entity_id):
+    if not _should_record(request.method, path, response.status_code, entity_id):
         return
 
     from app.services.ratelimit import client_ip

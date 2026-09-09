@@ -79,6 +79,47 @@ def test_listing_residents_is_not_recorded(client, officer, clean_trail):
     assert _events(action="read") == []
 
 
+def test_asking_the_assistant_is_not_recorded(client, citizen, clean_trail):
+    """POST, but nothing is written and no record is named — the verb is only
+    how the question travelled.
+
+    The UI calls /ask and /context together for every question, so recording
+    them wrote two rows per question and buried the events the trail exists
+    for. Access to a resident's actual record still goes through /citizens/{id}
+    and is recorded there.
+    """
+    resp = client.post(
+        f"{API}/assistant/ask",
+        headers=citizen,
+        json={"query": "which schemes am I eligible for?", "language": "en"},
+    )
+    assert resp.status_code == 200, resp.text
+    client.post(
+        f"{API}/assistant/context",
+        headers=citizen,
+        json={"query": "which schemes am I eligible for?", "language": "en"},
+    )
+
+    assert _events() == [], "assistant traffic is filling the audit trail"
+
+
+def test_an_ordinary_post_is_still_recorded(client, officer, clean_trail):
+    """The exemption is a named list, not a rule about POSTs. Anything that
+    actually writes must still land in the trail."""
+    resp = client.post(
+        f"{API}/grievances",
+        headers=officer,
+        json={
+            "title": "Audit exemption boundary test",
+            "description": "Filed to prove ordinary writes are still recorded.",
+            "category": "Water Supply",
+            "ward": 1,
+        },
+    )
+    assert resp.status_code in (200, 201), resp.text
+    assert _events(action="post"), "a real write was not recorded"
+
+
 def test_a_refused_attempt_is_recorded_too(client, neighbour_officer, clean_trail):
     """An officer reaching into another village is exactly the event a trail is
     for. Recording only what succeeded would lose it."""
