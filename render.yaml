@@ -1,6 +1,113 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Defines the whole deployment: the API and the website. In the Render
+# dashboard: New → Blueprint → point it at this repository. Render reads this
+# file and creates both services.
+#
+# Infrastructure as code, deliberately. The alternative is clicking settings
+# into a dashboard, where nothing is reviewed, nothing is in version control,
+# and rebuilding after an accident means remembering what you clicked.
+#
+# The database is not defined here. It is the existing Supabase project;
+# creating a second one on Render would leave two databases disagreeing about
+# who lives in the village.
+#
+# Secrets are marked `sync: false`, which means Render prompts for them and
+# stores them itself. They are deliberately absent from this file because it
+# is committed to a public repository.
+
 services:
+  # ── The API ────────────────────────────────────────────────────────────────
   - type: web
-    name: e-panchayat-ai
-    runtime: node
-    buildCommand: npm run build
-    startCommand: node server.js
+    name: epanchayat-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: singapore # the Render region closest to Pune
+    branch: main
+    healthCheckPath: /health
+
+    envVars:
+      # Supabase → Settings → Database → Connection string → Session pooler.
+      # Change the prefix to postgresql+psycopg:// and keep sslmode=require.
+      # Use the POOLER host, not the direct one: a free instance restarts often
+      # and the pooler survives that better.
+      - key: DATABASE_URL
+        sync: false
+
+      # python -c "import secrets; print(secrets.token_urlsafe(48))"
+      # Must NOT be the value from .env.example. Changing it later signs
+      # everybody out, which is correct behaviour if it ever leaks.
+      - key: SECRET_KEY
+        sync: false
+
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # The website's exact origin, e.g. https://epanchayat-web.onrender.com
+      # — scheme and host, no trailing slash, no path.
+      #
+      # You cannot fill this in until the web service below has deployed once
+      # and been given its URL, so the order is: deploy both, copy the web
+      # service's URL, set this, redeploy the API.
+      #
+      # Getting this wrong is the most common deployment failure in this whole
+      # setup, and the least obvious: the site loads, every request fails, the
+      # browser console shows a CORS error, and the API log shows nothing at
+      # all — because the request never reached the server.
+      - key: CORS_ORIGINS
+        sync: false
+
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+  # ── The website ────────────────────────────────────────────────────────────
+  # A static site, not a web service: the build produces plain files, so there
+  # is no server process. Two consequences worth knowing — it costs nothing to
+  # keep running, and unlike a free web service it never spins down. Only the
+  # API sleeps.
+  - type: web
+    name: epanchayat-web
+    runtime: static
+    plan: free
+    branch: main
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+
+    envVars:
+      # Read by Vite at BUILD time and inlined into the JavaScript bundle, so
+      # changing it requires a rebuild, not just a restart.
+      #
+      # This is exactly why the Gemini key must never carry a VITE_ prefix:
+      # anything Vite inlines is readable by anyone who opens the browser's
+      # source view. An API URL is public anyway; a key is not.
+      #
+      # Set this to the API service's URL plus /api/v1, e.g.
+      #   https://epanchayat-api.onrender.com/api/v1
+      - key: VITE_API_URL
+        sync: false
+
+    routes:
+      # Serve index.html for any path that is not a built asset. The app keeps
+      # its current screen in React state rather than the URL today, but this
+      # costs nothing and means a deep link stops being a 404 the moment
+      # routing is added.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      # Vite fingerprints asset filenames, so a given URL's contents can never
+      # change. Caching them for a year is safe and makes repeat visits instant.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

@@ -32,6 +32,7 @@ import {
   type Scheme,
 } from '../lib/api';
 import { useMutation, useQuery } from '../lib/useApi';
+import { SchemeReader } from './schemes/SchemeReader';
 import {
   CriteriaList,
   EmptyState,
@@ -118,6 +119,8 @@ export const SchemeBrowser: React.FC = () => {
           </span>
         </div>
       </header>
+
+      <SchemeReader onProposed={schemes.refetch} />
 
       {schemes.error && <ErrorNotice message={schemes.error} onRetry={schemes.refetch} />}
       {decide.error && <ErrorNotice message={decide.error} />}

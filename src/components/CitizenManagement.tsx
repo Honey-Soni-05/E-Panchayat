@@ -48,10 +48,12 @@ import {
   Phone,
   Inbox,
   AlertTriangle,
+  ExternalLink,
 } from 'lucide-react';
 
 import {
   api,
+  ApiError,
   ELIGIBILITY_ORDER,
   type Citizen,
   type CitizenDocument,
@@ -1172,11 +1174,7 @@ const VerificationQueue: React.FC<{
                 )}
               </dl>
 
-              <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2.5 m-0 leading-relaxed">
-                {isEnglish
-                  ? 'The uploaded file is held on the server; this screen shows the record of it. Open the file itself before deciding.'
-                  : 'अपलोड केलेली फाईल सर्व्हरवर आहे; येथे तिची नोंद दिसते. निर्णयापूर्वी मूळ फाईल तपासा.'}
-              </p>
+              <DocumentViewer documentId={reviewing.id} fileName={reviewing.fileName} />
 
               {rejecting && (
                 <div className="space-y-1.5">
@@ -1288,6 +1286,110 @@ const VerificationQueue: React.FC<{
 };
 
 // ─── Screen ─────────────────────────────────────────────────────────────────
+
+/**
+ * Shows the actual uploaded file inside the verification dialog.
+ *
+ * The officer is being asked to approve or reject someone's income
+ * certificate. Deciding that from a filename alone is not verification, and it
+ * makes the requirement to give a reason for rejection meaningless — there is
+ * nothing to form a reason about.
+ *
+ * The file needs an Authorization header, so it cannot be an <img src> or a
+ * plain link. It is fetched as a blob and shown from an object URL, which must
+ * be revoked when the dialog closes or the blob stays in memory for the life
+ * of the tab.
+ */
+const DocumentViewer: React.FC<{ documentId: string; fileName: string }> = ({
+  documentId,
+  fileName,
+}) => {
+  const { i18n } = useTranslation();
+  const isEnglish = i18n.language === 'en';
+
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revoked: string | null = null;
+    let cancelled = false;
+
+    setLoading(true);
+    setError(null);
+    api.documents
+      .fileUrl(documentId)
+      .then((objectUrl) => {
+        if (cancelled) {
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        revoked = objectUrl;
+        setUrl(objectUrl);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (revoked) URL.revokeObjectURL(revoked);
+    };
+  }, [documentId]);
+
+  if (loading) {
+    return (
+      <p className="flex items-center gap-2 text-[11px] text-slate-500 font-semibold">
+        <Loader2 size={13} className="animate-spin" />
+        {isEnglish ? 'Opening the document…' : 'दस्तऐवज उघडत आहे…'}
+      </p>
+    );
+  }
+
+  if (error || !url) {
+    return (
+      <p
+        role="alert"
+        className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded p-2.5 m-0 leading-relaxed"
+      >
+        {error ??
+          (isEnglish ? 'The document could not be opened.' : 'दस्तऐवज उघडता आला नाही.')}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <object
+        data={url}
+        type="application/pdf"
+        className="w-full h-64 rounded border border-slate-200 bg-slate-50"
+        aria-label={fileName}
+      >
+        {/* Shown when the browser has no inline PDF viewer. */}
+        <p className="p-3 text-[11px] text-slate-600">
+          {isEnglish
+            ? 'This browser cannot show the file inline.'
+            : 'हा ब्राउझर फाईल थेट दाखवू शकत नाही.'}
+        </p>
+      </object>
+
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-govnavy hover:underline"
+      >
+        <ExternalLink size={12} />
+        {isEnglish ? 'Open full size in a new tab' : 'नवीन टॅबमध्ये पूर्ण आकारात उघडा'}
+      </a>
+    </div>
+  );
+};
+
 
 export const CitizenManagement: React.FC = () => {
   const { t, i18n } = useTranslation();

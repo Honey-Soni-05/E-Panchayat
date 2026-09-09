@@ -73,6 +73,8 @@ export const Login: React.FC = () => {
   const isEnglish = i18n.language === 'en';
   const toggleLanguage = () => i18n.changeLanguage(isEnglish ? 'mr' : 'en');
 
+  const selectedVillage = villages.find((v) => v.id === form.villageId) ?? null;
+
   // Loaded only when the form is open, and from the unauthenticated endpoint
   // that returns names alone.
   useEffect(() => {
@@ -386,6 +388,24 @@ export const Login: React.FC = () => {
                     ))}
                   </select>
                 </div>
+
+                {/* The block, district and state are shown rather than asked
+                    for. This platform serves one block, so three dropdowns
+                    with one option each would be pure friction — but an
+                    applicant still needs to see where the village they picked
+                    actually sits, because village names repeat across a
+                    district. When this covers more than one block, these
+                    become real cascading selects. */}
+                {selectedVillage && (
+                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                    {isEnglish
+                      ? `${selectedVillage.blockName} block · ${selectedVillage.districtName} district · ${selectedVillage.stateName}`
+                      : `${selectedVillage.blockNameMr} तालुका · ${selectedVillage.districtNameMr} जिल्हा · ${selectedVillage.stateNameMr}`}
+                    {selectedVillage.lgdCode
+                      ? ` · LGD ${selectedVillage.lgdCode}`
+                      : ''}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
