@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from app.db.session import SessionLocal
 from app.models import Citizen, Grievance, KnowledgeChunk, User
-from app.services import graph
+from app.services import graph, retrieval
 from app.services.indexer import build_drafts, reindex
 
 API = "/api/v1"
@@ -377,24 +377,36 @@ def test_chunks_with_no_embedding_are_skipped_not_scored_as_perfect():
 
 # ── Falling back ─────────────────────────────────────────────────────────────
 
-def test_the_assistant_reports_keyword_mode_when_nothing_is_indexed(client, officer):
+def test_the_assistant_reports_keyword_mode_when_nothing_is_indexed(client, officer, fake_index):
     """With no index the endpoint must still answer, and must say which path it
-    used rather than implying a semantic search happened."""
+    used rather than implying a semantic search happened.
+
+    The index is put back afterwards. It is shared module state, and an earlier
+    version of this test emptied it and walked away — which silently turned
+    every later semantic test into a keyword test, passing for the wrong reason.
+    """
     with SessionLocal() as db:
-        saved = list(db.scalars(select(KnowledgeChunk)))
-        for chunk in saved:
+        saved = {c.id: c.embedding for c in db.scalars(select(KnowledgeChunk))}
+        for chunk in db.scalars(select(KnowledgeChunk)):
             chunk.embedding = None
         db.commit()
 
-    resp = client.post(
-        f"{API}/assistant/ask",
-        headers=officer,
-        json={"query": "How many grievances are pending?", "language": "en"},
-    )
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert body["retrieval"] == "keyword"
-    assert body["answer"]
+    try:
+        resp = client.post(
+            f"{API}/assistant/ask",
+            headers=officer,
+            json={"query": "How many grievances are pending?", "language": "en"},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["retrieval"] == "keyword"
+        assert body["answer"]
+    finally:
+        with SessionLocal() as db:
+            for chunk in db.scalars(select(KnowledgeChunk)):
+                if chunk.id in saved:
+                    chunk.embedding = saved[chunk.id]
+            db.commit()
 
 
 # ── Routing a question the way a villager actually phrases it ───────────────
@@ -510,6 +522,107 @@ def test_the_resident_is_told_their_data_stayed_in_the_panchayat(client, citizen
     )
     answer = resp.json()["answer"].lower()
     assert "never sent outside" in answer or "rule engine" in answer
+
+
+# ── Regressions found by running the app, not by the tests ──────────────────
+#
+# Every test above passed while the assistant was answering a resident's
+# eligibility question with a description of the schemes. The paths were each
+# covered on their own; nothing exercised the semantic path *for a citizen*,
+# which is the combination that was broken.
+
+
+@pytest.fixture
+def semantic_path(fake_index, monkeypatch):
+    """Force the semantic branch to actually run.
+
+    Without this these tests prove nothing. The suite has no API key, so
+    `embed()` raises and `gather_semantic` falls straight through to the keyword
+    pass — which computes eligibility and would have passed before the fix as
+    readily as after it. Stubbing the embedding is what puts the test on the
+    branch that was broken.
+    """
+
+    async def fake_embed(texts):
+        return [_vector_for(fake_index, "scheme")]
+
+    monkeypatch.setattr(retrieval, "embed", fake_embed)
+
+    # Re-assert the vectors rather than trusting whatever ran before. The index
+    # is module-scoped shared state and other tests null it deliberately; a
+    # semantic test that silently ran as a keyword test would pass while proving
+    # nothing, which is how the bug below survived a green suite in the first
+    # place.
+    with SessionLocal() as db:
+        for chunk in db.scalars(select(KnowledgeChunk)):
+            if chunk.entity_type in fake_index:
+                chunk.embedding = _vector_for(fake_index, chunk.entity_type)
+        db.commit()
+    return fake_index
+
+
+def test_a_resident_asking_about_eligibility_gets_their_own_answer(semantic_path):
+    """The bug: semantic search matched the scheme chunks, returned early, and
+    the eligibility engine was never consulted — so a resident asking which
+    schemes they qualify for was told what the schemes are.
+
+    A resident's verdict is computed, not retrieved. It exists in no chunk and
+    cannot, because residents are deliberately not indexed, so the semantic hits
+    have to be layered onto the keyword pass rather than replace it.
+    """
+    citizen = _user("citizen")
+    with SessionLocal() as db:
+        retrieved = asyncio.run(
+            retrieval.gather_semantic(db, "which schemes am I eligible for?", citizen, HOME)
+        )
+
+    assert retrieved.mode == "semantic", "fell back to keyword; the branch is untested"
+    assert retrieved.has_personal is True, (
+        "the resident's own eligibility was not retrieved, so the answer is "
+        "about the schemes rather than about them"
+    )
+    joined = " ".join(retrieved.facts).lower()
+    assert "qualifies for" in joined or "criterion" in joined
+
+
+def test_an_officers_semantic_answer_stays_impersonal(semantic_path):
+    """The other half: layering personal facts in for a citizen must not start
+    doing it for an officer, or every officer question would stop reaching the
+    model."""
+    officer = _user("officer")
+    with SessionLocal() as db:
+        retrieved = asyncio.run(
+            retrieval.gather_semantic(db, "what schemes are available?", officer, HOME)
+        )
+
+    assert retrieved.mode == "semantic"
+    assert retrieved.facts
+    assert retrieved.has_personal is False
+
+
+def test_the_plain_answer_says_which_reason_it_is_giving():
+    """'No key is configured', printed under a working key, sends whoever is
+    debugging to the wrong place. A retired model name did exactly that."""
+    retrieved = retrieval.Retrieved()
+    retrieved.add("There are 4 unresolved grievances.")
+
+    no_key = retrieval.plain_answer(retrieved, "en", reason="no_key")
+    unreachable = retrieval.plain_answer(retrieved, "en", reason="unavailable")
+
+    assert "not configured" in no_key
+    assert "not configured" not in unreachable
+    assert "could not be reached" in unreachable
+
+
+def test_a_personal_answer_says_so_whatever_the_reason():
+    """The privacy note is a decision, not a failure, so it outranks both."""
+    retrieved = retrieval.Retrieved()
+    retrieved.add("Savita qualifies for 1 scheme.", personal=True)
+
+    for reason in ("no_key", "unavailable"):
+        answer = retrieval.plain_answer(retrieved, "en", reason=reason)
+        assert "never sent outside" in answer
+        assert "not configured" not in answer
 
 
 def test_an_officer_still_gets_the_village_count_not_the_filing_advice(client, officer):

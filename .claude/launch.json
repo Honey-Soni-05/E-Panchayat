@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "//": "chdir into backend/ first: settings read .env relative to cwd, and uvicorn's --app-dir does not change it.",
+      "runtimeExecutable": "D:/E-Panchayat/backend/.venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-c",
+        "import os, uvicorn; os.chdir(r'D:/E-Panchayat/backend'); uvicorn.run('app.main:app', host='127.0.0.1', port=8000)"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    }
+  ]
+}

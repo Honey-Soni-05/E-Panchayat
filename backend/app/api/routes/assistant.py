@@ -135,10 +135,16 @@ async def ask(
         )
     except LLMUnavailable:
         # The records are still real, so answer from them rather than failing.
+        #
+        # Reported as 'unavailable', not 'retrieval_only'. They look the same to
+        # a reader and mean opposite things: one is a server with no key
+        # configured, the other is a key that works and an upstream that just
+        # refused. Collapsing them cost real time here — a retired model name
+        # was returning 404 while the UI insisted no key was configured.
         return AssistantAnswer(
-            answer=retrieval.plain_answer(retrieved, body.language),
+            answer=retrieval.plain_answer(retrieved, body.language, reason="unavailable"),
             sources=sources,
-            mode="retrieval_only",
+            mode="unavailable",
             retrieval=retrieved.mode,
         )
 

@@ -118,8 +118,39 @@ Everything lives in `backend/.env`, which is gitignored and must stay that way.
 | `DATABASE_URL` | Supabase session pooler string, prefix changed to `postgresql+psycopg://`, `sslmode=require` kept |
 | `SECRET_KEY` | `python -c "import secrets; print(secrets.token_urlsafe(48))"` — never the example value |
 | `GEMINI_API_KEY` | Server-side only. **Never** prefix with `VITE_` — that compiles it into the browser bundle |
+| `GEMINI_MODEL` | Pin a specific model. Google retires names, and the failure is confusing — see below |
 | `CORS_ORIGINS` | Exact frontend origin, comma-separated, no trailing slash |
 | `SEED_DEFAULT_PASSWORD` | Password given to every demo account |
+
+### When the assistant stops using its model
+
+The symptom is quiet: answers keep coming, but they are bulleted lists read
+straight from the records, and the badge says so in small text. Two different
+causes, and the API log tells them apart.
+
+**A 404 means the model name was retired.** `gemini-2.5-flash` was the default
+here until Google began answering *"no longer available to new users"*. The
+models list endpoint still advertised it — only a real `generateContent` call
+revealed it — so check the log rather than the listing, and repin `GEMINI_MODEL`
+from <https://ai.google.dev/gemini-api/docs/models>.
+
+**A 503 means the model is busy.** Free-tier flash models shed load, and larger
+requests go first: every candidate below answered a two-word probe happily while
+returning 503 for a real prompt. The client now retries transient failures twice
+with backoff, which clears most spikes.
+
+Measured on a free key with a realistic prompt — a system instruction plus a
+dozen retrieved facts — three calls each:
+
+| Model | Result |
+|---|---|
+| `gemini-3.7-flash` | 3/3, 3–4s — the current default |
+| `gemini-3.6-flash` | 3/3, 27–42s |
+| `gemini-3.8-flash` | 0/3, all 503 |
+| `gemini-flash-latest` | 0/3, all 503 |
+
+`gemini-flash-latest` looks like the way to never repin and is the opposite: it
+resolves to whatever is newest, which is what is busiest. Pin a version.
 
 ### Demo accounts
 

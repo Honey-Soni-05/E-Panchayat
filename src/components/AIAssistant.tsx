@@ -246,6 +246,16 @@ export const AIAssistant: React.FC = () => {
                               ? 'Your data — kept in the Panchayat'
                               : 'तुमची माहिती — पंचायतीतच'}
                           </>
+                        ) : turn.answer.mode === 'unavailable' ? (
+                          /* A configured key whose upstream refused — not the
+                             same as no key, and saying "no model key" here sent
+                             us looking at the wrong thing for a while. */
+                          <>
+                            <Database size={9} />
+                            {isEnglish
+                              ? 'Records only — AI unreachable'
+                              : 'फक्त नोंदी — AI उपलब्ध नाही'}
+                          </>
                         ) : (
                           <>
                             <Database size={9} />

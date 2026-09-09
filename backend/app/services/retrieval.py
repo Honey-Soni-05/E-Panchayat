@@ -209,14 +209,30 @@ async def gather_semantic(
         # have something useful, and an empty answer helps nobody.
         return gather(db, question, user, village_id)
 
-    out = Retrieved()
-    out.mode = "semantic"
-    out.topics = sorted({h.chunk.entity_type for h in hits})
+    # A resident's own answer is computed, never retrieved. Their eligibility
+    # verdicts come from the rule engine and exist in no chunk — and cannot,
+    # since residents are deliberately not indexed. So for a citizen the
+    # semantic hits are layered on top of the keyword pass rather than
+    # replacing it.
+    #
+    # Without this, a resident asking "which schemes am I eligible for" got a
+    # description of the schemes instead of their own answer: semantic search
+    # matched the scheme chunks, returned early, and the eligibility engine was
+    # never consulted. Running the app is what caught it; every test still
+    # passed, because they exercise the two paths separately.
+    if user.role == "citizen":
+        out = gather(db, question, user, village_id)
+        out.mode = "semantic"
+    else:
+        out = Retrieved()
+        out.mode = "semantic"
+        out.topics = sorted({h.chunk.entity_type for h in hits})
+
     for hit in hits:
-        # `indexer` does not build resident chunks, so this should never fire.
-        # It is here so that if someone reintroduces them, the assistant treats
-        # them as personal and withholds them from the model rather than
-        # quietly resuming the export this was written to stop.
+        # `indexer` does not build resident chunks, so `personal` should never
+        # be True here. It is set so that if someone reintroduces them, the
+        # assistant treats them as personal and withholds them from the model
+        # rather than quietly resuming the export this was written to stop.
         out.add(
             graph.describe(hit),
             Source(hit.chunk.entity_type, hit.chunk.entity_id, hit.chunk.content[:80]),
@@ -444,17 +460,22 @@ def gather(
 # Answering without a language model
 # ─────────────────────────────────────────────────────────────────────────────
 
-def plain_answer(retrieved: Retrieved, language: str = "en") -> str:
+def plain_answer(
+    retrieved: Retrieved, language: str = "en", reason: str = "no_key"
+) -> str:
     """A readable answer built from the retrieved facts, with no model involved.
 
-    Used in three cases: no API key is configured, the model call failed, or the
+    Used in three cases, and `reason` says which: no API key is configured
+    ('no_key'), the model was reachable but refused ('unavailable'), or the
     facts describe an identified resident and so are not eligible to be sent to
-    a model at all. It is plainer than a generated answer but every line of it
-    is true, which the old canned responses could not claim.
+    a model at all — which takes precedence over both, since it is a decision
+    rather than a failure.
 
-    The closing note says which of the three happened. A resident reading an
-    answer about their own pension should be told that their income and category
-    were not sent to Google, rather than left to assume they were.
+    Saying which one happened is not decoration. A resident reading an answer
+    about their own pension should be told their income and category were not
+    sent to Google, rather than left to assume they were. And "no key is
+    configured" printed under a working key sends whoever is debugging it to
+    the wrong place — which is exactly what a retired model name did here.
     """
     if retrieved.is_empty:
         return (
@@ -484,9 +505,17 @@ def plain_answer(retrieved: Retrieved, language: str = "en") -> str:
             "category and documents are never sent outside this system. The eligibility "
             "decision itself is made by a rule engine, not by AI.)"
         )
+    elif reason == "unavailable":
+        footer = (
+            "\n\n(भाषा मॉडेल सध्या उपलब्ध नाही, त्यामुळे ही थेट नोंदींची यादी आहे. "
+            "नोंदी अचूक आहेत.)"
+            if language == "mr"
+            else "\n\n(Listed directly from the records — the language model could not be "
+            "reached, so this is not a written summary. The records themselves are current.)"
+        )
     else:
         footer = (
-            "\n\n(भाषा मॉडेल उपलब्ध नसल्याने ही थेट नोंदींची यादी आहे.)"
+            "\n\n(भाषा मॉडेल कॉन्फिगर केलेले नसल्याने ही थेट नोंदींची यादी आहे.)"
             if language == "mr"
             else "\n\n(Listed directly from the records — the language model is not configured, "
             "so this is not a written summary.)"

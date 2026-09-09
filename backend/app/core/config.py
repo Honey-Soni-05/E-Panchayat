@@ -24,7 +24,25 @@ class Settings(BaseSettings):
 
     # AI
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    # gemini-2.5-flash was here until it started returning 404 "no longer
+    # available to new users". Note that the models list endpoint still
+    # advertises it — only a real generateContent call reveals the retirement,
+    # which is why `llm._api_error` spells the fix out in the error text.
+    #
+    # Measured on a free key with a realistic prompt (a system instruction plus
+    # a dozen retrieved facts), three calls each:
+    #
+    #   gemini-3.7-flash      3/3 ok, 3-4s     <- this
+    #   gemini-3.6-flash      3/3 ok, 27-42s
+    #   gemini-3.8-flash      0/3, all 503
+    #   gemini-flash-latest   0/3, all 503
+    #
+    # Two things that reads are worth keeping in mind. The alias is not the
+    # safe option: it resolves to whatever is newest, which is exactly what is
+    # saturated. And a two-word probe is not a test — every one of these
+    # answered "reply with ok" happily while shedding real requests, because
+    # size is what gets dropped under load.
+    GEMINI_MODEL: str = "gemini-3.7-flash"
     GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
 
     # ── Sign-in throttling ──────────────────────────────────────────────────

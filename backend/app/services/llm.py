@@ -9,6 +9,7 @@ server whether AI is available; it never holds a key.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -20,6 +21,21 @@ from app.core.config import settings
 log = logging.getLogger(__name__)
 
 BASE = "https://generativelanguage.googleapis.com/v1beta"
+
+# Worth trying again: the model is there, the key is fine, the service is busy.
+# A free-tier flash model answers 503 "currently experiencing high demand" often
+# enough that a single attempt is a coin toss at a busy hour — and the failure
+# is invisible in the UI, because the assistant degrades politely to records
+# only. Retrying is the difference between a demo that works and one that
+# quietly stops using its model halfway through.
+#
+# 404 is deliberately absent: a retired model name never recovers, and retrying
+# it just makes the wrong answer slower.
+TRANSIENT_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+# Two extra attempts, ~0.6s then ~1.8s. Long enough to clear a spike, short
+# enough that a person waiting on an answer does not give up first.
+RETRY_DELAYS = (0.6, 1.8)
 
 # Requested explicitly rather than taking the model's default, so a model
 # change cannot silently alter the vector width and invalidate every stored
@@ -92,15 +108,33 @@ async def generate(
         body["generationConfig"]["responseSchema"] = json_schema
 
     url = f"{BASE}/models/{settings.GEMINI_MODEL}:generateContent"
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.post(
-                url, headers=_auth_headers(), json=body
-            )
-    except httpx.HTTPError as exc:
-        log.warning("Gemini request failed: %s", exc)
-        raise LLMUnavailable("Could not reach the language model.") from exc
 
+    resp: httpx.Response | None = None
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        for attempt in range(len(RETRY_DELAYS) + 1):
+            try:
+                resp = await client.post(url, headers=_auth_headers(), json=body)
+            except httpx.HTTPError as exc:
+                # A transport failure is as transient as a 503, and worth the
+                # same retry — but the last one has to surface.
+                if attempt == len(RETRY_DELAYS):
+                    log.warning("Gemini request failed: %s", exc)
+                    raise LLMUnavailable("Could not reach the language model.") from exc
+                await asyncio.sleep(RETRY_DELAYS[attempt])
+                continue
+
+            if resp.status_code not in TRANSIENT_STATUSES:
+                break
+            if attempt == len(RETRY_DELAYS):
+                break
+            log.info(
+                "Gemini returned %s, retrying in %ss",
+                resp.status_code,
+                RETRY_DELAYS[attempt],
+            )
+            await asyncio.sleep(RETRY_DELAYS[attempt])
+
+    assert resp is not None  # the loop either sets it or raises
     if resp.status_code != 200:
         log.warning("Gemini returned %s: %s", resp.status_code, resp.text[:500])
         raise LLMUnavailable(_api_error("The language model", resp))
