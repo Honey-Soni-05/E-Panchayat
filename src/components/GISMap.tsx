@@ -232,6 +232,10 @@ export const GISMap: React.FC = () => {
   // the map away from wherever the officer had panned it.
   const viewAppliedRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
+  // The basemap failing is not the same as the records failing, and the screen
+  // has to be able to say which. Markers are drawn from our own API and stay
+  // correct even when no tile arrives.
+  const [tilesBroken, setTilesBroken] = useState(false);
 
   const facilityRows = useMemo(() => facilities.data ?? [], [facilities.data]);
   const projectRows = useMemo(() => projects.data ?? [], [projects.data]);
@@ -305,12 +309,45 @@ export const GISMap: React.FC = () => {
     if (!element || mapRef.current) return;
 
     const map = L.map(element, { zoomControl: true, scrollWheelZoom: true });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+
+    // OpenStreetMap's own tiles, which need no key and no account.
+    //
+    // This was CARTO's basemaps.cartocdn.com, which is where the map broke: it
+    // kept answering 200 with a perfectly ordinary-looking tile that had
+    // "API KEY REQUIRED" written diagonally across it. Nothing failed, nothing
+    // logged, and the map rendered — just with the watermark repeated over
+    // every tile. CARTO now wants a registered key for their basemaps.
+    //
+    // OSM is the right replacement for this project rather than another free
+    // tier: the licence is unambiguous, attribution is the only requirement,
+    // and there is no account to lapse before a viva. Their tile policy asks
+    // that heavy use go elsewhere, which a Gram Panchayat demo is not.
+    //
+    // If the flatter, lighter basemap is wanted back, Esri's World Light Gray
+    // Base is key-free and closest to what CARTO's light_all looked like — but
+    // at village zoom it draws almost no labels, which is worse for an officer
+    // trying to find a ward.
+    const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20,
-    }).addTo(map);
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    });
+
+    // A basemap that silently stops loading is exactly the failure that hid the
+    // watermark for so long: the markers still plot, the legend still counts,
+    // and only a person looking at the screen can tell the map is wrong. Count
+    // the failures and say so. A handful of misses at the edge of a pan is
+    // normal, so this waits for a real pattern before complaining.
+    let tileFailures = 0;
+    tiles.on('tileerror', () => {
+      tileFailures += 1;
+      if (tileFailures === 6) setTilesBroken(true);
+    });
+    tiles.on('tileload', () => {
+      tileFailures = 0;
+      setTilesBroken(false);
+    });
+    tiles.addTo(map);
 
     groupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -322,6 +359,7 @@ export const GISMap: React.FC = () => {
       groupRef.current = null;
       viewAppliedRef.current = false;
       setMapReady(false);
+      setTilesBroken(false);
     };
   }, [canShowMap]);
 
@@ -522,6 +560,16 @@ export const GISMap: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
           {/* Map */}
           <div className="lg:col-span-3 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm relative">
+            {tilesBroken && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] max-w-md bg-amber-50 border border-amber-300 text-amber-900 rounded-lg shadow-sm px-3 py-2 flex items-start gap-2">
+                <Info size={14} className="mt-0.5 flex-shrink-0" />
+                <p className="m-0 text-[11px] leading-normal">
+                  {isEnglish
+                    ? 'The background map is not loading. The markers below come from the Panchayat records and are still correct — only the base map is missing.'
+                    : 'पार्श्वभूमीचा नकाशा लोड होत नाही. खालील खुणा पंचायत नोंदींमधून आल्या आहेत आणि त्या बरोबर आहेत — फक्त आधारभूत नकाशा दिसत नाही.'}
+                </p>
+              </div>
+            )}
             <div ref={containerRef} className="w-full h-[550px] z-10" />
             <div className="absolute bottom-4 right-4 bg-white/95 border border-slate-200 text-[10px] font-mono text-slate-600 px-2.5 py-1 rounded shadow-sm select-none z-[400]">
               {centre

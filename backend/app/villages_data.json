@@ -4,13 +4,13 @@
     "name_mr": "लोणी काळभोर",
     "lgd_code": 556315,
     "census_code_2011": 556315,
-    "latitude": 18.483,
-    "longitude": 74.033,
+    "latitude": 18.4884,
+    "longitude": 74.0222,
     "population_2011": 22518,
     "households_2011": 4720,
     "confidence": "high",
     "gram_panchayat_status": "active",
-    "notes": "Independent Gram Panchayat (LGD local body code 185740, 'LONIKALBHOR'). Population/households cross-verified across census2011.co.in and villageinfo.org (both report 22,518 / 4,720). Coordinates from Wikipedia infobox (18°29'N 74°02'E)."
+    "notes": "Independent Gram Panchayat (LGD local body code 185740, 'LONIKALBHOR'). Population/households cross-verified across census2011.co.in and villageinfo.org (both report 22,518 / 4,720). Coordinates from OpenStreetMap (Nominatim), which agrees with the basemap the GIS screen draws. They were previously taken from a Wikipedia infobox written to arcminute precision (18°29'N 74°02'E) — about 1.3 km out, and enough to open the map off the village."
   },
   {
     "name": "Wagholi",

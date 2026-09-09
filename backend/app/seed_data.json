@@ -1694,8 +1694,8 @@
       "deptName": "Water Supply and Sanitation Department",
       "deptNameMr": "पाणी पुरवठा आणि स्वच्छता विभाग",
       "coordinates": [
-        18.4911,
-        73.9811
+        18.4888,
+        74.0227
       ],
       "citizenName": "Priyanka Deshmukh",
       "phone": "9860112301"
@@ -1717,8 +1717,8 @@
       "deptName": "MSEB Rural Division (Panchayat Wing)",
       "deptNameMr": "एमएसईबी ग्रामीण विभाग (पंचायत शाखा)",
       "coordinates": [
-        18.4888,
-        73.979
+        18.4865,
+        74.0206
       ],
       "citizenName": "Vitthal Jadhav",
       "phone": "9860112302"
@@ -1740,8 +1740,8 @@
       "deptName": "Public Works Department (Rural Roads)",
       "deptNameMr": "सार्वजनिक बांधकाम विभाग (ग्रामीण रस्ते)",
       "coordinates": [
-        18.4898,
-        73.9818
+        18.4875,
+        74.0234
       ],
       "citizenName": "Sunil Ghadge",
       "phone": "9860112303"
@@ -1763,8 +1763,8 @@
       "deptName": "Panchayat Health & Sanitation Cell",
       "deptNameMr": "पंचायत आरोग्य व स्वच्छता कक्ष",
       "coordinates": [
-        18.4915,
-        73.98
+        18.4892,
+        74.0216
       ],
       "citizenName": "Savita Patil",
       "phone": "9860112304"
@@ -1786,8 +1786,8 @@
       "deptName": "District Health Administration Office",
       "deptNameMr": "जिल्हा आरोग्य प्रशासन कार्यालय",
       "coordinates": [
-        18.4928,
-        73.9824
+        18.4905,
+        74.024
       ],
       "citizenName": "Ramesh Shinde",
       "phone": "9860112305"
@@ -1809,8 +1809,8 @@
       "description": "Upgrading the muddy lane to a full-width durable cement concrete road with standard side drainage blocks.",
       "descriptionMr": "चिखलाची गल्ली सर्व रुंदीच्या मजबूत सिमेंट काँक्रीट रस्त्यामध्ये बाजूच्या गटारांसह अद्ययावत करणे.",
       "coordinates": [
-        18.4901,
-        73.9814
+        18.4878,
+        74.023
       ]
     },
     {
@@ -1828,8 +1828,8 @@
       "description": "Equipping the office with high speed fiber internet, citizen service kiosks, printers and computers for digital certificates delivery.",
       "descriptionMr": "डिजिटल प्रमाणपत्रे वितरणासाठी कार्यालयात हाय-स्पीड फायबर इंटरनेट, नागरी सेवा किओस्क, प्रिंटर आणि संगणक सुसज्ज करणे.",
       "coordinates": [
-        18.4907,
-        73.9806
+        18.4884,
+        74.0222
       ]
     },
     {
@@ -1847,8 +1847,8 @@
       "description": "Constructing a 50,000-liter overhead storage tank and laying PVC water pipes to 120 new housing units.",
       "descriptionMr": "५०,००० लिटर क्षमतेची उंचावरील पाण्याची टाकी बांधणे आणि १२० नवीन घरांना पीव्हीसी पाण्याचे पाईप्स टाकणे.",
       "coordinates": [
-        18.4881,
-        73.9781
+        18.4858,
+        74.0197
       ]
     },
     {
@@ -1866,8 +1866,8 @@
       "description": "Building an outer security compound wall and setting up a projector and computer lab for student learning.",
       "descriptionMr": "बाहेरील सुरक्षा कंपाऊंड भिंत बांधणे आणि विद्यार्थ्यांच्या शिक्षणासाठी प्रोजेक्टर आणि संगणक लॅब उभारणे.",
       "coordinates": [
-        18.4894,
-        73.9797
+        18.4871,
+        74.0213
       ]
     }
   ],
@@ -1957,8 +1957,8 @@
       "nameMr": "जिल्हा परिषद प्राथमिक शाळा",
       "type": "school",
       "coordinates": [
-        18.4891,
-        73.9794
+        18.4868,
+        74.021
       ],
       "details": "Grades 1-7, 185 students enrolled"
     },
@@ -1968,8 +1968,8 @@
       "nameMr": "लोणी काळभोर प्राथमिक आरोग्य उपकेंद्र",
       "type": "health",
       "coordinates": [
-        18.4931,
-        73.9819
+        18.4908,
+        74.0235
       ],
       "details": "OPD, basic emergency beds, vaccine distribution"
     },
@@ -1979,8 +1979,8 @@
       "nameMr": "सार्वजनिक विहीर आणि जलशुद्धीकरण केंद्र",
       "type": "water",
       "coordinates": [
-        18.4906,
-        73.9809
+        18.4883,
+        74.0225
       ],
       "details": "RO treatment unit, capacity 10,000 LPD"
     },
@@ -1990,8 +1990,8 @@
       "nameMr": "अंगणवाडी बाल संगोपन केंद्र",
       "type": "health",
       "coordinates": [
-        18.4896,
-        73.9784
+        18.4873,
+        74.02
       ],
       "details": "Serving 45 children, midday meal kitchen"
     },
@@ -2001,8 +2001,8 @@
       "nameMr": "टेकडीवरील पाण्याची टाकी",
       "type": "water",
       "coordinates": [
-        18.4879,
-        73.9779
+        18.4856,
+        74.0195
       ],
       "details": "Distribution source for Ward 1"
     }

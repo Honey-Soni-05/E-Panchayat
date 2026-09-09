@@ -71,6 +71,7 @@ For the report and the viva. Every line here survives being clicked on.
 | Transcript reader | Real text extraction plus an LLM call with a response schema. |
 | Scheme reader | Same, with a closed criteria vocabulary and a mandatory human approval gate. |
 | Vector storage | Embeddings stored as JSON, cosine similarity computed in Python. Correct at village scale (67 chunks — villages, schemes, projects, facilities, grievances and meetings, no residents); see `KnowledgeChunk` in `app/models.py` for what changes at district scale. |
+| GIS map | Leaflet over OpenStreetMap tiles. No API key, no account. Markers are drawn from the API's own coordinates; the basemap is the only external dependency, and the screen says so when it fails to load. |
 
 Things this system does **not** have, stated plainly: no trained or fine-tuned
 model of our own, no OCR for scanned documents, no Aadhaar or DigiLocker
