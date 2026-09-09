@@ -129,6 +129,44 @@ def test_a_dropped_connection_is_retried(monkeypatch, instant_retries):
     assert calls["count"] == 2
 
 
+def test_the_model_check_reports_a_retired_model_rather_than_hiding_it(
+    client, officer, monkeypatch, instant_retries
+):
+    """The failure this endpoint exists for. /health said aiEnabled: true for
+    days while every generation 404'd, because a key was configured and that is
+    all it checks."""
+    client_cls, _ = _client_returning(_FakeResponse(404, _RETIRED))
+    monkeypatch.setattr(llm.httpx, "AsyncClient", lambda **kw: client_cls())
+
+    body = client.get("/api/v1/assistant/model-check", headers=officer).json()
+    assert body["ok"] is False
+    assert "GEMINI_MODEL" in body["detail"], "the fix is not in the message"
+
+
+def test_the_model_check_confirms_a_working_model(
+    client, officer, monkeypatch, instant_retries
+):
+    client_cls, _ = _client_returning(_FakeResponse(200, _OK))
+    monkeypatch.setattr(llm.httpx, "AsyncClient", lambda **kw: client_cls())
+
+    body = client.get("/api/v1/assistant/model-check", headers=officer).json()
+    assert body["ok"] is True
+    assert body["model"]
+
+
+def test_the_model_check_says_so_when_no_key_is_set(client, officer, monkeypatch):
+    """Distinguished from a broken model, because the remedies differ."""
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    body = client.get("/api/v1/assistant/model-check", headers=officer).json()
+    assert body["ok"] is False
+    assert "GEMINI_API_KEY" in body["detail"]
+
+
+def test_the_model_check_is_not_public(client):
+    """It spends quota and names the configured model."""
+    assert client.get("/api/v1/assistant/model-check").status_code == 401
+
+
 def test_no_key_configured_never_calls_out(monkeypatch):
     """The one case that must not reach the network at all."""
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")

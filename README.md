@@ -147,6 +147,19 @@ The symptom is quiet: answers keep coming, but they are bulleted lists read
 straight from the records, and the badge says so in small text. Two different
 causes, and the API log tells them apart.
 
+**Ask it directly, before a demo rather than during one:**
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/assistant/model-check
+```
+
+`{"ok": true, "model": "gemini-3.7-flash", "detail": "ok", "latencyMs": 2851}`
+means the configured model really answered. `/health` cannot tell you this —
+its `aiEnabled` reports only whether a key is set, and it said `true` for days
+while every generation was returning 404. The check makes one small real call,
+which is why it is a separate endpoint: `/health` is hit by the keep-alive job
+and every page load, and none of those should spend model quota.
+
 **A 404 means the model name was retired.** `gemini-2.5-flash` was the default
 here until Google began answering *"no longer available to new users"*. The
 models list endpoint still advertised it — only a real `generateContent` call
@@ -277,6 +290,10 @@ every comparable platform now wants a card. The options are:
 ### Before the demo
 
 - Open the site five minutes early and click one page, so the API is warm.
+- Sign in and hit `/api/v1/assistant/model-check`. It makes one real call and
+  tells you whether the model still answers — the failure it catches is silent,
+  because the assistant degrades to reading from the records and only says so
+  in small text under the answer.
 - Check the Actions tab — a failing keepalive run means the database paused.
 - Use one machine. A single free Gemini key is rate-limited, and four people
   demoing at once will hit it.

@@ -20,11 +20,13 @@ category, their disability assessment and their documents. Those are not sent
 to a third party to be phrased more nicely.
 """
 
+from time import perf_counter
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_user, village_scope
+from app.core.deps import get_current_user, require_officer, village_scope
 from app.db.session import get_db
 from app.models import User
 from app.schemas import AssistantAnswer, AssistantQuery, RetrievedSource
@@ -151,6 +153,53 @@ async def ask(
     return AssistantAnswer(
         answer=answer, sources=sources, mode="llm", retrieval=retrieved.mode
     )
+
+
+@router.get("/model-check", response_model=dict)
+async def model_check(_: User = Depends(require_officer)) -> dict:
+    """Does the configured model actually answer? Ask it and see.
+
+    `/health` reports `aiEnabled` from whether a key is set, which is not the
+    same question and has already given the wrong answer once: it said true for
+    days while every generation returned 404 because the model name had been
+    retired. The assistant degrades politely when that happens — answers keep
+    arriving, assembled from records — so nothing looks broken until someone
+    reads the small print under an answer.
+
+    This makes one real, tiny call and reports what came back. Deliberately not
+    folded into `/health`: that endpoint is hit by the keep-alive job every six
+    hours and by every page load, and none of those should spend model quota.
+    Run this before a demo, when a check is actually wanted.
+
+    Officer-level rather than public — it consumes quota and names the model.
+    """
+    started = perf_counter()
+
+    if not settings.ai_enabled:
+        return {
+            "ok": False,
+            "model": settings.GEMINI_MODEL,
+            "detail": "No GEMINI_API_KEY is configured on the server.",
+        }
+
+    try:
+        answer = await generate(
+            "Reply with the single word: ok", temperature=0, timeout=30.0
+        )
+    except LLMUnavailable as exc:
+        return {
+            "ok": False,
+            "model": settings.GEMINI_MODEL,
+            "detail": str(exc),
+            "latencyMs": round((perf_counter() - started) * 1000),
+        }
+
+    return {
+        "ok": True,
+        "model": settings.GEMINI_MODEL,
+        "detail": answer[:80],
+        "latencyMs": round((perf_counter() - started) * 1000),
+    }
 
 
 @router.post("/context", response_model=dict)
