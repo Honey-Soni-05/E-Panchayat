@@ -30,6 +30,7 @@ import {
   ChevronDown,
   Sparkles,
   FileSearch,
+  ShieldCheck,
 } from 'lucide-react';
 
 import {
@@ -213,18 +214,37 @@ export const AIAssistant: React.FC = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      {/* Honest about how the answer was produced. */}
+                      {/* Honest about how the answer was produced. Three cases,
+                          and the third is not a degradation: an answer about
+                          the reader's own file is written here on purpose, so
+                          the badge reassures rather than apologises. */}
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${
                           turn.answer.mode === 'llm'
                             ? 'bg-govblue-50 text-govnavy border-govnavy/25'
-                            : 'bg-amber-50 text-amber-800 border-amber-300'
+                            : turn.answer.mode === 'retrieval_only_personal'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : 'bg-amber-50 text-amber-800 border-amber-300'
                         }`}
+                        title={
+                          turn.answer.mode === 'retrieval_only_personal'
+                            ? isEnglish
+                              ? 'This answer is about your own record, so it was written from the Panchayat database and never sent to an outside AI service.'
+                              : 'हे उत्तर तुमच्या स्वतःच्या नोंदीबद्दल आहे, त्यामुळे ते ग्रामपंचायत डेटाबेसमधून तयार केले आहे आणि कोणत्याही बाहेरील AI सेवेकडे पाठवलेले नाही.'
+                            : undefined
+                        }
                       >
                         {turn.answer.mode === 'llm' ? (
                           <>
                             <Sparkles size={9} />
                             {isEnglish ? 'Written from records' : 'नोंदींवरून लिहिलेले'}
+                          </>
+                        ) : turn.answer.mode === 'retrieval_only_personal' ? (
+                          <>
+                            <ShieldCheck size={9} />
+                            {isEnglish
+                              ? 'Your data — kept in the Panchayat'
+                              : 'तुमची माहिती — पंचायतीतच'}
                           </>
                         ) : (
                           <>

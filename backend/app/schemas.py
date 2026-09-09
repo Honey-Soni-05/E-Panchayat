@@ -627,8 +627,15 @@ class RetrievedSource(ApiModel):
 class AssistantAnswer(ApiModel):
     answer: str
     sources: list[RetrievedSource] = []
-    # How the answer was written: by the model, or assembled from records alone.
-    mode: Literal["llm", "retrieval_only", "unavailable"]
+    # How the answer was written:
+    #   llm                      the model wrote it from retrieved facts
+    #   retrieval_only           no model key, or the call failed
+    #   retrieval_only_personal  the facts describe one resident, so they were
+    #                            deliberately not sent to the model
+    # The last two read the same to a user unless they are told apart, and they
+    # mean very different things — one is a degraded service, the other is the
+    # privacy rule working.
+    mode: Literal["llm", "retrieval_only", "retrieval_only_personal", "unavailable"]
     # How the records were found: by embedding similarity plus graph expansion,
     # or by keyword routing. Reported rather than assumed, because the semantic
     # path silently falls back and the reader deserves to know which ran.

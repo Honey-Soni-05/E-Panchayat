@@ -10,6 +10,14 @@ sources are returned so a claim can be checked against the row it came from.
 
 If no model key is configured, the endpoint answers from the same retrieved
 facts in a plainer form rather than pretending — see `retrieval.plain_answer`.
+
+One rule overrides the shape above: **the model may see the village, never the
+villager.** Questions about the Panchayat — its projects, budgets, schemes,
+meetings, grievance queue — are answered by the model as normal. Questions that
+turn on one resident's own record are answered from the records directly, with
+no external call, because the facts involved are their income, their social
+category, their disability assessment and their documents. Those are not sent
+to a third party to be phrased more nicely.
 """
 
 from fastapi import APIRouter, Depends
@@ -70,17 +78,47 @@ async def ask(
     if user.role == "citizen" and user.village_id:
         village_id = user.village_id
 
-    retrieved = retrieval.gather(db, body.query, user, village_id)
+    # Semantic first; this falls back to keyword routing on its own if the
+    # index is not built or the embedding call fails.
+    retrieved = await retrieval.gather_semantic(db, body.query, user, village_id)
     sources = [
         RetrievedSource(entity_type=s.entity_type, entity_id=s.entity_id, title=s.title)
         for s in retrieved.sources
     ]
+
+    # The privacy boundary. Everything above this line ran inside our own
+    # database; everything below it is a request to Google. Facts describing one
+    # identified resident — their income, social category, BPL status,
+    # disability assessment, the documents in their file — do not cross it, and
+    # neither does the question that asked for them.
+    #
+    # Nothing is withheld from the user: they get the same facts, assembled from
+    # a template instead of a sentence. The decision those facts explain was
+    # made by the rule engine, which never involved a model, so the only thing
+    # lost is phrasing.
+    #
+    # This is a hard rule rather than a setting, because the alternative is
+    # trusting a provider's terms about retention and training. On the free tier
+    # those terms permit using submitted content to improve their products, and
+    # a resident cannot consent to that on behalf of a welfare application.
+    #
+    # Checked before the key check below, because "we do not send this" is the
+    # real reason such an answer is never model-written. Reporting a missing key
+    # instead would imply that configuring one would change the outcome.
+    if retrieved.has_personal:
+        return AssistantAnswer(
+            answer=retrieval.plain_answer(retrieved, body.language),
+            sources=sources,
+            mode="retrieval_only_personal",
+            retrieval=retrieved.mode,
+        )
 
     if not settings.ai_enabled:
         return AssistantAnswer(
             answer=retrieval.plain_answer(retrieved, body.language),
             sources=sources,
             mode="retrieval_only",
+            retrieval=retrieved.mode,
         )
 
     prompt = (
@@ -101,9 +139,12 @@ async def ask(
             answer=retrieval.plain_answer(retrieved, body.language),
             sources=sources,
             mode="retrieval_only",
+            retrieval=retrieved.mode,
         )
 
-    return AssistantAnswer(answer=answer, sources=sources, mode="llm")
+    return AssistantAnswer(
+        answer=answer, sources=sources, mode="llm", retrieval=retrieved.mode
+    )
 
 
 @router.post("/context", response_model=dict)

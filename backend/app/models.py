@@ -607,8 +607,18 @@ class KnowledgeChunk(Base, TimestampMixin):
     foreign keys needed to walk to its neighbours, so retrieval can start from
     a similarity match and expand across relationships before generating.
 
-    The `embedding` column is added by its own migration once pgvector is
-    enabled, so Phase 1 can run on a plain Postgres without the extension.
+    The embedding is stored as a plain JSON array rather than a pgvector column,
+    and similarity is computed in Python. That is a deliberate choice, not a
+    shortcut: one Gram Panchayat produces on the order of a hundred chunks, and
+    scanning a hundred 768-dimension vectors takes under a millisecond. A
+    pgvector index would add an extension dependency to every deployment and a
+    dialect-specific query path to maintain, in exchange for speeding up
+    something that is already imperceptible.
+
+    That reasoning stops holding somewhere around a hundred thousand chunks — a
+    whole district rather than a village. At that point the fix is a pgvector
+    column and an IVFFlat index behind `semantic_search()`, which is why nothing
+    outside that one function knows how the vectors are stored.
     """
 
     __tablename__ = "knowledge_chunks"
@@ -621,6 +631,23 @@ class KnowledgeChunk(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     content_mr: Mapped[str | None] = mapped_column(Text)
     meta: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    # The embedding vector, as a JSON array of floats. Null until indexed —
+    # a chunk with no embedding is skipped by search rather than treated as
+    # distance zero, which would make un-indexed rows look maximally relevant.
+    #
+    # none_as_null is essential and not decoration: by default SQLAlchemy stores
+    # a Python None in a JSON column as the JSON value `null`, which is NOT SQL
+    # NULL. `embedding IS NOT NULL` would then be true for every un-indexed row,
+    # and search would score them against an empty vector. A test caught this.
+    embedding: Mapped[list[float] | None] = mapped_column(JSON(none_as_null=True))
+    embedding_model: Mapped[str | None] = mapped_column(String(80))
+
+    # Which village this fact belongs to, so semantic search can be scoped the
+    # same way every other query in this system is.
+    village_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("villages.id", ondelete="CASCADE"), index=True
+    )
 
     # Set to the source row's updated_at when embedded, so re-indexing can skip
     # anything unchanged.

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # AI
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
-    GEMINI_EMBED_MODEL: str = "text-embedding-004"
+    GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
 
     # CORS — comma separated in the environment
     CORS_ORIGINS: str = "http://localhost:5173"

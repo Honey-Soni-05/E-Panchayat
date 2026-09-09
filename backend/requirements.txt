@@ -10,9 +10,12 @@ pyjwt==2.10.1
 bcrypt==4.2.1
 python-multipart==0.0.20
 httpx==0.28.1
-pgvector==0.3.6
 pymupdf==1.25.1
 python-docx==1.1.2
+
+# Embeddings are stored as JSON and compared in Python — see the note on
+# KnowledgeChunk in app/models.py for why, and what to change at district
+# scale. No pgvector dependency, and no extension to enable on Supabase.
 
 # ── Development ─────────────────────────────────────────────────────────────
 pytest==8.3.4

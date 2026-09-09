@@ -1,116 +1,357 @@
-# 🏛️ Loni Kalbhor E-Panchayat Decision Support Portal
+# E-Panchayat
 
-An interactive, high-fidelity Government-Tech (Gov-Tech) portal and AI Administration System custom-designed for the **Loni Kalbhor** Gram Panchayat in Pune, Maharashtra. 
+An AI-assisted decision support system for Gram Panchayat administration.
+Citizen records, welfare schemes and eligibility, grievances, development
+projects, Gram Sabha minutes, GIS and analytics — for 23 villages of Haveli
+block, Pune district, Maharashtra.
 
-This platform integrates automated policy verification rules, GIS mappings, department-specific grievance routing, meeting transcript processing, and active citizen data persistence with a multi-mode **Google Gemini 2.5 Flash Cloud LLM** / offline search engine assistant.
+Sem-7 capstone, Group BCC28, MIT School of Computing, MIT-ADT University Pune.
+Guide: Prof. Jyoti Gavhane.
 
----
-
-## ✨ Features Breakdown
-
-### 🤖 1. Dual AI Helpdesks (Officer AI Assistant & Citizen Portal Chat)
-- **Zero-Config Cloud LLM**: Fully integrates with Google's Gemini API via Vite environment variables.
-- **Offline GraphRAG Fallback Engine**: If no key is present or the API experiences network failure, the chatbots dynamically query a local offline database utilizing mock semantic routing paths.
-- **Departmental Knowledge injection**: Automatically constructs local contextual prompts regarding unresolved grievances, delayed civil projects, and Sabha schedules for accurate generative outputs.
-
-### 📋 2. Automated Scheme Eligibility & Document Auditor
-- **Automatic Demographics Filter**: Scans candidates based on age bounds, occupation, and family income thresholds.
-- **Digital Locker Verification**: Automatically checks citizen folders for required documents (e.g., Aadhaar Card, 7/12 Extract, Income Certificate).
-- **Status Audit Tracker**: Indicates whether citizens are **Eligible** (criteria and files verified), **Missing Papers** (demographics match but files are missing/pending), or **Ineligible** (demographics do not match policy requirements).
-
-### 📍 3. Interactive GIS Map Layer
-- **CartoDB Dark Theme Mappings**: Loaded dynamically with custom-styled map marker nodes.
-- **Custom Facility Filters**: Toggle displays for healthcare sub-centres, public schools, active road projects, and unresolved grievances.
-- **Detail Popups**: Displays live metrics (progress bars, priority alerts, budget spent) directly upon clicking pins.
-
-### 📁 4. Gram Sabha transcript Processor (Document AI)
-- **Mock Document Upload**: Processes raw meeting minutes or audio transcripts.
-- **Structured Action Items**: Extracts major decisions and populates an interactive, trackable checklist of tasks.
-- **Status Toggling & Retention**: Toggle actions between *Pending*, *In Progress*, and *Completed* with instant local caching.
-
-### 📊 5. Financial & Demographics Analytics
-- **Recharts Data Visualization Panels**: Displays dynamic charts for:
-  - Age demographics distribution.
-  - Project budgets vs. actual expenditure (in ₹ Lakhs).
-  - Potential scheme enrollment capacities.
-  - Grievance volume load by department.
-- **Hover Logic Clarification**: Sleek `(i)` icons next to every title display precise formulas on hover.
+> **All resident data in this system is synthetic.** The villages, LGD codes and
+> welfare schemes are real and cited; the ten residents, their incomes, families
+> and documents are invented for demonstration. No real citizen record has ever
+> been loaded, and none should be.
 
 ---
 
-## 🛠️ Technical Architecture
+## What it does
 
+**Multi-village and permission-scoped.** A real state → district → block →
+village hierarchy with official LGD codes. An officer sees one Gram Panchayat;
+an admin sees the block and the district rollup; a citizen sees their own file
+and nothing else. Every list endpoint is scoped server-side, and a set of tests
+exists specifically to prove one village's officer cannot read another's.
+
+**Eligibility as data, not code.** Each of the 29 seeded schemes carries its
+rules in a `criteria` dictionary — age bands, income ceilings, social category,
+BPL and ration-card gates, land holdings, and `any_of` groups for schemes with
+alternative qualifying routes. Adding a scheme is an insert. The engine returns
+one of four verdicts (Eligible, Missing Documents, Needs Review, Ineligible) and
+says which rule produced it. Where a rule needs a document the record cannot
+settle, it says so rather than guessing.
+
+**Retrieval-augmented assistant.** Questions are answered from the Panchayat's
+own records: semantic search over an embedded index, then a walk across the
+links between records, then generation constrained to what was retrieved. Scoped
+by the asker's permissions — the retrieval layer cannot surface what the API
+would refuse. With no API key it still answers from the same records in plainer
+language rather than inventing.
+
+**The model may see the village, never the villager.** Questions about the
+Panchayat — projects, budgets, schemes, meetings, the grievance queue — are
+answered by the model. Questions that turn on one resident's own record are
+answered from the database directly, with no external call at all, because the
+facts involved are that person's income, social category, BPL status,
+disability assessment and documents. No resident is in the embedded index
+either, so nothing about one is sent away even when nobody is asking. See
+[Privacy](#privacy-what-leaves-this-server) below.
+
+**Document readers.** Upload Gram Sabha minutes and get the decisions and action
+items extracted from the file's actual text. Upload a Government Resolution and
+get a proposed scheme with machine-readable eligibility rules — saved as
+*pending*, reaching no resident until an officer approves it.
+
+**Resident sign-up with verification.** A resident applies for an account; an
+officer matches them against the village register from a ranked candidate list
+and approves. Applying never creates a working login. Officer and admin accounts
+are created by an admin, never self-registered.
+
+---
+
+## Honest capability statement
+
+For the report and the viva. Every line here survives being clicked on.
+
+| Feature | What it actually is |
+|---|---|
+| Assistant | Retrieval-augmented generation. Semantic retrieval over embedded records plus graph expansion across record links; generation by Gemini 2.5 Flash constrained to retrieved facts. Falls back to keyword routing when unindexed, and to a template — no model call — for anything about an individual resident. |
+| Eligibility engine | A deterministic rule engine over data-driven criteria. No model involved. |
+| Grievance classification | A transparent rule-based classifier over bilingual keyword sets. **Not** a trained model. |
+| Transcript reader | Real text extraction plus an LLM call with a response schema. |
+| Scheme reader | Same, with a closed criteria vocabulary and a mandatory human approval gate. |
+| Vector storage | Embeddings stored as JSON, cosine similarity computed in Python. Correct at village scale (67 chunks — villages, schemes, projects, facilities, grievances and meetings, no residents); see `KnowledgeChunk` in `app/models.py` for what changes at district scale. |
+
+Things this system does **not** have, stated plainly: no trained or fine-tuned
+model of our own, no OCR for scanned documents, no Aadhaar or DigiLocker
+integration, no SMS or payment gateway, and only two languages.
+
+---
+
+## Running it locally
+
+Requires Python 3.11+, Node 20+, and a Postgres database (Supabase works).
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # macOS / Linux
+
+pip install -r requirements.txt
+cp .env.example .env            # then fill it in — see below
+alembic upgrade head
+python -m app.seed --reset
+python -m app.index             # builds the semantic index; needs GEMINI_API_KEY
+uvicorn app.main:app --reload --port 8000
 ```
-   ┌─────────────────────────────────────────────────────────────┐
-   │                       React Frontend                        │
-   └───────────────┬─────────────────────────────┬───────────────┘
-                   ▼                             ▼
-       ┌──────────────────────┐       ┌──────────────────────┐
-       │   LocalStorage Caching│       │   react-i18next      │
-       │   (Local Persistence)│       │   (Bilingual EN/MR)  │
-       └──────────────────────┘       └──────────────────────┘
-                   ▲
-                   │ (Loads & Syncs Core Datasets)
-                   ▼
-┌────────────────────────────────────────────────────────────────┐
-│                          Mock Database                         │
-│   (CITIZENS, GRIEVANCES, PROJECTS, SCHEMES, CITIZEN_DOCUMENTS)  │
-└───────────────────────────────┬────────────────────────────────┘
-                                │
-                                ▼
-       ┌─────────────────────────────────────────────────┐
-       │             AI Orchestrator Client              │
-       └───────────────┬─────────────────┬───────────────┘
-                       │                 │
-       (If API Key)    ▼                 ▼  (If Offline / Error)
-    ┌─────────────────────┐           ┌─────────────────────┐
-    │  Google Gemini API  │           │ Offline GraphRAG    │
-    │  (2.5 Flash Cloud)  │           │ Simulated Search    │
-    └─────────────────────┘           └─────────────────────┘
-```
 
----
+Interactive API docs: <http://localhost:8000/docs>
 
-## 💾 Data Persistence Layer
-The portal implements a client-side persistence layer utilizing `localStorage`. This ensures that all modifications:
-- Submitting a new citizen grievance.
-- Approving or dismissing new government scheme feeds.
-- Creating or editing Gram Sabha action items.
-- Approving or rejecting citizen digital locker files.
-- Modifying civil project progress metrics.
+### Frontend
 
-...are **fully retained** even after refreshing the page or restarting your browser.
-
----
-
-## 🚀 Setup & Execution Instructions
-
-### 1. Prerequisites
-Ensure you have [Node.js](https://nodejs.org/) (v18+) installed.
-
-### 2. Installation
-Clone this repository, navigate to the folder, and install all dependencies:
 ```bash
 npm install
-```
-
-### 3. Setup Environment Variables
-Create a `.env` file in the root directory:
-```env
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
-```
-*(If no `.env` file is created, the application will automatically fall back to the offline search mode).*
-
-### 4. Running Locally
-Launch the local Vite development server:
-```bash
 npm run dev
 ```
-Open your browser and navigate to the printed URL (typically `http://localhost:5173`).
 
-### 5. Production Compilation
-Generate the optimized static build folder:
+<http://localhost:5173>
+
+### Configuration
+
+Everything lives in `backend/.env`, which is gitignored and must stay that way.
+
+| Variable | Notes |
+|---|---|
+| `DATABASE_URL` | Supabase session pooler string, prefix changed to `postgresql+psycopg://`, `sslmode=require` kept |
+| `SECRET_KEY` | `python -c "import secrets; print(secrets.token_urlsafe(48))"` — never the example value |
+| `GEMINI_API_KEY` | Server-side only. **Never** prefix with `VITE_` — that compiles it into the browser bundle |
+| `CORS_ORIGINS` | Exact frontend origin, comma-separated, no trailing slash |
+| `SEED_DEFAULT_PASSWORD` | Password given to every demo account |
+
+### Demo accounts
+
+All use the password in `SEED_DEFAULT_PASSWORD` (`Panchayat@2026` by default).
+
+| Account | Role | Sees |
+|---|---|---|
+| `admin@panchayat.gov.in` | admin | Every village in Haveli block, plus the district rollup |
+| `officer@panchayat.gov.in` | officer | Loni Kalbhor only |
+| `officer.theur@panchayat.gov.in` | officer | Theur only — exists to demonstrate isolation |
+| `savita@citizen.panchayat.gov.in` | citizen | Her own record, documents, grievances and eligibility |
+
+Any seeded resident signs in as `<firstname>@citizen.panchayat.gov.in`. Two
+residents — Sunita Jadhav and Sunil Ghadge — deliberately have **no** account,
+so the sign-up and officer-approval flow can be demonstrated end to end.
+
+### Tests
+
 ```bash
-npm run build
+cd backend && python -m pytest        # 186 tests
+npm run build                          # typecheck + production build
 ```
-The compiled HTML, CSS, and JS output will be placed inside the `./dist` directory.
+
+---
+
+## Deployment
+
+Two services on Render, defined by `render.yaml`, plus the Supabase database
+where it already lives.
+
+Everything is deployed from this repository rather than configured by hand in a
+dashboard, so the infrastructure is reviewable, versioned, and rebuildable after
+an accident.
+
+### 1. Database
+
+Nothing to move. The existing Supabase project is production.
+
+> Supabase pauses free projects after about 7 days of low activity, and a paused
+> project must be resumed by hand from the dashboard. The GitHub Action in step 4
+> prevents that.
+
+### 2. Both services on Render
+
+1. Push this repository to GitHub.
+2. Render dashboard → **New → Blueprint** → select the repository. It reads
+   `render.yaml` and creates two services: `epanchayat-api` and `epanchayat-web`.
+3. Render prompts for the secrets. Fill in `DATABASE_URL`, `SECRET_KEY` and
+   `GEMINI_API_KEY`. For the two URL settings you do not have the values yet —
+   put anything for now and fix them in step 3.
+4. Let both deploy. Note the two URLs Render assigns.
+
+Migrations run automatically when the API container starts. The seed and the
+search index do not — run them once from the API service's **Shell** tab:
+
+```bash
+python -m app.seed --reset
+python -m app.index
+```
+
+### 3. Point the two services at each other
+
+This is the step that goes wrong, so do it deliberately.
+
+| Service | Setting | Value |
+|---|---|---|
+| `epanchayat-web` | `VITE_API_URL` | `https://epanchayat-api.onrender.com/api/v1` |
+| `epanchayat-api` | `CORS_ORIGINS` | `https://epanchayat-web.onrender.com` |
+
+Use your own URLs, exactly as Render shows them — scheme and host, no trailing
+slash. Then redeploy both.
+
+`VITE_API_URL` is read at build time and compiled into the JavaScript, so
+changing it needs a **rebuild**, not a restart.
+
+If you skip the `CORS_ORIGINS` half, the site loads, every request fails, the
+browser console shows a CORS error, and the API log shows nothing at all —
+because the browser blocked the request before it was ever sent.
+
+### 4. Keep it awake
+
+`.github/workflows/keepalive.yml` pings the API every six hours, which stops
+Supabase pausing and Render sleeping. Add one repository secret:
+
+**Settings → Secrets and variables → Actions → New repository secret**
+Name `API_URL`, value `https://epanchayat-api.onrender.com`
+
+Run it once by hand from the Actions tab to confirm it works.
+
+### Known limitation: the API sleeps
+
+A free Render **web service** spins down after 15 minutes of inactivity, and the
+next request waits roughly a minute while the container boots. The static site
+does not sleep — only the API.
+
+Nothing free solves this. Fly.io withdrew its free tier in October 2024, and
+every comparable platform now wants a card. The options are:
+
+- **Mitigate** — the keep-alive job above, plus opening the site yourself a few
+  minutes before presenting. GitHub's scheduler runs cron jobs late under load,
+  so do not rely on it alone for a timed demo.
+- **Pay** — Render's cheapest paid instance removes spin-down for a few dollars a
+  month. Worth it for the month around a demo; cancel afterwards.
+
+### Before the demo
+
+- Open the site five minutes early and click one page, so the API is warm.
+- Check the Actions tab — a failing keepalive run means the database paused.
+- Use one machine. A single free Gemini key is rate-limited, and four people
+  demoing at once will hit it.
+
+## Architecture
+
+```
+React 19 + TypeScript + Vite + Tailwind 4      Render (static site)
+        │  fetch, JWT in Authorization header
+        ▼
+FastAPI + SQLAlchemy 2.0 + Alembic              Render (Docker web service)
+        │                    │
+        │                    └── Gemini API — generation and embeddings
+        ▼
+PostgreSQL                                       Supabase
+```
+
+Backend layout:
+
+```
+backend/app/
+  api/routes/     endpoints, one module per resource
+  core/           config, security, dependency guards (RBAC, village scoping)
+  services/
+    eligibility.py    the rule engine
+    retrieval.py      question → records
+    graph.py          semantic search and graph expansion
+    indexer.py        records → embeddable linked chunks
+    scheme_reader.py  Government Resolution → proposed scheme
+    transcript.py     minutes → decisions and action items
+    classifier.py     grievance → category, priority, department
+    llm.py            the only place that talks to Gemini
+```
+
+Frontend state is deliberately plain: a typed client (`src/lib/api.ts`), two
+hooks (`useQuery`, `useMutation`), and an auth context. No Redux, no React Query
+— the app is a few dozen screens over one API and did not need them.
+
+---
+
+## Security notes
+
+- Passwords are bcrypt-hashed. Authentication is JWT access + refresh.
+- Every role check runs server-side as a FastAPI dependency. The frontend hides
+  buttons; the server is what refuses.
+- Village scoping is a WHERE clause on every list endpoint, and semantic search
+  scopes its candidate set *before* ranking, so a similar vector is never a
+  route around permissions.
+- Self-registration cannot assign a role and does not create a usable login.
+- `POST /auth/register` returns an identical response whether or not the email
+  exists, so it cannot be used to discover who holds an account.
+- The Gemini key is server-side only.
+
+---
+
+## Privacy: what leaves this server
+
+Google's terms state that content submitted on the Gemini free tier may be used
+to improve their products. A resident applying for a widow's pension cannot
+meaningfully consent to that, and a Panchayat cannot consent on their behalf.
+
+The answer here is not to rely on a tier upgrade. A paid tier is a contractual
+promise about data already handed over; the stronger guarantee is not to hand it
+over. So the rule is enforced in code, in one place, as a hard rule rather than
+a setting:
+
+**The model may see the village, never the villager.**
+
+| Sent to Gemini | Never sent |
+|---|---|
+| Village facts, LGD codes, Census figures | Resident names |
+| Scheme rules, benefits, required documents | Income, social category, BPL status, ration card |
+| Project names, budgets, progress | Disability assessments |
+| Grievance titles, wards, categories, status | Which documents sit in a resident's file |
+| Gram Sabha minutes and decisions | Any eligibility verdict about a named person |
+
+Three things enforce it:
+
+1. **Residents are not in the index.** `services/indexer.py` builds no chunk for
+   any resident, so no part of the register is embedded. This matters most,
+   because indexing runs over every row whether or not anyone asks a question —
+   a resident in the index is exported as a standing cost of the feature.
+2. **Personal facts are flagged as they are retrieved.** `services/retrieval.py`
+   marks any fact describing one identified resident, and
+   `api/routes/assistant.py` refuses to build a prompt from a set containing
+   one. The question that asked for them is not sent either.
+3. **The decision was never the model's anyway.** Eligibility is decided by
+   `services/eligibility.py`, a deterministic rule engine. The model was only
+   ever phrasing an answer the engine had already reached, so withholding the
+   record costs phrasing and nothing else.
+
+The resident is told, rather than left to assume: an answer about their own file
+carries a badge reading *"Your data — kept in the Panchayat"*, and the answer
+itself closes by saying their income, category and documents were not sent
+outside the system.
+
+> **If you indexed before this change, re-run the indexer.** Excluding residents
+> from `build_drafts` stops new ones being written; it does not delete rows
+> already stored. One run removes them, and needs no API key because the
+> deletion happens before anything is embedded:
+>
+> ```bash
+> python -m app.index
+> ```
+>
+> The `removed:` figure it prints is how many chunks it deleted. Expect it to
+> match your resident count on the first run after upgrading.
+
+**Why not just anonymise the records instead?** It was considered and rejected.
+At village scale it does not work — "a 52-year-old female agricultural labourer
+in ward 3" identifies one person in a population of a few hundred, so stripping
+the name leaves the record re-identifiable from the quasi-identifiers around it.
+De-identification is a defence at district scale and an illusion at this one.
+
+### What still reaches Google, honestly
+
+- **The text of non-personal questions.** An officer asking "which ward has the
+  worst water complaints" sends that sentence.
+- **Grievance descriptions**, which are free text. A resident who writes a
+  neighbour's name into a complaint puts that name in the index. Structured
+  fields are controlled; prose is not.
+- **Uploaded Gram Sabha minutes and Government Resolutions**, whose text is sent
+  for extraction. Gram Sabha proceedings are public records by law, and a GR is
+  a published government document, so neither is private — but minutes naming a
+  resident who spoke would carry that name.
+
+None of these is solved by the boundary above, and a deployment holding real
+resident data should say so plainly rather than claim more than it does.

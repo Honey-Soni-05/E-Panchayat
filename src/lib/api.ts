@@ -187,6 +187,41 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return (await response.json()) as T;
 }
 
+/**
+ * Like `request`, but hands back the raw Response instead of parsed JSON —
+ * for binary bodies such as an uploaded document. Shares the same token
+ * handling and the same one-shot refresh, so a stale token behaves identically
+ * whether you are fetching a grievance or a PDF.
+ */
+async function authorizedFetch(path: string): Promise<Response> {
+  const send = () =>
+    fetch(buildUrl(path), {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    });
+
+  let response: Response;
+  try {
+    response = await send();
+  } catch {
+    throw new ApiError(0, 'Cannot reach the server.');
+  }
+
+  if (response.status === 401 && refreshToken) {
+    if (await attemptRefresh()) {
+      response = await send();
+    } else {
+      clearTokens();
+      onSessionExpired?.();
+      throw new ApiError(401, 'Your session has expired. Please sign in again.');
+    }
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await messageFrom(response));
+  }
+  return response;
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type Role = 'admin' | 'officer' | 'citizen';
@@ -264,6 +299,12 @@ export interface PublicVillage {
   name: string;
   nameMr: string;
   lgdCode: number | null;
+  blockName: string;
+  blockNameMr: string;
+  districtName: string;
+  districtNameMr: string;
+  stateName: string;
+  stateNameMr: string;
 }
 
 export interface Village {
@@ -409,6 +450,17 @@ export const ELIGIBILITY_ORDER: EligibilityStatus[] = [
   'Needs Review',
   'Ineligible',
 ];
+
+/** What came back from reading a Government Resolution. */
+export interface SchemeReadResult {
+  scheme: Scheme;
+  /** Conditions in the GR that no automatic rule can express. */
+  unmappableConditions: string[];
+  /** Criteria the reader proposed that this system does not evaluate. */
+  discardedCriteria: string[];
+  confidenceNote: string | null;
+  needsManualReview: boolean;
+}
 
 export interface EligibilityResult {
   citizenId: string;
@@ -599,9 +651,14 @@ export interface RetrievedSource {
 export interface AssistantAnswer {
   answer: string;
   sources: RetrievedSource[];
-  /** 'llm' when a model wrote the answer, 'retrieval_only' when it was read
-   *  straight from the records because no model key is configured. */
-  mode: 'llm' | 'retrieval_only' | 'unavailable';
+  /** How the answer was produced.
+   *  - 'llm'                     a model wrote it from the retrieved records
+   *  - 'retrieval_only'          read straight from the records, because no
+   *                              model key is configured or the call failed
+   *  - 'retrieval_only_personal' read straight from the records on purpose:
+   *                              the answer concerns one resident's own file,
+   *                              which is never sent to an outside AI service */
+  mode: 'llm' | 'retrieval_only' | 'retrieval_only_personal' | 'unavailable';
 }
 
 /** What the assistant retrieved, without calling the model. Makes the
@@ -704,6 +761,17 @@ export const api = {
       request(`/schemes/${id}`, { method: 'PATCH', body: data }),
     decide: (id: string, approve: boolean): Promise<Scheme> =>
       request(`/schemes/${id}/decision`, { method: 'POST', params: { approve } }),
+
+    /**
+     * Read a Government Resolution and propose a scheme from it. Officer only.
+     * The proposal is saved as pending — it reaches no citizen and no
+     * eligibility result until an officer approves it with decide().
+     */
+    readDocument: (file: File): Promise<SchemeReadResult> => {
+      const form = new FormData();
+      form.append('file', file);
+      return request('/schemes/read', { method: 'POST', formData: form });
+    },
     eligibility: (
       schemeId: string,
       params?: { ward?: number; only?: string; language?: Language },
@@ -775,6 +843,18 @@ export const api = {
       form.append('file', file);
       return request('/documents', { method: 'POST', formData: form });
     },
+    /**
+     * Fetch the stored file as a blob URL for viewing.
+     *
+     * A plain <a href> cannot be used: the endpoint needs the Authorization
+     * header, and a link carries no headers. The caller must revoke the URL
+     * when finished, or the blob is held in memory for the life of the tab.
+     */
+    fileUrl: async (id: string): Promise<string> => {
+      const response = await authorizedFetch(`/documents/${id}/file`);
+      return URL.createObjectURL(await response.blob());
+    },
+
     review: (
       id: string,
       status: 'Verified' | 'Rejected',
@@ -800,6 +880,23 @@ export const api = {
       data: { status?: 'Pending' | 'In Progress' | 'Completed'; responsible?: string },
     ): Promise<ActionItem> =>
       request(`/sabha/action-items/${id}`, { method: 'PATCH', body: data }),
+
+    /** Assign a follow-up task by hand — for commitments the transcript reader
+     *  did not pick up. Officer only. */
+    createActionItem: (
+      meetingId: string,
+      data: {
+        action: string;
+        actionMr?: string;
+        responsible: string;
+        responsibleMr?: string;
+        deadline?: string | null;
+      },
+    ): Promise<ActionItem> =>
+      request(`/sabha/meetings/${meetingId}/action-items`, {
+        method: 'POST',
+        body: data,
+      }),
   },
 
   analytics: {

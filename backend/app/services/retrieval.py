@@ -15,10 +15,17 @@ them alone. Two consequences worth noting:
   * With no model key configured the endpoint still answers, from the same
     retrieved facts, in a plainer form. It degrades rather than inventing.
 
-Retrieval is keyword-routed rather than embedding-based. That is a deliberate
-first step: the facts are real, which is the part that matters. Semantic search
-over `knowledge_chunks` is the next layer, and slots in behind the same
-interface.
+Retrieval happens entirely inside this server: it is database queries and, on
+the semantic path, a comparison against vectors already stored. Nothing about a
+resident leaves the building to answer a question — the model, when it is
+called at all, is called afterwards and only with facts cleared for it.
+
+Facts about one identified resident are marked `personal=True` as they are
+collected. They are returned to the person entitled to see them exactly as
+before; what changes is that they are never used as prompt material. The
+eligibility decision they describe was made by `services.eligibility`, which is
+deterministic and calls no model, so nothing is lost by keeping the model out
+of this path — only the phrasing is plainer.
 """
 
 from __future__ import annotations
@@ -40,15 +47,33 @@ from app.models import (
     Village,
 )
 from app.services import eligibility as elig
+from app.services.classifier import CATEGORY_KEYWORDS
+from app.services import graph
+from app.services.llm import LLMUnavailable, embed
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Intent routing
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _service_words() -> list[str]:
+    """Every keyword the grievance classifier recognises, flattened.
+
+    Imported rather than copied so the two cannot drift: a word added for
+    classification immediately helps retrieval find the same complaints.
+    """
+    return [w for words in CATEGORY_KEYWORDS.values() for w in words]
+
+
 TOPIC_KEYWORDS: dict[str, list[str]] = {
     "grievances": [
         "grievance", "complaint", "issue", "problem", "pending", "resolved",
-        "तक्रार", "समस्या", "प्रलंबित", "निराकरण",
+        "broken", "not working", "fix", "repair", "what to do",
+        "तक्रार", "समस्या", "प्रलंबित", "निराकरण", "बंद", "दुरुस्ती",
+        # Plus every word the grievance classifier knows — water, drains,
+        # roads, electricity, health, in both languages. Villagers describe a
+        # problem ("the tap has been dry"), they do not say "grievance", and
+        # this list existed already rather than needing to be invented twice.
+        *_service_words(),
     ],
     "schemes": [
         "scheme", "yojana", "eligible", "eligibility", "pension", "subsidy",
@@ -61,9 +86,12 @@ TOPIC_KEYWORDS: dict[str, list[str]] = {
         "प्रकल्प", "काम", "बांधकाम", "रस्ता", "निधी", "बजेट", "खर्च", "विलंब",
     ],
     "citizens": [
+        # "ward" deliberately absent: nearly every question about a village
+        # names a ward, so routing on it sent "the tap in ward 1 is dry" to the
+        # resident directory, which for a citizen returns nothing at all.
         "citizen", "resident", "population", "people", "household", "family",
-        "how many live", "ward",
-        "नागरिक", "रहिवासी", "लोकसंख्या", "कुटुंब", "वॉर्ड",
+        "how many live",
+        "नागरिक", "रहिवासी", "लोकसंख्या", "कुटुंब",
     ],
     "sabha": [
         "sabha", "meeting", "minutes", "decision", "action item", "resolution",
@@ -104,14 +132,32 @@ class Source:
 
 @dataclass
 class Retrieved:
-    """Facts pulled from the database, ready to be handed to a model."""
+    """Facts pulled from the database, ready to be handed to a model.
+
+    Some of them are not, though. `has_personal` marks a set of facts that
+    describes an identified individual — what they earn, which social category
+    they belong to, whether they are on the BPL list, what their disability
+    assessment says, which documents sit in their file. Those are collected
+    normally, shown to the person entitled to see them, and never sent to
+    Google. See `api.routes.assistant` for where that is enforced.
+    """
 
     facts: list[str] = field(default_factory=list)
     sources: list[Source] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)
+    # 'semantic' when the embedded index answered, 'keyword' when it fell back.
+    # Surfaced in the UI so nobody has to guess which path ran.
+    mode: str = "keyword"
+    # True once any fact describes one identified resident. Sticky: a set of
+    # facts is only as shareable as its most sensitive member.
+    has_personal: bool = False
 
-    def add(self, fact: str, source: Source | None = None) -> None:
+    def add(
+        self, fact: str, source: Source | None = None, *, personal: bool = False
+    ) -> None:
         self.facts.append(fact)
+        if personal:
+            self.has_personal = True
         if source:
             self.sources.append(source)
 
@@ -133,6 +179,50 @@ def _rupees(value) -> str:
 
 def _village_filter(model, village_id: str | None):
     return [model.village_id == village_id] if village_id else []
+
+
+async def gather_semantic(
+    db: Session, question: str, user: User, village_id: str | None, limit: int = 6
+) -> Retrieved:
+    """Retrieve by meaning, then walk the links of what matched.
+
+    Falls back to `gather()` whenever the semantic path cannot run - no index
+    built, no API key, an embedding call that failed, or a question that matched
+    nothing above the similarity floor. The fallback is not a degraded copy: it
+    is the same keyword retrieval that served this endpoint before, so the
+    assistant keeps working on a deployment where nobody has run the indexer.
+    """
+    if not graph.index_is_ready(db):
+        return gather(db, question, user, village_id)
+
+    try:
+        vectors = await embed([question])
+    except LLMUnavailable:
+        return gather(db, question, user, village_id)
+
+    if not vectors:
+        return gather(db, question, user, village_id)
+
+    hits = graph.semantic_search(db, vectors[0], user, village_id, limit=limit)
+    if not hits:
+        # A question the index has nothing close to. Keyword routing may still
+        # have something useful, and an empty answer helps nobody.
+        return gather(db, question, user, village_id)
+
+    out = Retrieved()
+    out.mode = "semantic"
+    out.topics = sorted({h.chunk.entity_type for h in hits})
+    for hit in hits:
+        # `indexer` does not build resident chunks, so this should never fire.
+        # It is here so that if someone reintroduces them, the assistant treats
+        # them as personal and withholds them from the model rather than
+        # quietly resuming the export this was written to stop.
+        out.add(
+            graph.describe(hit),
+            Source(hit.chunk.entity_type, hit.chunk.entity_id, hit.chunk.content[:80]),
+            personal=hit.chunk.entity_type == "citizen",
+        )
+    return out
 
 
 def gather(
@@ -174,7 +264,26 @@ def gather(
         open_count = db.scalar(
             select(func.count()).select_from(stmt.where(Grievance.status != "Resolved").subquery())
         ) or 0
-        out.add(f"There are {open_count} unresolved grievances.")
+
+        if is_citizen:
+            # A resident asking about a problem wants to know what to do about
+            # it, not to be handed a count. Their own complaints are the only
+            # ones they may see, so when none of them match, the useful answer
+            # is how to raise one — not silence.
+            out.add(
+                f"This resident has {open_count} unresolved complaint(s) of their own "
+                f"on record. A resident can only see complaints they filed themselves."
+            )
+            out.add(
+                "To report a new problem, a resident files a grievance from the "
+                "Grievances page of this portal. It is recorded with a ward and a "
+                "category, routed to the responsible department automatically, and "
+                "its status becomes visible to them here as the office updates it. "
+                "Urgent problems can also be reported at the Gram Panchayat office "
+                "in person."
+            )
+        else:
+            out.add(f"There are {open_count} unresolved grievances.")
 
         for g in db.scalars(
             stmt.where(Grievance.status != "Resolved")
@@ -229,16 +338,25 @@ def gather(
                 eligible = [(a, s) for a, s in results if a.status == "Eligible"]
                 nearly = [(a, s) for a, s in results if a.status == "Missing Documents"]
 
+                # Personal: an eligibility explanation carries the reason the
+                # engine decided as it did, and those reasons are the resident's
+                # income, social category, BPL status, ration card and
+                # disability assessment. This is the data the assistant must
+                # never hand to a third-party model, so it is flagged here and
+                # answered from a template instead.
                 out.add(
-                    f"{citizen.name} currently qualifies for {len(eligible)} schemes, "
-                    f"and would qualify for {len(nearly)} more once the missing "
-                    f"documents are uploaded and verified."
+                    f"{citizen.name} currently qualifies for {len(eligible)} "
+                    f"{'scheme' if len(eligible) == 1 else 'schemes'}, and would "
+                    f"qualify for {len(nearly)} more once the missing documents "
+                    f"are uploaded and verified.",
+                    personal=True,
                 )
                 for assessment, scheme in (eligible + nearly)[:limit]:
                     out.add(
                         f'Scheme "{scheme.name}" ({scheme.benefit}): '
                         f"{elig.explain(assessment, 'en')}",
                         Source("scheme", scheme.id, scheme.name),
+                        personal=True,
                     )
         else:
             for scheme in active[:limit]:
@@ -299,6 +417,9 @@ def gather(
         stmt = select(CitizenDocument)
         if is_citizen and citizen_id:
             stmt = stmt.where(CitizenDocument.citizen_id == citizen_id)
+            # Personal: which documents one named resident has filed, and why
+            # any of them was rejected, is their own file rather than village
+            # information.
             for d in db.scalars(stmt.limit(limit)):
                 out.add(
                     f"Document {d.doc_type} ({d.file_name}) submitted {d.submitted_date}, "
@@ -306,6 +427,7 @@ def gather(
                     + (f" — {d.rejection_reason}" if d.rejection_reason else "")
                     + ".",
                     Source("document", d.id, d.doc_type),
+                    personal=True,
                 )
         else:
             pending = db.scalar(
@@ -325,15 +447,23 @@ def gather(
 def plain_answer(retrieved: Retrieved, language: str = "en") -> str:
     """A readable answer built from the retrieved facts, with no model involved.
 
-    Used when no API key is configured, or when the model call fails. It is
-    plainer than a generated answer but every line of it is true, which the old
-    canned responses could not claim.
+    Used in three cases: no API key is configured, the model call failed, or the
+    facts describe an identified resident and so are not eligible to be sent to
+    a model at all. It is plainer than a generated answer but every line of it
+    is true, which the old canned responses could not claim.
+
+    The closing note says which of the three happened. A resident reading an
+    answer about their own pension should be told that their income and category
+    were not sent to Google, rather than left to assume they were.
     """
     if retrieved.is_empty:
         return (
-            "मला या प्रश्नाशी संबंधित नोंदी सापडल्या नाहीत."
+            "मला या प्रश्नाशी संबंधित नोंदी सापडल्या नाहीत. तुम्ही ग्रामपंचायत "
+            "कार्यालयात विचारू शकता, किंवा तक्रार असल्यास 'तक्रारी' पानावरून नोंदवू शकता."
             if language == "mr"
-            else "I could not find any records related to that question."
+            else "I could not find any records related to that question. You can ask "
+            "at the Gram Panchayat office, or file it from the Grievances page if it "
+            "is a problem that needs fixing."
         )
 
     header = (
@@ -342,10 +472,23 @@ def plain_answer(retrieved: Retrieved, language: str = "en") -> str:
         else "Here is what the Panchayat records show:"
     )
     body = "\n".join(f"• {fact}" for fact in retrieved.facts[:10])
-    footer = (
-        "\n\n(भाषा मॉडेल उपलब्ध नसल्याने ही थेट नोंदींची यादी आहे.)"
-        if language == "mr"
-        else "\n\n(Listed directly from the records — the language model is not configured, "
-        "so this is not a written summary.)"
-    )
+
+    if retrieved.has_personal:
+        footer = (
+            "\n\n(ही तुमची वैयक्तिक माहिती असल्याने ती कोणत्याही बाहेरील AI सेवेकडे "
+            "पाठवली जात नाही. म्हणून हे उत्तर थेट नोंदींमधून दिले आहे. पात्रता "
+            "नियमांनुसार ठरवली जाते, AI ने नाही.)"
+            if language == "mr"
+            else "\n\n(Listed directly from the records. This answer concerns your own "
+            "file, so it was written here rather than by an AI service — your income, "
+            "category and documents are never sent outside this system. The eligibility "
+            "decision itself is made by a rule engine, not by AI.)"
+        )
+    else:
+        footer = (
+            "\n\n(भाषा मॉडेल उपलब्ध नसल्याने ही थेट नोंदींची यादी आहे.)"
+            if language == "mr"
+            else "\n\n(Listed directly from the records — the language model is not configured, "
+            "so this is not a written summary.)"
+        )
     return f"{header}\n{body}{footer}"
