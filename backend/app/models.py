@@ -159,6 +159,18 @@ class User(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Tokens issued before this moment are refused. Access and refresh tokens
+    # are stateless JWTs, so there is otherwise no way to end a session early:
+    # changing a password would leave whoever already had the account signed in
+    # until their refresh token expired, which is a week. Set on password change
+    # and on password reset, and compared against the token's `iat` claim in
+    # `core.deps`. Null means nothing has ever been revoked.
+    #
+    # Stored truncated to the second, because `iat` is whole seconds. Keeping
+    # the microseconds would reject the very token issued by the sign-in that
+    # follows a reset, whenever both landed inside the same second.
+    tokens_valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # An officer works for one Gram Panchayat and sees only its records. An
     # admin has no village and sees every village in the district.
     village_id: Mapped[str | None] = mapped_column(
@@ -653,6 +665,61 @@ class KnowledgeChunk(Base, TimestampMixin):
     # Set to the source row's updated_at when embedded, so re-indexing can skip
     # anything unchanged.
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Password resets
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PasswordReset(Base):
+    """A one-time code that lets someone set a new password.
+
+    There is no email or SMS gateway in this deployment, so the usual "we have
+    sent you a link" flow cannot exist — and inventing one would mean a reset
+    that silently never arrives. This uses the channel a Gram Panchayat actually
+    has: the office counter.
+
+    A resident who cannot sign in goes to the Panchayat office. An officer
+    identifies them against the village register — the same check that already
+    gates account approval — and issues a code, which the system shows once and
+    the officer hands over. The resident redeems it for a password of their own
+    choosing. The officer never learns that password.
+
+    The code is stored only as a bcrypt hash, exactly like a password, so a
+    reader of this table cannot use what they find. It expires, it is single
+    use, and issuing a new one invalidates any earlier unused code for that
+    account — otherwise every reset ever issued would stay live.
+
+    Who may reset whom is the part that matters. An officer may reset residents
+    of their own village and nobody else: letting an officer reset another
+    officer, or an admin, would turn a village login into a route to the whole
+    block. That check lives in the route.
+    """
+
+    __tablename__ = "password_resets"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+
+    # bcrypt, never the code itself.
+    hashed_code: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    issued_by_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    # Set when redeemed. A code with this set is spent and cannot be reused.
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False, index=True
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 import difflib
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import jwt
@@ -11,20 +11,31 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_user, require_admin, require_officer, village_scope
+from app.core.deps import (
+    get_current_user,
+    require_admin,
+    require_officer,
+    token_is_revoked,
+    village_scope,
+)
 from app.core.security import (
+    as_utc,
     create_access_token,
     create_refresh_token,
     decode_token,
+    generate_reset_code,
     hash_password,
+    normalise_reset_code,
     verify_password,
 )
 from app.db.session import get_db
-from app.models import Citizen, RegistrationRequest, User
+from app.models import Citizen, PasswordReset, RegistrationRequest, User
 from app.services import ratelimit
 from app.schemas import (
     LoginRequest,
     PasswordChange,
+    PasswordResetIssued,
+    PasswordResetRedeem,
     RefreshRequest,
     RegistrationCreate,
     RegistrationDecision,
@@ -142,6 +153,14 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)) -> TokenPair:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Account unavailable."
         )
+    # A refresh token outlives an access token by a week, so this is the one
+    # that matters: without the check, a password reset would leave whoever held
+    # the account able to mint fresh access tokens for seven more days.
+    if token_is_revoked(user, payload):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Your password was changed. Sign in again.",
+        )
     return _issue(user)
 
 
@@ -150,19 +169,183 @@ def me(user: User = Depends(get_current_user)) -> User:
     return user
 
 
-@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def _revoke_existing_sessions(user: User) -> None:
+    """End every session issued before now.
+
+    Truncated to the second because `iat` is whole seconds — see the note on
+    `User.tokens_valid_from`.
+    """
+    user.tokens_valid_from = datetime.now(timezone.utc).replace(microsecond=0)
+
+
+@router.post("/change-password", response_model=TokenPair)
 def change_password(
     body: PasswordChange,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> None:
+) -> TokenPair:
+    """Change your own password, ending every other session.
+
+    Returns a fresh token pair rather than 204. Changing a password revokes
+    every token issued before it, including the one used to make this call, so
+    without new tokens the caller would be signed out by their own success. The
+    other sessions stay revoked, which is the point: someone who changes their
+    password because they think it is known must not leave that person signed
+    in for the week a refresh token lasts.
+    """
     if not verify_password(body.current_password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect.",
         )
     user.hashed_password = hash_password(body.new_password)
+    _revoke_existing_sessions(user)
     db.commit()
+    return _issue(user)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Password reset
+#
+# There is no email or SMS gateway here, so "we have sent you a link" is not
+# available — and building a flow whose message silently never arrives would be
+# worse than having none. This uses the channel a Gram Panchayat actually has.
+#
+# A resident who cannot sign in goes to the office. An officer identifies them
+# against the village register, which is the same check that already gates
+# account approval, and issues a code. The system shows it once; the officer
+# writes it down and hands it over. The resident chooses their own password with
+# it, so the officer never learns what it becomes.
+#
+# An officer may reset residents of their own village and nobody else. An
+# officer who could reset another officer, or an admin, would hold a route from
+# one village login to the whole block.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _assert_may_reset(actor: User, target: User) -> None:
+    if actor.id == target.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use change-password to set your own password.",
+        )
+    if actor.role == "admin":
+        return
+    if target.role != "citizen":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only an admin can reset a staff account.",
+        )
+    scope = village_scope(actor)
+    if scope is not None and target.village_id != scope:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That resident belongs to another Gram Panchayat.",
+        )
+
+
+@router.post("/users/{user_id}/password-reset", response_model=PasswordResetIssued)
+def issue_password_reset(
+    user_id: str,
+    actor: User = Depends(require_officer),
+    db: Session = Depends(get_db),
+) -> PasswordResetIssued:
+    """Issue a one-time code for a resident who cannot sign in.
+
+    The code is in the response and nowhere else readable — only its bcrypt hash
+    is stored. Issuing a new code voids any earlier unused one, so a resident
+    who has been through this twice cannot be let in by the first slip of paper.
+    """
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No such account."
+        )
+    _assert_may_reset(actor, target)
+
+    now = datetime.now(timezone.utc)
+    for stale in db.scalars(
+        select(PasswordReset)
+        .where(PasswordReset.user_id == target.id)
+        .where(PasswordReset.used_at.is_(None))
+    ):
+        stale.used_at = now
+
+    code = generate_reset_code()
+    expires_at = now + timedelta(hours=settings.PASSWORD_RESET_TTL_HOURS)
+    db.add(
+        PasswordReset(
+            id=f"pwr_{uuid4().hex[:12]}",
+            user_id=target.id,
+            hashed_code=hash_password(normalise_reset_code(code)),
+            issued_by_id=actor.id,
+            expires_at=expires_at,
+        )
+    )
+    db.commit()
+
+    return PasswordResetIssued(
+        code=code,
+        expires_at=expires_at,
+        user_email=target.email,
+        user_name=target.full_name,
+    )
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+def redeem_password_reset(
+    body: PasswordResetRedeem, request: Request, db: Session = Depends(get_db)
+) -> None:
+    """Set a new password using a code issued at the Panchayat office."""
+    email = body.email.lower().strip()
+    ip = ratelimit.client_ip(request)
+
+    try:
+        ratelimit.check_reset_allowed(db, email, ip)
+    except HTTPException:
+        ratelimit.record(db, email=email, ip=ip, outcome="rate_limited")
+        raise
+
+    # One refusal for every way this can fail — wrong code, expired code, code
+    # already spent, no such account. Distinguishing them would say whether an
+    # address holds an account and whether a reset is outstanding for it.
+    refused = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=(
+            "That reset code is not valid. Codes expire, and can be used only "
+            "once. Ask the Panchayat office for a new one."
+        ),
+    )
+
+    user = db.scalar(select(User).where(User.email == email))
+    reset = None
+    if user is not None:
+        reset = db.scalar(
+            select(PasswordReset)
+            .where(PasswordReset.user_id == user.id)
+            .where(PasswordReset.used_at.is_(None))
+            .order_by(PasswordReset.created_at.desc())
+        )
+
+    entered = normalise_reset_code(body.code)
+    if (
+        user is None
+        or reset is None
+        or as_utc(reset.expires_at) <= datetime.now(timezone.utc)
+        or not verify_password(entered, reset.hashed_code)
+    ):
+        ratelimit.record(db, email=email, ip=ip, outcome="reset_bad_code")
+        raise refused
+
+    user.hashed_password = hash_password(body.new_password)
+    # Whoever knew the old password is signed out by this, which is the reason
+    # a reset exists rather than a convenience on top of it.
+    _revoke_existing_sessions(user)
+    reset.used_at = datetime.now(timezone.utc)
+    db.commit()
+    ratelimit.record(
+        db, email=email, ip=ip, outcome="reset_redeemed", user_id=user.id
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

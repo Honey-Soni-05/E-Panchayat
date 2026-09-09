@@ -317,6 +317,47 @@ has been trying". It pairs an email with an IP, which is personal data, so
 calls it automatically; there is no scheduler here, and claiming an enforced
 retention policy that nothing enforces would be worse than running it by hand.
 
+### Password reset, over the counter
+
+There is no email or SMS gateway in this deployment, so "we have sent you a
+link" is not available — and a reset flow whose message silently never arrives
+is worse than none. This uses the channel a Gram Panchayat actually has.
+
+A resident who cannot sign in goes to the office. An officer identifies them
+against the village register — the same check that already gates account
+approval — and issues a one-time code. The system shows it once; the officer
+writes it down and hands it over. The resident redeems it for a password of
+their own choosing, so **the officer never learns the password**, only that a
+reset was permitted.
+
+| Who | May reset |
+|---|---|
+| Officer | Residents of their own village |
+| Admin | Anyone, including officers |
+| Anyone | Not themselves — that is `change-password` |
+
+An officer who could reset another officer, or an admin, would hold a route from
+one village login to the whole block. That is the check most worth reading in
+`auth.py`, and it has tests.
+
+The code is stored only as a bcrypt hash, expires after 24 hours, works once,
+and is voided by issuing another. Its alphabet drops `O I L S 0 1`, because it
+is read off a slip of paper and a resident who types `0` for `O` has hit a bad
+alphabet rather than failed a security check. Redeeming is metered like signing
+in, since a code is the same kind of guessable secret.
+
+**Resetting ends existing sessions.** Access and refresh tokens are stateless
+JWTs with no server-side session to close, so without this a reset would leave
+whoever already had the account signed in for the week a refresh token lasts —
+which is precisely the situation a reset exists for. `users.tokens_valid_from`
+records the moment of revocation and `core.deps` refuses any token issued
+before it. Changing your own password does the same, and returns a fresh token
+pair so the caller is not signed out by their own success.
+
+Known gap: a resident must reach the office. There is no way to start a reset
+from the portal, because there is no channel to deliver a code over. That is a
+missing integration, not a missing design.
+
 ---
 
 ## Privacy: what leaves this server

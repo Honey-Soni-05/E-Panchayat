@@ -116,6 +116,32 @@ class PasswordChange(ApiModel):
     new_password: str = Field(min_length=8)
 
 
+class PasswordResetIssued(ApiModel):
+    """What the officer sees after issuing a reset — once.
+
+    The code is in this response and nowhere else readable: the database keeps
+    only a bcrypt hash of it. If the officer loses it before the resident has
+    it, the fix is to issue another, which is cheap and invalidates this one.
+    """
+
+    code: str
+    expires_at: datetime
+    user_email: str
+    user_name: str
+
+
+class PasswordResetRedeem(ApiModel):
+    """A resident setting their own password with a code from the office.
+
+    The officer never sees this password. They hand over a code that permits
+    setting one; what gets set is between the resident and the server.
+    """
+
+    email: EmailStr
+    code: str
+    new_password: str = Field(min_length=8)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Administrative hierarchy
 # ─────────────────────────────────────────────────────────────────────────────

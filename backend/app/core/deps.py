@@ -11,7 +11,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.security import decode_token
+from app.core.security import as_utc, decode_token
 from app.db.session import get_db
 from app.models import Citizen, User
 
@@ -44,7 +44,39 @@ def get_current_user(
     user = db.get(User, payload.get("sub"))
     if user is None or not user.is_active:
         raise CREDENTIALS_ERROR
+    if token_is_revoked(user, payload):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Your password was changed. Sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
+
+
+def token_is_revoked(user: User, payload: dict) -> bool:
+    """Whether this token predates the account's last password change.
+
+    Access and refresh tokens are stateless, so there is no server-side session
+    to end. Without this check, changing or resetting a password would not
+    remove whoever already held the account — they would stay signed in until
+    their refresh token expired a week later, which makes a reset close to
+    useless in the one situation it exists for.
+
+    `iat` is whole seconds and `tokens_valid_from` is stored truncated to the
+    second, so a token minted in the same second as the revocation survives.
+    That one-second overlap is the price of comparing the two, and it is the
+    right side to err on: the alternative rejects the fresh token issued by the
+    sign-in immediately after a reset.
+    """
+    valid_from = as_utc(user.tokens_valid_from)
+    if valid_from is None:
+        return False
+    issued_at = payload.get("iat")
+    if issued_at is None:
+        # A token with no `iat` cannot be placed in time, so it cannot be shown
+        # to post-date the revocation.
+        return True
+    return issued_at < valid_from.timestamp()
 
 
 def require_roles(*roles: str) -> Callable[[User], User]:

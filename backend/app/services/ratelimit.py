@@ -123,6 +123,29 @@ def check_login_allowed(db: Session, email: str, ip: str | None) -> None:
         raise _too_many(retry_after)
 
 
+def check_reset_allowed(db: Session, email: str, ip: str | None) -> None:
+    """Raise 429 if this account's reset code has been guessed at too often.
+
+    Redeeming a code is the same shape of oracle as signing in — a secret, an
+    unlimited number of tries — so it gets the same treatment. Counted
+    separately from sign-in failures, so someone failing to redeem a code does
+    not also lock themselves out of the password they may still remember.
+    """
+    window = settings.LOGIN_WINDOW_MINUTES
+    since = _window_start(window)
+
+    failures = db.scalar(
+        select(func.count())
+        .select_from(AuthAttempt)
+        .where(AuthAttempt.email == email)
+        .where(AuthAttempt.outcome == "reset_bad_code")
+        .where(AuthAttempt.created_at >= since)
+    ) or 0
+
+    if failures >= settings.RESET_MAX_FAILURES_PER_EMAIL:
+        raise _too_many(window * 60)
+
+
 def check_registration_allowed(db: Session, ip: str | None) -> None:
     """Cap how many applications one source can file into the officer's queue."""
     if not ip:

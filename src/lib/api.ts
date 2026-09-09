@@ -234,6 +234,16 @@ export interface TokenPair {
   expiresIn: number;
 }
 
+/** The one and only time a reset code is readable. Only its hash is stored, so
+ *  there is no endpoint that can show it again — losing it means issuing
+ *  another, which voids this one. */
+export interface PasswordResetIssued {
+  code: string;
+  expiresAt: string;
+  userEmail: string;
+  userName: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -693,10 +703,28 @@ export const api = {
         anonymous: true,
       }),
     me: (): Promise<User> => request('/auth/me'),
-    changePassword: (currentPassword: string, newPassword: string): Promise<void> =>
+    /** Changing a password revokes every token issued before it — including the
+     *  one that made this call — so the server hands back a fresh pair. Store
+     *  them, or the caller is signed out by their own success. */
+    changePassword: (currentPassword: string, newPassword: string): Promise<TokenPair> =>
       request('/auth/change-password', {
         method: 'POST',
         body: { currentPassword, newPassword },
+      }),
+
+    /** Officer or admin: issue a one-time reset code for someone who cannot
+     *  sign in. The code is in this response and nowhere else readable, so it
+     *  has to be written down before the screen is closed. Issuing another
+     *  voids this one. */
+    issuePasswordReset: (userId: string): Promise<PasswordResetIssued> =>
+      request(`/auth/users/${userId}/password-reset`, { method: 'POST' }),
+
+    /** Public: set a new password with a code from the Panchayat office. */
+    resetPassword: (email: string, code: string, newPassword: string): Promise<void> =>
+      request('/auth/reset-password', {
+        method: 'POST',
+        body: { email, code, newPassword },
+        anonymous: true,
       }),
 
     /**
