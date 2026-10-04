@@ -67,9 +67,25 @@ def dashboard(
         used_stmt = used_stmt.where(Project.village_id == scope)
     total_budget = db.scalar(budget_stmt) or 0
     total_utilized = db.scalar(used_stmt) or 0
-    next_meeting = db.scalar(
-        select(func.max(SabhaMeeting.meeting_date))
+
+    # Two figures the helper above could not scope. `scoped()` adds the village
+    # filter only when the model has a `village_id` column, and quietly adds
+    # nothing when it does not — so a document, which belongs to a village only
+    # through its resident, was counted across the whole block. Written out
+    # explicitly here so the join is visible.
+    meeting_stmt = select(func.max(SabhaMeeting.meeting_date))
+    pending_docs_stmt = (
+        select(func.count())
+        .select_from(CitizenDocument)
+        .where(CitizenDocument.status == "Pending Verification")
     )
+    if scope is not None:
+        meeting_stmt = meeting_stmt.where(SabhaMeeting.village_id == scope)
+        pending_docs_stmt = pending_docs_stmt.join(
+            Citizen, CitizenDocument.citizen_id == Citizen.id
+        ).where(Citizen.village_id == scope)
+    next_meeting = db.scalar(meeting_stmt)
+    pending_documents = db.scalar(pending_docs_stmt) or 0
 
     return DashboardStats(
         total_citizens=count(Citizen),
@@ -83,16 +99,24 @@ def dashboard(
         delayed_projects=count(Project, Project.status == "Delayed"),
         total_budget=float(total_budget),
         total_utilized=float(total_utilized),
-        pending_documents=count(
-            CitizenDocument, CitizenDocument.status == "Pending Verification"
-        ),
+        pending_documents=pending_documents,
         next_meeting_date=next_meeting,
     )
 
 
+# The four breakdowns below sit beside the dashboard totals on the same screen.
+# The totals were scoped to the officer's village and these were not, so an
+# officer shown "0 residents" was shown their neighbour's complaints by ward and
+# budgets by project in the charts underneath. Each takes the same scope now.
+
+def _in_village(model, user: User) -> list:
+    scope = village_scope(user)
+    return [model.village_id == scope] if scope is not None else []
+
+
 @router.get("/analytics/age-distribution", response_model=list[NamedCount])
 def age_distribution(
-    _: User = Depends(require_officer), db: Session = Depends(get_db)
+    user: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> list[NamedCount]:
     buckets = [
         ("0-17", "०-१७", 0, 17),
@@ -105,7 +129,7 @@ def age_distribution(
         n = db.scalar(
             select(func.count())
             .select_from(Citizen)
-            .where(Citizen.age >= low, Citizen.age <= high)
+            .where(Citizen.age >= low, Citizen.age <= high, *_in_village(Citizen, user))
         )
         out.append(NamedCount(label=label, label_mr=label_mr, value=n or 0))
     return out
@@ -113,10 +137,11 @@ def age_distribution(
 
 @router.get("/analytics/grievances-by-department", response_model=list[NamedCount])
 def grievances_by_department(
-    _: User = Depends(require_officer), db: Session = Depends(get_db)
+    user: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> list[NamedCount]:
     rows = db.execute(
         select(Grievance.department, Grievance.department_mr, func.count())
+        .where(*_in_village(Grievance, user))
         .group_by(Grievance.department, Grievance.department_mr)
         .order_by(func.count().desc())
     ).all()
@@ -125,11 +150,11 @@ def grievances_by_department(
 
 @router.get("/analytics/grievances-by-ward", response_model=list[NamedCount])
 def grievances_by_ward(
-    _: User = Depends(require_officer), db: Session = Depends(get_db)
+    user: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> list[NamedCount]:
     rows = db.execute(
         select(Grievance.ward, func.count())
-        .where(Grievance.status != "Resolved")
+        .where(Grievance.status != "Resolved", *_in_village(Grievance, user))
         .group_by(Grievance.ward)
         .order_by(Grievance.ward)
     ).all()
@@ -138,10 +163,14 @@ def grievances_by_ward(
 
 @router.get("/analytics/project-budgets", response_model=list[dict])
 def project_budgets(
-    _: User = Depends(require_officer), db: Session = Depends(get_db)
+    user: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> list[dict]:
     """Budget vs. expenditure per project, in lakhs — the units the charts use."""
-    projects = db.scalars(select(Project).order_by(Project.ward, Project.name))
+    projects = db.scalars(
+        select(Project)
+        .where(*_in_village(Project, user))
+        .order_by(Project.ward, Project.name)
+    )
     return [
         {
             "id": p.id,

@@ -9,7 +9,12 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import assert_can_read_citizen, get_current_user, require_officer
+from app.core.deps import (
+    assert_can_read_citizen,
+    get_current_user,
+    require_officer,
+    village_scope,
+)
 from app.db.session import get_db
 from app.models import Citizen, CitizenDocument, User
 from app.schemas import DocumentOut, DocumentReview
@@ -50,8 +55,20 @@ def list_documents(
         if not user.citizen_id:
             return []
         stmt = stmt.where(CitizenDocument.citizen_id == user.citizen_id)
-    elif citizen_id:
-        stmt = stmt.where(CitizenDocument.citizen_id == citizen_id)
+    else:
+        # An officer's queue is their own village's documents. This had no
+        # village filter at all, so the verification queue listed every
+        # resident in the block by name, with what they had filed and why any
+        # of it was rejected. A document has no village of its own; it takes
+        # the village of the resident it belongs to.
+        if citizen_id:
+            assert_can_read_citizen(db, user, citizen_id)
+            stmt = stmt.where(CitizenDocument.citizen_id == citizen_id)
+        scope = village_scope(user)
+        if scope is not None:
+            stmt = stmt.join(Citizen, CitizenDocument.citizen_id == Citizen.id).where(
+                Citizen.village_id == scope
+            )
 
     if status_filter:
         stmt = stmt.where(CitizenDocument.status == status_filter)
@@ -176,6 +193,10 @@ def review_document(
     document = db.get(CitizenDocument, document_id)
     if document is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No document with that ID.")
+    # Opening the file was guarded and ruling on it was not. Verifying a
+    # document is what moves a resident from 'Missing Documents' to 'Eligible',
+    # so this let an officer of one village decide eligibility in another.
+    assert_can_read_citizen(db, officer, document.citizen_id)
     if body.status == "Rejected" and not body.rejection_reason:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,

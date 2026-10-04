@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import assert_can_read_citizen, get_current_user, require_officer
+from app.core.deps import (
+    assert_can_read_citizen,
+    get_current_user,
+    require_officer,
+    village_scope,
+)
 from app.db.session import get_db
 from app.models import Citizen, CitizenDocument, Scheme, User
 from app.schemas import (
@@ -204,16 +209,27 @@ def scheme_eligibility(
         None, description="Filter to 'Eligible', 'Missing Documents' or 'Ineligible'"
     ),
     language: str = Query("en", pattern="^(en|mr)$"),
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> list[EligibilityResult]:
-    """Assess every citizen against one scheme. This is the beneficiary
-    recommendation screen's data source."""
+    """Assess the officer's own residents against one scheme. This is the
+    beneficiary recommendation screen's data source.
+
+    It said "every citizen" and meant it: there was no village filter, so one
+    request returned every resident of every village together with the reason
+    each passed or failed. Those reasons are the resident's age, income, social
+    category and BPL status written out as a sentence — the most sensitive
+    thing this API serves, and the per-resident route beside this one was
+    already guarded for exactly that reason.
+    """
     scheme = db.get(Scheme, scheme_id)
     if scheme is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No scheme with that ID.")
 
     stmt = select(Citizen).options(selectinload(Citizen.documents))
+    scope = village_scope(officer)
+    if scope is not None:
+        stmt = stmt.where(Citizen.village_id == scope)
     if ward is not None:
         stmt = stmt.where(Citizen.ward == ward)
 

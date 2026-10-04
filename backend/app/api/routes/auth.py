@@ -29,7 +29,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
-from app.models import Citizen, PasswordReset, RegistrationRequest, User
+from app.models import Citizen, PasswordReset, RegistrationRequest, User, Village
 from app.services import ratelimit
 from app.schemas import (
     LoginRequest,
@@ -632,11 +632,43 @@ def create_user(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with that email already exists.",
         )
-    if body.role == "citizen" and not body.citizen_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A citizen account must be linked to a citizen record.",
-        )
+    # Which village the account belongs to is decided here and nowhere else.
+    #
+    # This used to store no village at all, for any role. An officer made this
+    # way was therefore unscoped, and unscoped is what an admin is: they saw
+    # every resident in the block. There was no field to say which Gram
+    # Panchayat they served, so there was no way to create one correctly.
+    village_id: str | None = None
+    citizen_id: str | None = None
+
+    if body.role == "citizen":
+        if not body.citizen_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A citizen account must be linked to a citizen record.",
+            )
+        citizen = db.get(Citizen, body.citizen_id)
+        if citizen is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="That resident record does not exist.",
+            )
+        # A resident's account follows the resident; it is not the admin's to
+        # choose, or an account could be pointed at a village its owner does
+        # not live in.
+        citizen_id = citizen.id
+        village_id = citizen.village_id
+    elif body.role == "officer":
+        if not body.village_id or db.get(Village, body.village_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "An officer account must be assigned to a Gram Panchayat. "
+                    "Give the village it serves."
+                ),
+            )
+        village_id = body.village_id
+    # An admin has no village: that absence is what "the whole block" means.
 
     user = User(
         id=f"usr_{uuid4().hex[:12]}",
@@ -644,7 +676,8 @@ def create_user(
         hashed_password=hash_password(body.password),
         full_name=body.full_name,
         role=body.role,
-        citizen_id=body.citizen_id,
+        citizen_id=citizen_id,
+        village_id=village_id,
     )
     db.add(user)
     db.commit()

@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import get_current_user, require_officer, village_scope
+from app.core.deps import (
+    assert_can_access_village,
+    get_current_user,
+    require_officer,
+    village_scope,
+)
 from app.db.session import get_db
 from app.models import Citizen, Grievance, GrievanceEvent, User
 from app.schemas import (
@@ -159,8 +164,16 @@ def get_grievance(
     )
     if grievance is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No grievance with that ID.")
-    if user.role == "citizen" and grievance.citizen_id != user.citizen_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only view your own complaints.")
+    if user.role == "citizen":
+        if grievance.citizen_id != user.citizen_id:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "You can only view your own complaints."
+            )
+        return grievance
+    # A resident was held to their own complaints and an officer was held to
+    # nothing: the list was scoped by village, this was not. A complaint
+    # carries the complainant's name and phone number.
+    assert_can_access_village(user, grievance.village_id)
     return grievance
 
 
@@ -174,6 +187,7 @@ def update_grievance(
     grievance = db.get(Grievance, grievance_id)
     if grievance is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No grievance with that ID.")
+    assert_can_access_village(officer, grievance.village_id)
 
     data = body.model_dump(exclude_unset=True)
     note = data.get("officer_notes")

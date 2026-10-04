@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_officer, village_scope
+from app.core.deps import (
+    assert_can_access_village,
+    get_current_user,
+    require_officer,
+    village_scope,
+)
 from app.db.session import get_db
 from app.models import Project, User
 from app.schemas import ProjectCreate, ProjectOut, ProjectUpdate
@@ -37,12 +42,13 @@ def list_projects(
 @router.get("/{project_id}", response_model=ProjectOut)
 def get_project(
     project_id: str,
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Project:
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No project with that ID.")
+    assert_can_access_village(user, project.village_id)
     return project
 
 
@@ -70,12 +76,15 @@ def create_project(
 def update_project(
     project_id: str,
     body: ProjectUpdate,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> Project:
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No project with that ID.")
+    # The role was checked and the village was not: any officer in the block
+    # could restate another Panchayat's spending, or delete the work outright.
+    assert_can_access_village(officer, project.village_id)
 
     data = body.model_dump(exclude_unset=True)
     for field, value in data.items():
@@ -103,11 +112,12 @@ def update_project(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
     project_id: str,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> None:
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No project with that ID.")
+    assert_can_access_village(officer, project.village_id)
     db.delete(project)
     db.commit()

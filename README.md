@@ -20,8 +20,10 @@ Guide: Prof. Jyoti Gavhane.
 **Multi-village and permission-scoped.** A real state → district → block →
 village hierarchy with official LGD codes. An officer sees one Gram Panchayat;
 an admin sees the block and the district rollup; a citizen sees their own file
-and nothing else. Every list endpoint is scoped server-side, and a set of tests
-exists specifically to prove one village's officer cannot read another's.
+and nothing else. Every list is scoped server-side and every route that takes a
+record ID checks that record's village, and a set of tests signs in as the
+officer next door specifically to prove they can neither read nor change
+another village's records.
 
 **Eligibility as data, not code.** Each of the 29 seeded schemes carries its
 rules in a `criteria` dictionary — age bands, income ceilings, social category,
@@ -202,7 +204,7 @@ so the sign-up and officer-approval flow can be demonstrated end to end.
 ### Tests
 
 ```bash
-cd backend && python -m pytest        # 240 tests
+cd backend && python -m pytest        # 284 tests
 npm run build                          # typecheck + production build
 ```
 
@@ -342,6 +344,17 @@ hooks (`useQuery`, `useMutation`), and an auth context. No Redux, no React Query
 - Village scoping is a WHERE clause on every list endpoint, and semantic search
   scopes its candidate set *before* ranking, so a similar vector is never a
   route around permissions.
+- Scoping the lists was not enough, and for a while it was all there was. A list
+  that leaves a record out protects nothing if the record can still be opened,
+  edited or deleted by its ID, and the seeded IDs are `cit_102` and `griev_201`.
+  Every by-ID route now checks the record's own village
+  (`assert_can_access_village` in `core/deps.py`), and
+  `tests/test_village_isolation.py` reaches for each one as the neighbouring
+  officer. The gap had gone unnoticed because all ten seeded residents live in
+  one village, so "the neighbouring officer sees an empty list" was true of the
+  scoped endpoints and looked true of the rest.
+- An account with no village fails closed. "No village" used to mean "no
+  filter", which is the admin's view, so an unassigned officer saw the block.
 - Self-registration cannot assign a role and does not create a usable login.
 - `POST /auth/register` returns an identical response whether or not the email
   exists, so it cannot be used to discover who holds an account.

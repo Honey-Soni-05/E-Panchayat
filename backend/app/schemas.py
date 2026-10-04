@@ -66,6 +66,10 @@ class UserCreate(ApiModel):
     full_name: str
     role: Role = "citizen"
     citizen_id: str | None = None
+    # Required for an officer: the Gram Panchayat they serve. Ignored for a
+    # resident, whose account takes the village on their own record, and for an
+    # admin, who has none.
+    village_id: str | None = None
 
 
 class RegistrationCreate(ApiModel):

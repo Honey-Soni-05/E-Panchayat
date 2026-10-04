@@ -104,17 +104,50 @@ def village_scope(user: User) -> str | None:
     """Which village's records this user may see.
 
     Returns a village id to filter by, or None meaning "all villages".
-    An officer is bound to one Gram Panchayat; an admin sees the district.
+
+    None is the admin's answer and nobody else's. This used to return
+    `user.village_id` for everyone else, and every caller reads None as "apply
+    no filter" — so an officer whose account had no village assigned was not
+    shown nothing, they were shown the whole block. That is the wrong way for a
+    missing value to fail, and it was reachable: `POST /auth/users` created
+    officers with no village at all. An account without an assignment is now
+    refused wherever a village would have been needed.
+
+    A resident's account falls back to the village on their own record, so one
+    created before accounts carried a village still works.
     """
     if user.role == "admin":
         return None
-    return user.village_id
+
+    village_id = user.village_id
+    if village_id is None and user.role == "citizen" and user.citizen is not None:
+        village_id = user.citizen.village_id
+
+    if village_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "This account is not assigned to a Gram Panchayat. "
+                "Ask the administrator to assign one."
+            ),
+        )
+    return village_id
 
 
 def assert_can_access_village(user: User, village_id: str | None) -> None:
-    """Guard for routes that name a village explicitly."""
+    """Guard for any route that opens, changes or deletes one record by its ID.
+
+    Scoping a list is not enough on its own. A list that leaves a record out
+    protects nothing if the record can still be fetched, edited or deleted by
+    whoever knows its ID — and the seeded IDs are `griev_201` and `proj_301`.
+    Every by-ID handler calls this with the record's own village.
+
+    A record with no village belongs to no Gram Panchayat, so only an admin may
+    touch it. The lists already behave that way (`village_id == scope` never
+    matches NULL), and an ID should not open what the list would not show.
+    """
     scope = village_scope(user)
-    if scope is not None and village_id is not None and scope != village_id:
+    if scope is not None and village_id != scope:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="That record belongs to another Gram Panchayat.",
@@ -152,7 +185,10 @@ def assert_can_read_citizen(db: Session, user: User, citizen_id: str) -> None:
     # instead would tell an officer which ids exist in villages they cannot see.
     if citizen is None:
         return
-    if citizen.village_id and citizen.village_id != scope:
+    # Strict: a resident with no village on record belongs to no officer. The
+    # resident list already leaves such a row out, and the ID must not open
+    # what the list hides.
+    if citizen.village_id != scope:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="That resident belongs to another Gram Panchayat.",

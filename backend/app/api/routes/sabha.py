@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import get_current_user, require_officer, village_scope
+from app.core.deps import (
+    assert_can_access_village,
+    get_current_user,
+    require_officer,
+    village_scope,
+)
 from app.db.session import get_db
 from app.models import SabhaActionItem, SabhaMeeting, User
 from app.schemas import (
@@ -44,12 +49,15 @@ def list_meetings(
 @router.get("/meetings/{meeting_id}", response_model=SabhaMeetingOut)
 def get_meeting(
     meeting_id: str,
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SabhaMeeting:
     meeting = db.get(SabhaMeeting, meeting_id)
     if meeting is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No meeting with that ID.")
+    # Minutes are public within the village that held the meeting, which is the
+    # rule the list above already applies.
+    assert_can_access_village(user, meeting.village_id)
     return meeting
 
 
@@ -205,12 +213,15 @@ def create_action_item(
 def update_action_item(
     item_id: str,
     body: ActionItemUpdate,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> SabhaActionItem:
     item = db.get(SabhaActionItem, item_id)
     if item is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No action item with that ID.")
+    # Creating an item against another village's meeting was refused; changing
+    # one that already existed was not. An item belongs to its meeting's village.
+    assert_can_access_village(officer, item.meeting.village_id)
 
     data = body.model_dump(exclude_unset=True)
     if (new_status := data.get("status")) is not None:
@@ -229,10 +240,15 @@ def update_action_item(
 @router.get("/action-items", response_model=list[ActionItemOut])
 def list_action_items(
     status_filter: str | None = None,
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[SabhaActionItem]:
     stmt = select(SabhaActionItem)
+    scope = village_scope(user)
+    if scope is not None:
+        stmt = stmt.join(
+            SabhaMeeting, SabhaActionItem.meeting_id == SabhaMeeting.id
+        ).where(SabhaMeeting.village_id == scope)
     if status_filter:
         stmt = stmt.where(SabhaActionItem.status == status_filter)
     return list(db.scalars(stmt.order_by(SabhaActionItem.deadline)))

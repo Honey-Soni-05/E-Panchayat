@@ -446,11 +446,19 @@ def gather(
                     personal=True,
                 )
         else:
-            pending = db.scalar(
+            # Counted through the resident, because a document has no village of
+            # its own. Without the join this was the whole block's queue, told to
+            # whichever officer asked.
+            pending_stmt = (
                 select(func.count())
                 .select_from(CitizenDocument)
                 .where(CitizenDocument.status == "Pending Verification")
-            ) or 0
+            )
+            if village_id:
+                pending_stmt = pending_stmt.join(
+                    Citizen, CitizenDocument.citizen_id == Citizen.id
+                ).where(Citizen.village_id == village_id)
+            pending = db.scalar(pending_stmt) or 0
             out.add(f"{pending} citizen documents are awaiting officer verification.")
 
     return out

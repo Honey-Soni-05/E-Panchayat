@@ -7,6 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import (
+    assert_can_access_village,
     assert_can_read_citizen,
     get_current_user,
     require_officer,
@@ -105,13 +106,23 @@ def get_citizen(
     citizen = db.get(Citizen, citizen_id)
     if citizen is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No citizen with that ID.")
-
-    scope = village_scope(user)
-    if scope is not None and citizen.village_id and citizen.village_id != scope:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, "That resident belongs to another Gram Panchayat."
-        )
     return _to_out(citizen)
+
+
+def _assert_household_is_ours(db: Session, officer: User, family_id: str | None) -> None:
+    """A resident may only be placed in a household of the officer's own village.
+
+    This is a write that works as a read. The response to creating or editing a
+    resident lists the other members of their household, so an officer who could
+    name any household could have its members' names and ages handed back to
+    them — from a village whose resident list they are not allowed to see.
+    """
+    if not family_id:
+        return
+    family = db.get(Family, family_id)
+    if family is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No family with that ID.")
+    assert_can_access_village(officer, family.village_id)
 
 
 @router.post("/citizens", response_model=CitizenOut, status_code=status.HTTP_201_CREATED)
@@ -123,8 +134,7 @@ def create_citizen(
     citizen_id = body.id or f"cit_{uuid4().hex[:10]}"
     if db.get(Citizen, citizen_id):
         raise HTTPException(status.HTTP_409_CONFLICT, "That citizen ID is already in use.")
-    if body.family_id and not db.get(Family, body.family_id):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No family with that ID.")
+    _assert_household_is_ours(db, officer, body.family_id)
 
     # A new resident joins the officer's own village by default.
     citizen = Citizen(
@@ -142,14 +152,21 @@ def create_citizen(
 def update_citizen(
     citizen_id: str,
     body: CitizenUpdate,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> CitizenOut:
+    # The role was checked and the village was not, so any officer in the block
+    # could edit any resident. Income, age and ward are inputs to every
+    # eligibility decision — editing them is deciding who qualifies.
+    assert_can_read_citizen(db, officer, citizen_id)
     citizen = db.get(Citizen, citizen_id)
     if citizen is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No citizen with that ID.")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    _assert_household_is_ours(db, officer, data.get("family_id"))
+
+    for field, value in data.items():
         setattr(citizen, field, value)
     db.commit()
     db.refresh(citizen)
@@ -159,9 +176,10 @@ def update_citizen(
 @router.delete("/citizens/{citizen_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_citizen(
     citizen_id: str,
-    _: User = Depends(require_officer),
+    officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ) -> None:
+    assert_can_read_citizen(db, officer, citizen_id)
     citizen = db.get(Citizen, citizen_id)
     if citizen is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No citizen with that ID.")
@@ -171,7 +189,13 @@ def delete_citizen(
 
 @router.get("/families", response_model=list[FamilyOut])
 def list_families(
-    _: User = Depends(require_officer), db: Session = Depends(get_db)
+    officer: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> list[Family]:
+    """Households of the officer's own village. A row carries the name and age
+    of everyone in it, so this is the resident list by another route and takes
+    the same scope."""
     stmt = select(Family).options(selectinload(Family.members)).order_by(Family.name)
+    scope = village_scope(officer)
+    if scope is not None:
+        stmt = stmt.where(Family.village_id == scope)
     return list(db.scalars(stmt))
