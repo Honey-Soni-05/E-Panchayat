@@ -17,7 +17,8 @@ import {
   FolderOpen,
   UserPlus,
   KeyRound,
-  ScrollText
+  ScrollText,
+  Wallet
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -48,6 +49,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: i18n.language === 'en' ? 'Public Info' : 'सार्वजनिक माहिती', icon: LayoutDashboard },
     { id: 'schemes', label: i18n.language === 'en' ? 'Welfare Schemes' : 'कल्याणकारी योजना', icon: Landmark },
     { id: 'grievances', label: i18n.language === 'en' ? 'Track Grievances' : 'तक्रारींचा मागोवा', icon: Megaphone },
+    // What the Panchayat sanctioned, received and spent on public works is
+    // public, so a resident gets the same budget screen an officer does.
+    { id: 'budget', label: i18n.language === 'en' ? 'Village Budget' : 'गावाचा निधी', icon: Wallet },
     { id: 'documents', label: i18n.language === 'en' ? 'Digital Locker' : 'डिजिटल लॉकर', icon: FolderOpen },
     { id: 'ai_assistant', label: i18n.language === 'en' ? 'AI Helpdesk' : 'AI मदत कक्ष', icon: Bot, isAI: true }
   ] : [
@@ -64,6 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'schemes', label: t('nav.schemes'), icon: Landmark },
     { id: 'grievances', label: t('nav.grievances'), icon: Megaphone },
     { id: 'projects', label: t('nav.projects'), icon: Construction },
+    { id: 'budget', label: i18n.language === 'en' ? 'Budget' : 'निधी', icon: Wallet },
     { id: 'sabha', label: t('nav.sabha'), icon: Notebook },
     { id: 'gis_map', label: t('nav.gis_map'), icon: Map },
     { id: 'ai_assistant', label: t('nav.ai_assistant'), icon: Bot, isAI: true },

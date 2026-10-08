@@ -19,6 +19,13 @@
  * shape as well as its own colour and icon, so a reader with a colour-vision
  * deficiency can still tell a project pin from a grievance pin, and the legend
  * shows the same marker artwork the map uses rather than a colour swatch.
+ *
+ * What a finished work built is on the map too. Completing a work adds a row to
+ * the asset register, and that row is drawn here as one marker carrying a
+ * quantity: "20 streetlights", at the place the work was done. It is one marker
+ * and not twenty because the record says a work installed twenty lights there;
+ * it does not say where each pole stands, and twenty pins at invented positions
+ * would be drawing a survey nobody carried out.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -38,8 +45,22 @@ import { EmptyState, ErrorNotice } from './schemes/SchemeBits';
 
 // ─── Layer definitions ──────────────────────────────────────────────────────
 
-type LayerKey = 'project' | 'grievance' | 'water' | 'school' | 'health' | 'other';
-type Shape = 'circle' | 'square' | 'triangle' | 'diamond' | 'hexagon' | 'pentagon';
+type LayerKey =
+  | 'project'
+  | 'grievance'
+  | 'water'
+  | 'school'
+  | 'health'
+  | 'streetlight'
+  | 'other';
+type Shape =
+  | 'circle'
+  | 'square'
+  | 'triangle'
+  | 'diamond'
+  | 'hexagon'
+  | 'pentagon'
+  | 'octagon';
 
 interface LayerStyle {
   shape: Shape;
@@ -94,6 +115,14 @@ const LAYERS: Record<LayerKey, LayerStyle> = {
     labelEn: 'Health facilities',
     labelMr: 'आरोग्य सुविधा',
   },
+  streetlight: {
+    shape: 'octagon',
+    color: '#a16207',
+    glyph: '💡',
+    i18nKey: null,
+    labelEn: 'Streetlights',
+    labelMr: 'पथदिवे',
+  },
   other: {
     shape: 'pentagon',
     color: '#475569',
@@ -104,7 +133,19 @@ const LAYERS: Record<LayerKey, LayerStyle> = {
   },
 };
 
-const LAYER_ORDER: LayerKey[] = ['project', 'grievance', 'water', 'school', 'health', 'other'];
+const LAYER_ORDER: LayerKey[] = [
+  'project',
+  'grievance',
+  'water',
+  'school',
+  'health',
+  'streetlight',
+  'other',
+];
+
+/** Layers that exist only once something lands in them. There is no point
+ *  offering a toggle for streetlights in a village that has recorded none. */
+const OPTIONAL_LAYERS: LayerKey[] = ['streetlight', 'other'];
 
 const SHAPES: Record<Shape, string> = {
   circle: '<circle cx="15" cy="15" r="12.5" />',
@@ -113,6 +154,7 @@ const SHAPES: Record<Shape, string> = {
   diamond: '<polygon points="15,1.5 28.5,15 15,28.5 1.5,15" />',
   hexagon: '<polygon points="15,1.5 27,8.5 27,21.5 15,28.5 3,21.5 3,8.5" />',
   pentagon: '<polygon points="15,1.5 28.5,11.5 23.5,27.5 6.5,27.5 1.5,11.5" />',
+  octagon: '<polygon points="9.5,2 20.5,2 28,9.5 28,20.5 20.5,28 9.5,28 2,20.5 2,9.5" />',
 };
 
 /** Built only from the constants above — no record data reaches this markup. */
@@ -138,6 +180,7 @@ const facilityLayer = (facilityType: string): LayerKey => {
   if (normalised === 'water') return 'water';
   if (normalised === 'school') return 'school';
   if (normalised === 'health') return 'health';
+  if (normalised === 'streetlight') return 'streetlight';
   // An unrecognised type is still a real facility, so it is shown under its
   // own key rather than being silently discarded.
   return 'other';
@@ -222,6 +265,7 @@ export const GISMap: React.FC = () => {
     water: true,
     school: true,
     health: true,
+    streetlight: true,
     other: true,
   });
 
@@ -238,8 +282,20 @@ export const GISMap: React.FC = () => {
   const [tilesBroken, setTilesBroken] = useState(false);
 
   const facilityRows = useMemo(() => facilities.data ?? [], [facilities.data]);
-  const projectRows = useMemo(() => projects.data ?? [], [projects.data]);
   const grievanceRows = useMemo(() => grievances.data ?? [], [grievances.data]);
+
+  // Two kinds of work are left off. A proposal the Panchayat turned down is
+  // not a thing in the village. And a finished work that built something is
+  // already on the map as what it built, at the very same coordinates — drawing
+  // both would stack two markers on one point and hide whichever is underneath.
+  const projectRows = useMemo(() => {
+    const builtBy = new Set(
+      (facilities.data ?? []).map((f) => f.projectId).filter((id): id is string => Boolean(id)),
+    );
+    return (projects.data ?? []).filter(
+      (p) => p.stage !== 'rejected' && !(p.stage === 'completed' && builtBy.has(p.id)),
+    );
+  }, [projects.data, facilities.data]);
 
   /** Records that carry usable coordinates, split by layer. */
   const plottable = useMemo(() => {
@@ -266,6 +322,7 @@ export const GISMap: React.FC = () => {
       water: 0,
       school: 0,
       health: 0,
+      streetlight: 0,
       other: 0,
     };
     for (const f of plottable.facilitiesOk) counts[facilityLayer(f.facilityType)] += 1;
@@ -404,6 +461,21 @@ export const GISMap: React.FC = () => {
         label: isEnglish ? 'Type' : 'प्रकार',
         value: layerName(key),
       });
+      if (f.quantity > 1) {
+        rows.push({ label: isEnglish ? 'Number' : 'संख्या', value: String(f.quantity) });
+      }
+      if (f.installedOn) {
+        rows.push({
+          label: isEnglish ? 'Added on' : 'नोंद दिनांक',
+          value: formatDate(f.installedOn, isEnglish),
+        });
+      }
+      if (f.projectId) {
+        rows.push({
+          label: isEnglish ? 'Source' : 'स्रोत',
+          value: isEnglish ? 'Built by a recorded work' : 'नोंदवलेल्या कामातून',
+        });
+      }
       L.marker([f.latitude, f.longitude], { icon: iconFor(key) })
         .bindPopup(
           popupHtml(
@@ -428,15 +500,45 @@ export const GISMap: React.FC = () => {
               pick(p.name, p.nameMr, isEnglish),
               [
                 {
-                  label: isEnglish ? 'Status' : 'स्थिती',
-                  value: isEnglish ? p.status : p.statusMr || p.status,
+                  label: isEnglish ? 'Stage' : 'टप्पा',
+                  value:
+                    p.status === 'Delayed'
+                      ? pick(p.status, p.statusMr, isEnglish)
+                      : pick(p.stageLabel, p.stageLabelMr, isEnglish),
                 },
-                { label: isEnglish ? 'Progress' : 'प्रगती', value: `${p.progress}%` },
-                {
-                  label: isEnglish ? 'Sanctioned' : 'मंजूर',
-                  value: lakhs(p.budget, isEnglish),
-                },
-                { label: isEnglish ? 'Spent' : 'खर्च', value: lakhs(p.utilized, isEnglish) },
+                // A work that has not started has no progress and usually no
+                // sanction, and "0%" beside "₹0.00 lakh" reads as a failure
+                // rather than as a proposal. Say what is actually known.
+                ...(p.stage === 'in_progress' || p.stage === 'completed'
+                  ? [
+                      {
+                        label: isEnglish ? 'Progress' : 'प्रगती',
+                        value:
+                          p.unitsPlanned !== null
+                            ? `${p.unitsDone} / ${p.unitsPlanned} (${p.physicalPercent}%)`
+                            : `${p.physicalPercent}%`,
+                      },
+                    ]
+                  : []),
+                ...(p.finance.approved !== null
+                  ? [
+                      {
+                        label: isEnglish ? 'Sanctioned' : 'मंजूर',
+                        value: lakhs(p.budget, isEnglish),
+                      },
+                      { label: isEnglish ? 'Spent' : 'खर्च', value: lakhs(p.utilized, isEnglish) },
+                    ]
+                  : [
+                      {
+                        label: isEnglish ? 'Estimated' : 'अंदाजित',
+                        value:
+                          p.finance.estimated !== null
+                            ? lakhs(p.finance.estimated, isEnglish)
+                            : isEnglish
+                              ? 'Not yet estimated'
+                              : 'अद्याप अंदाज नाही',
+                      },
+                    ]),
                 { label: isEnglish ? 'Ward' : 'वॉर्ड', value: String(p.ward) },
               ],
               pick(p.location, p.locationMr, isEnglish),
@@ -489,8 +591,8 @@ export const GISMap: React.FC = () => {
 
   const visibleLayers = LAYER_ORDER.filter(
     // "Other" is an escape hatch for facility types this screen does not know
-    // about; there is no point offering the toggle when nothing lands in it.
-    (key) => key !== 'other' || layerCounts.other > 0,
+    // about, and streetlights appear only once a work has installed some.
+    (key) => !OPTIONAL_LAYERS.includes(key) || layerCounts[key] > 0,
   );
 
   const unmappedNotes: string[] = [];
@@ -524,8 +626,8 @@ export const GISMap: React.FC = () => {
         </h1>
         <p className="text-xs text-slate-500 mt-1 m-0">
           {isEnglish
-            ? 'Facilities, sanctioned works and located complaints, each drawn at its own recorded coordinates.'
-            : 'सुविधा, मंजूर कामे आणि ठिकाण नोंद असलेल्या तक्रारी, प्रत्येक तिच्या नोंदवलेल्या निर्देशांकांवर.'}
+            ? 'Facilities, development works and located complaints, each drawn at its own recorded coordinates. What a finished work built appears as a facility, with its count.'
+            : 'सुविधा, विकास कामे आणि ठिकाण नोंद असलेल्या तक्रारी, प्रत्येक तिच्या नोंदवलेल्या निर्देशांकांवर. पूर्ण झालेल्या कामाने उभारलेली मालमत्ता संख्येसह सुविधा म्हणून दिसते.'}
         </p>
       </div>
 

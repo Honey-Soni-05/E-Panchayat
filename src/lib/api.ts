@@ -515,6 +515,12 @@ export interface EligibilityResult {
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
 export type GrievanceStatus = 'Pending' | 'In Progress' | 'Resolved';
 
+/** 'service' — something that exists has stopped working, and a repair closes
+ *  it. 'development' — a request for something that is not there yet, which
+ *  has to become a work to be answered. Suggested by keyword rules on the
+ *  server and confirmed or changed by an officer; no model decides it. */
+export type RequestType = 'service' | 'development';
+
 export interface Grievance {
   id: string;
   title: string;
@@ -539,11 +545,31 @@ export interface Grievance {
   resolvedDate: string | null;
   officerNotes: string | null;
   autoClassified: boolean;
+  requestType: RequestType;
+  requestTypeMr: string | null;
+  /** "20" in "we need 20 more streetlights", when the text gave one. */
+  requestedQuantity: number | null;
+  /** The work this complaint led to, once an officer has linked it to one. */
+  projectId: string | null;
+  /** How many *other* residents have reported the same problem. A count and
+   *  nothing else — a resident is never told who the others are. */
+  similarCount: number;
+  /** The resident's own answer once the office marked it resolved. */
+  citizenFeedback: 'confirmed' | 'reopened' | null;
+  feedbackNote: string | null;
+  feedbackAt: string | null;
 }
 
 export interface GrievanceEvent {
   id: string;
-  eventType: 'filed' | 'status_changed' | 'priority_changed' | 'note_added';
+  eventType:
+    | 'filed'
+    | 'status_changed'
+    | 'priority_changed'
+    | 'note_added'
+    | 'linked_to_project'
+    | 'confirmed'
+    | 'reopened';
   fromStatus: string | null;
   toStatus: string | null;
   note: string | null;
@@ -552,9 +578,53 @@ export interface GrievanceEvent {
   createdAt: string;
 }
 
+/** One entry in a work's history: who moved it, from where to where, and why. */
+export interface ProjectEvent {
+  id: string;
+  eventType: string;
+  fromStage: string | null;
+  toStage: string | null;
+  note: string | null;
+  noteMr: string | null;
+  actorName: string | null;
+  createdAt: string;
+}
+
+/** What a resident is shown about the work their complaint became. All of it
+ *  is public within the village; none of it is about any other resident. */
+export interface ProjectBrief {
+  id: string;
+  name: string;
+  nameMr: string;
+  stage: ProjectStage;
+  stageLabel: string;
+  stageLabelMr: string;
+  /** 1-based position in the sequence; null when rejected or on hold. */
+  stageIndex: number | null;
+  stageTotal: number;
+  status: ProjectStatus;
+  statusMr: string;
+  decisionNote: string | null;
+  estimated: number | null;
+  requested: number | null;
+  approved: number | null;
+  received: number;
+  spent: number;
+  unitsPlanned: number | null;
+  unitsDone: number;
+  unitLabel: string | null;
+  unitLabelMr: string | null;
+  physicalPercent: number;
+  expectedCompletion: string | null;
+  /** Residents whose complaints led to this work — a count only. */
+  linkedGrievances: number;
+  history: ProjectEvent[];
+}
+
 /** One complaint with its recorded history — what the tracking view reads. */
 export interface GrievanceDetail extends Grievance {
   events: GrievanceEvent[];
+  project: ProjectBrief | null;
 }
 
 export interface Classification {
@@ -565,18 +635,102 @@ export interface Classification {
   department: string;
   departmentMr: string;
   matchedTerms: string[];
+  requestType: RequestType;
+  requestTypeMr: string;
+  requestedQuantity: number | null;
+  /** Other residents who have already reported the same problem. */
+  similarCount: number;
+}
+
+// ─── Works ──────────────────────────────────────────────────────────────────
+
+export type ProjectStatus =
+  | 'Planned'
+  | 'Ongoing'
+  | 'Delayed'
+  | 'Completed'
+  | 'On Hold'
+  | 'Rejected';
+
+/** Where a work is in its life. The first eight happen in order and none can
+ *  be skipped; the last two sit to the side. The rules are the server's — see
+ *  `steps` on a project for what may be done next. */
+export type ProjectStage =
+  | 'proposed'
+  | 'verified'
+  | 'approved'
+  | 'budget_requested'
+  | 'budget_approved'
+  | 'funds_received'
+  | 'in_progress'
+  | 'completed'
+  | 'rejected'
+  | 'on_hold';
+
+export type StageAction =
+  | 'verify'
+  | 'approve'
+  | 'reject'
+  | 'start'
+  | 'complete'
+  | 'hold'
+  | 'resume';
+
+/** An estimate, a request and an approval are each one current figure that can
+ *  be revised: the latest dated entry stands. Receipts and payments add up. */
+export type EntryKind = 'estimate' | 'requested' | 'approved' | 'received' | 'spent';
+
+export interface ProjectFinance {
+  estimated: number | null;
+  requested: number | null;
+  approved: number | null;
+  received: number;
+  spent: number;
+  /** Sanctioned but not yet arrived. */
+  awaiting: number;
+  /** Arrived and not yet paid out. */
+  balance: number;
+  /** Approved and not yet paid out: in hand plus still to arrive. */
+  remaining: number;
+  financialPercent: number;
+}
+
+/** Something a person should look at: a comparison of two recorded figures,
+ *  never a finding that anything is wrong. */
+export interface ProjectFlag {
+  code:
+    | 'spend_ahead'
+    | 'stalled'
+    | 'overdue'
+    | 'estimate_up'
+    | 'partial_approval'
+    | 'funds_awaited'
+    | 'reopened';
+  severity: 'warning' | 'info';
+  message: string;
+  messageMr: string;
+}
+
+/** What may be done to a work now. The screen offers exactly these, so there
+ *  is no second copy of the stage rules to keep in step with the server. */
+export interface ProjectSteps {
+  actions: StageAction[];
+  entryKinds: EntryKind[];
+  canRecordProgress: boolean;
 }
 
 export interface Project {
   id: string;
+  villageId: string | null;
   name: string;
   nameMr: string;
   description: string;
   descriptionMr: string;
   progress: number;
+  /** The approved and spent totals of the ledger. Not typed in anywhere. */
   budget: number;
   utilized: number;
-  status: 'Ongoing' | 'Completed' | 'Delayed';
+  status: ProjectStatus;
   statusMr: string;
   ward: number;
   location: string;
@@ -585,6 +739,199 @@ export interface Project {
   longitude: number;
   startDate: string | null;
   expectedCompletion: string | null;
+
+  stage: ProjectStage;
+  stageLabel: string;
+  stageLabelMr: string;
+  stageIndex: number | null;
+  stageTotal: number;
+  stageChangedAt: string | null;
+  daysInStage: number | null;
+  /** Where a work on hold will return to when it is resumed. */
+  heldFromStage: ProjectStage | null;
+  category: string | null;
+  unitsPlanned: number | null;
+  unitsDone: number;
+  unitLabel: string | null;
+  unitLabelMr: string | null;
+  assetType: string | null;
+  physicalPercent: number;
+  fundingSource: string | null;
+  fundingSourceLabel: string | null;
+  fundingSourceLabelMr: string | null;
+  decisionNote: string | null;
+  sabhaMeetingId: string | null;
+  financialYear: string | null;
+
+  finance: ProjectFinance;
+  flags: ProjectFlag[];
+  linkedGrievances: number;
+  /** People, not complaints: one resident filing twice asked once. */
+  residentsAffected: number;
+  steps: ProjectSteps;
+}
+
+/** One step in a work's money, written once and never edited. */
+export interface BudgetEntry {
+  id: string;
+  kind: EntryKind;
+  kindLabel: string;
+  kindLabelMr: string;
+  amount: number;
+  entryDate: string;
+  fundingSource: string | null;
+  fundingSourceLabel: string | null;
+  fundingSourceLabelMr: string | null;
+  reference: string | null;
+  note: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  /** Set on a correction: the receipt or payment it puts right. `amount` is
+   *  then the difference applied, and may be negative. */
+  correctsId: string | null;
+  /** On an entry that has been corrected: what it stands at now. */
+  correctedTo: number | null;
+  /** Whether a correction may be recorded against this entry. */
+  canCorrect: boolean;
+}
+
+/** A complaint attached to a work, as an officer sees it. */
+export interface LinkedGrievance {
+  id: string;
+  title: string;
+  titleMr: string;
+  ward: number;
+  status: string;
+  priority: string;
+  citizenName: string;
+  submittedDate: string;
+  citizenFeedback: 'confirmed' | 'reopened' | null;
+  feedbackNote: string | null;
+}
+
+export interface ProjectDetail extends Project {
+  entries: BudgetEntry[];
+  events: ProjectEvent[];
+  /** Empty for a resident, who is told how many people asked, not who. */
+  grievances: LinkedGrievance[];
+}
+
+export interface CodedLabel {
+  code: string;
+  label: string;
+  labelMr: string;
+}
+
+/** The stages, funding sources, entry kinds and asset types, served by the
+ *  API rather than copied here, so a renamed stage appears without an edit. */
+export interface WorksVocabulary {
+  /** The eight that happen in order. */
+  stages: CodedLabel[];
+  /** Rejected and on hold, which sit to the side of them. */
+  sideStages: CodedLabel[];
+  fundingSources: CodedLabel[];
+  entryKinds: CodedLabel[];
+  assetTypes: CodedLabel[];
+}
+
+export interface ProposalCreate {
+  name: string;
+  nameMr?: string;
+  description: string;
+  descriptionMr?: string;
+  ward: number;
+  location: string;
+  locationMr?: string;
+  latitude?: number;
+  longitude?: number;
+  category?: string;
+  unitsPlanned?: number;
+  unitLabel?: string;
+  unitLabelMr?: string;
+  assetType?: string;
+  expectedCompletion?: string;
+  /** What the officer expects it to cost, if they can say yet. Recorded as
+   *  the first estimate in the ledger; typed by a person, never generated. */
+  estimate?: number;
+  estimateNote?: string;
+  /** The complaints this proposal answers. */
+  grievanceIds?: string[];
+  /** Read only for an admin, who has no village of their own. */
+  villageId?: string;
+}
+
+export interface BudgetEntryCreate {
+  kind: EntryKind;
+  amount: number;
+  entryDate?: string;
+  fundingSource?: string;
+  reference?: string;
+  note?: string;
+}
+
+// ─── Budget ─────────────────────────────────────────────────────────────────
+
+export interface BudgetTotals {
+  estimated: number;
+  /** Asked for and still awaiting a decision. */
+  requestedPending: number;
+  approved: number;
+  received: number;
+  spent: number;
+  awaiting: number;
+  balance: number;
+  /** Approved less spent: in hand plus still to arrive. */
+  remaining: number;
+  utilisationPercent: number;
+}
+
+export interface BudgetProjectRow {
+  id: string;
+  name: string;
+  nameMr: string;
+  ward: number;
+  stage: ProjectStage;
+  stageLabel: string;
+  stageLabelMr: string;
+  status: ProjectStatus;
+  fundingSource: string | null;
+  fundingSourceLabel: string | null;
+  fundingSourceLabelMr: string | null;
+  estimated: number | null;
+  requested: number | null;
+  approved: number | null;
+  received: number;
+  spent: number;
+  balance: number;
+  remaining: number;
+  physicalPercent: number;
+  financialPercent: number;
+  flags: ProjectFlag[];
+  /** What may be recorded against the work now. */
+  steps: ProjectSteps;
+}
+
+export interface BudgetSourceRow {
+  code: string | null;
+  label: string;
+  labelMr: string;
+  approved: number;
+  received: number;
+  spent: number;
+  projects: number;
+}
+
+/** The Panchayat's money across all its works: a roll-up of the ledgers.
+ *  Budget tracking, not accounts — there are no vouchers behind these figures
+ *  and nothing is reconciled against a bank or PFMS. */
+export interface BudgetOverview {
+  /** Null when every year on record is included. */
+  financialYear: string | null;
+  financialYears: string[];
+  totals: BudgetTotals;
+  projects: BudgetProjectRow[];
+  sources: BudgetSourceRow[];
+  stageCounts: Partial<Record<ProjectStage, number>>;
 }
 
 export interface CitizenDocument {
@@ -638,6 +985,13 @@ export interface Facility {
   ward: number | null;
   details: string | null;
   detailsMr: string | null;
+  /** More than one when a single work installed several of the same thing:
+   *  twenty streetlights are one row of twenty at the place the work was done,
+   *  not twenty pins at coordinates nobody surveyed. */
+  quantity: number;
+  /** The work that built it, when one did. */
+  projectId: string | null;
+  installedOn: string | null;
 }
 
 export interface DashboardStats {
@@ -646,8 +1000,11 @@ export interface DashboardStats {
   openGrievances: number;
   criticalGrievances: number;
   resolvedGrievances: number;
+  /** Started and not finished. A proposal is planned, not active. */
   activeProjects: number;
   delayedProjects: number;
+  plannedProjects: number;
+  budgetPendingProjects: number;
   totalBudget: number;
   totalUtilized: number;
   pendingDocuments: number;
@@ -859,8 +1216,21 @@ export const api = {
       category?: string;
       priority?: string;
       ward?: number;
-    }): Promise<Grievance[]> => request('/grievances', { params }),
+      requestType?: RequestType;
+    }): Promise<Grievance[]> =>
+      request('/grievances', {
+        params: {
+          status: params?.status,
+          category: params?.category,
+          priority: params?.priority,
+          ward: params?.ward,
+          request_type: params?.requestType,
+        },
+      }),
     get: (id: string): Promise<GrievanceDetail> => request(`/grievances/${id}`),
+    /** Officer only: the other open complaints that look like the same
+     *  problem. A resident is given the count, never this list. */
+    similar: (id: string): Promise<Grievance[]> => request(`/grievances/${id}/similar`),
     create: (data: {
       title: string;
       description: string;
@@ -873,30 +1243,126 @@ export const api = {
       longitude?: number;
       category?: string;
       priority?: Priority;
+      requestType?: RequestType;
+      requestedQuantity?: number;
     }): Promise<Grievance> => request('/grievances', { method: 'POST', body: data }),
     update: (
       id: string,
-      data: { status?: GrievanceStatus; priority?: Priority; category?: string; officerNotes?: string },
+      data: {
+        status?: GrievanceStatus;
+        priority?: Priority;
+        category?: string;
+        officerNotes?: string;
+        requestType?: RequestType;
+        requestedQuantity?: number | null;
+      },
     ): Promise<Grievance> => request(`/grievances/${id}`, { method: 'PATCH', body: data }),
     classify: (title: string, description: string, ward = 1): Promise<Classification> =>
       request('/grievances/classify', {
         method: 'POST',
         body: { title, description, ward },
       }),
+    /** The resident's answer to "was this resolved?". Only the person who
+     *  filed may give it, and a "no" needs a note saying what is still wrong. */
+    feedback: (id: string, resolved: boolean, note?: string): Promise<GrievanceDetail> =>
+      request(`/grievances/${id}/feedback`, {
+        method: 'POST',
+        body: { resolved, note: note || undefined },
+      }),
   },
 
   projects: {
-    list: (params?: { ward?: number }): Promise<Project[]> =>
+    list: (params?: { ward?: number; stage?: ProjectStage }): Promise<Project[]> =>
       request('/projects', { params }),
-    get: (id: string): Promise<Project> => request(`/projects/${id}`),
-    create: (data: Partial<Project>): Promise<Project> =>
-      request('/projects', { method: 'POST', body: data }),
+    get: (id: string): Promise<ProjectDetail> => request(`/projects/${id}`),
+    vocabulary: (): Promise<WorksVocabulary> => request('/projects/vocabulary'),
+
+    /** Register a work that is already under way, from its sanctioned and
+     *  spent totals. A new work should be opened with `propose` instead, so its
+     *  approval and its money are on the record from the start. */
+    create: (data: {
+      name: string;
+      nameMr?: string;
+      description?: string;
+      descriptionMr?: string;
+      progress: number;
+      budget: number;
+      utilized: number;
+      status: 'Ongoing' | 'Completed' | 'Delayed';
+      ward: number;
+      location: string;
+      locationMr?: string;
+      latitude: number;
+      longitude: number;
+      startDate?: string;
+      expectedCompletion?: string;
+    }): Promise<Project> => request('/projects', { method: 'POST', body: data }),
+
+    /** Open a proposed work, usually out of one or more complaints. */
+    propose: (data: ProposalCreate): Promise<ProjectDetail> =>
+      request('/projects/proposals', { method: 'POST', body: data }),
+
+    /** Verify, approve, reject, start, complete, hold or resume. The server
+     *  refuses a step out of turn, and verify, reject and hold need a reason. */
+    decide: (
+      id: string,
+      action: StageAction,
+      body: { note?: string; sabhaMeetingId?: string } = {},
+    ): Promise<ProjectDetail> =>
+      request(`/projects/${id}/decisions`, {
+        method: 'POST',
+        body: { action, note: body.note || undefined, sabhaMeetingId: body.sabhaMeetingId || undefined },
+      }),
+
+    /** Record one step in a work's money. There is no edit or delete: a
+     *  revision is a new entry and the earlier figure stays on the record. */
+    addEntry: (id: string, entry: BudgetEntryCreate): Promise<ProjectDetail> =>
+      request(`/projects/${id}/budget-entries`, { method: 'POST', body: entry }),
+
+    /** Put right a receipt or a payment that was recorded wrongly. The entry
+     *  is not edited: a correcting line is added for the difference, with the
+     *  reason, and the original stays in the ledger. */
+    correctEntry: (
+      id: string,
+      entryId: string,
+      body: { amount: number; reason: string },
+    ): Promise<ProjectDetail> =>
+      request(`/projects/${id}/budget-entries/${entryId}/corrections`, {
+        method: 'POST',
+        body,
+      }),
+
+    recordProgress: (
+      id: string,
+      body: { unitsDone?: number; progress?: number; note?: string },
+    ): Promise<ProjectDetail> =>
+      request(`/projects/${id}/progress`, { method: 'POST', body }),
+
+    linkGrievances: (id: string, grievanceIds: string[]): Promise<ProjectDetail> =>
+      request(`/projects/${id}/grievances`, { method: 'POST', body: { grievanceIds } }),
+    unlinkGrievance: (id: string, grievanceId: string): Promise<ProjectDetail> =>
+      request(`/projects/${id}/grievances/${grievanceId}`, { method: 'DELETE' }),
+
     update: (
       id: string,
-      data: { progress?: number; utilized?: number; status?: string; description?: string },
+      data: {
+        status?: 'Ongoing' | 'Delayed' | 'Completed';
+        description?: string;
+        expectedCompletion?: string | null;
+        unitsPlanned?: number;
+      },
     ): Promise<Project> => request(`/projects/${id}`, { method: 'PATCH', body: data }),
     remove: (id: string): Promise<void> =>
       request(`/projects/${id}`, { method: 'DELETE' }),
+  },
+
+  budget: {
+    /** Open to everyone in the village, residents included. `fy` limits it to
+     *  entries dated in one financial year ("2026-27"). */
+    overview: (params?: { fy?: string; villageId?: string }): Promise<BudgetOverview> =>
+      request('/budget/overview', {
+        params: { fy: params?.fy, village_id: params?.villageId },
+      }),
   },
 
   documents: {

@@ -33,6 +33,7 @@ import { SchemeBrowser } from './components/SchemeBrowser';
 import { RegistrationReview } from './components/RegistrationReview';
 import { AccountRecovery } from './components/AccountRecovery';
 import { AuditTrail } from './components/AuditTrail';
+import { BudgetOverview } from './components/BudgetOverview';
 import { Login } from './components/Login';
 
 // Import i18n initialization
@@ -59,6 +60,10 @@ function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // A complaint that became a work links across to it: the complaints screen
+  // names the work, and the works register opens on it.
+  const [focusProjectId, setFocusProjectId] = useState<string | null>(null);
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'en' ? 'mr' : 'en';
@@ -88,6 +93,7 @@ function App() {
       // the rest of the portal still runs on the older screens.
       if (currentTab === 'schemes') return <CitizenSchemes />;
       if (currentTab === 'grievances') return <CitizenGrievances />;
+      if (currentTab === 'budget') return <BudgetOverview />;
       if (currentTab === 'ai_assistant') return <AIAssistant />;
       return (
         <CitizenPortal
@@ -110,9 +116,23 @@ function App() {
       case 'schemes':
         return <SchemeBrowser />;
       case 'grievances':
-        return <GrievanceManagement />;
+        return (
+          <GrievanceManagement
+            onOpenWork={(projectId) => {
+              setFocusProjectId(projectId);
+              setCurrentTab('projects');
+            }}
+          />
+        );
       case 'projects':
-        return <DevelopmentProjects />;
+        return (
+          <DevelopmentProjects
+            focusId={focusProjectId}
+            onFocusHandled={() => setFocusProjectId(null)}
+          />
+        );
+      case 'budget':
+        return <BudgetOverview />;
       case 'sabha':
         return <GramSabhaAI />;
       case 'gis_map':

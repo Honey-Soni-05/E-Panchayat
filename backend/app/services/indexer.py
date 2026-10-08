@@ -56,6 +56,7 @@ from app.models import (
     Scheme,
     Village,
 )
+from app.services import works
 from app.services.llm import LLMUnavailable, embed
 
 # Gemini's embedding endpoint takes a batch; this keeps requests well inside
@@ -155,12 +156,31 @@ def _scheme_drafts(db: Session) -> list[Draft]:
 
 def _grievance_drafts(db: Session) -> list[Draft]:
     drafts: list[Draft] = []
-    for g in db.scalars(select(Grievance)):
+    for g in db.scalars(select(Grievance).options(selectinload(Grievance.project))):
         resolved = (
             f" It was resolved on {g.resolved_date}."
             if g.resolved_date
             else " It is not yet resolved."
         )
+        # A request for something new is a different kind of record from a
+        # repair, and "which requests for new work are open" is a question an
+        # officer asks in those words.
+        kind = ""
+        if g.request_type == "development":
+            asked = f" for {g.requested_quantity}" if g.requested_quantity else ""
+            kind = f" It is a request{asked} for new work rather than a repair."
+        work = ""
+        if g.project is not None:
+            work = (
+                f' It is being answered by the development work "{g.project.name}", '
+                f"which is at the stage: {works.stage_label(g.project.stage)[0]}."
+            )
+        # What the resident said after resolution, as a state. Their own words
+        # stay in the database: only the outcome is a fact about the complaint.
+        answer = {
+            "confirmed": " The resident who raised it has confirmed it is resolved.",
+            "reopened": " The resident who raised it says it is not resolved and has reopened it.",
+        }.get(g.citizen_feedback or "", "")
         drafts.append(
             Draft(
                 entity_type="grievance",
@@ -170,14 +190,19 @@ def _grievance_drafts(db: Session) -> list[Draft]:
                     f'A {g.priority.lower()}-priority {g.category.lower()} complaint in ward '
                     f'{g.ward}: "{g.title}". {g.description} It was filed on '
                     f"{g.submitted_date}, is assigned to {g.department}, and its status "
-                    f"is {g.status}.{resolved}"
+                    f"is {g.status}.{resolved}{kind}{work}{answer}"
                 ),
                 content_mr=f"{g.title_mr} — प्रभाग {g.ward}, स्थिती {g.status_mr}.",
                 # The 'filed by' link holds an internal id and is never embedded
                 # or sent anywhere; it records who the complaint belongs to so
                 # the officer UI can resolve it locally. Expansion will not
                 # follow it to a chunk, because residents are not indexed.
+                #
+                # The work comes first: expansion follows only the first few
+                # links, and the work a complaint led to is the neighbour most
+                # worth having beside it.
                 links=_links(
+                    _link("project", g.project_id, "the work answering"),
                     _link("citizen", g.citizen_id, "filed by"),
                     _link("village", g.village_id, "in village"),
                 ),
@@ -187,25 +212,97 @@ def _grievance_drafts(db: Session) -> list[Draft]:
     return drafts
 
 
+def _project_money(m: works.Money) -> str:
+    """Where a work's money stands, as a sentence.
+
+    Only what has actually been recorded is mentioned. A proposal with no
+    estimate yet says so, rather than reading "Budget ₹0", which a model will
+    happily repeat as though a decision had been taken to give it nothing.
+    """
+    if m.approved:
+        approved = f"{works.rupees(m.approved)} has been approved"
+        if m.requested and abs(m.requested - m.approved) > 0.005:
+            approved += f" against {works.rupees(m.requested)} requested"
+        return (
+            f" Money: {approved}, {works.rupees(m.received)} received, "
+            f"{works.rupees(m.spent)} ({m.financial_percent}%) spent."
+        )
+    if m.requested:
+        return (
+            f" A budget of {works.rupees(m.requested)} has been requested and is "
+            f"not yet approved."
+        )
+    if m.estimated:
+        return (
+            f" It is estimated to cost {works.rupees(m.estimated)}; no budget has "
+            f"been requested yet."
+        )
+    return " No cost estimate has been recorded yet."
+
+
 def _project_drafts(db: Session) -> list[Draft]:
     drafts: list[Draft] = []
-    for p in db.scalars(select(Project)):
-        budget = float(p.budget)
-        used = float(p.utilized)
-        share = f"{used / budget * 100:.0f}%" if budget else "0%"
+    stmt = select(Project).options(
+        selectinload(Project.entries), selectinload(Project.grievances)
+    )
+    for p in db.scalars(stmt):
+        m = works.money(p.entries)
+        stage, stage_mr = works.stage_label(p.stage)
+        percent = works.physical_percent(p)
+        if p.units_planned:
+            physical = (
+                f"{p.units_done} of {p.units_planned} {p.unit_label or 'units'} "
+                f"are done ({percent}%)"
+            )
+        else:
+            physical = f"It is {percent}% complete"
+
+        # A date, not a number of days: this text is embedded once and read
+        # for as long as the work stays put, and "76 days" is wrong tomorrow.
+        since = (
+            f" since {p.stage_changed_at.date()}"
+            if p.stage_changed_at and p.stage not in ("in_progress", "completed")
+            else ""
+        )
+        due = (
+            f" It is expected to be complete by {p.expected_completion}."
+            if p.expected_completion and p.stage != "completed"
+            else ""
+        )
+        decision = f" Decision recorded: {p.decision_note}" if p.decision_note else ""
+
+        # People, not complaints, and a count, not names: who asked for a
+        # public work is kept in the office, not in the index.
+        residents = len({g.citizen_id or g.id for g in p.grievances})
+        asked = (
+            f" It was raised by {residents} resident(s) through "
+            f"{len(p.grievances)} complaint(s)."
+            if p.grievances
+            else ""
+        )
+
         drafts.append(
             Draft(
                 entity_type="project",
                 entity_id=p.id,
                 village_id=p.village_id,
                 content=(
-                    f"{p.name} is a development project at {p.location} in ward {p.ward}. "
-                    f"{p.description} It is {p.progress}% complete and its status is "
-                    f"{p.status}. Budget ₹{budget:,.0f}, of which ₹{used:,.0f} ({share}) "
-                    f"has been spent."
+                    f"{p.name} is a development work at {p.location} in ward {p.ward}. "
+                    f"{p.description} Stage: {stage}{since}; status {p.status}. "
+                    f"{physical}.{_project_money(m)}{due}{asked}{decision}"
                 ),
-                content_mr=f"{p.name_mr} — प्रभाग {p.ward}, {p.progress}% पूर्ण, {p.status_mr}.",
-                links=_links(_link("village", p.village_id, "in village")),
+                content_mr=f"{p.name_mr} — प्रभाग {p.ward}, {stage_mr}, {percent}% पूर्ण.",
+                # Ordered for expansion, which follows the first few only: the
+                # meeting that decided a work and the complaints behind it say
+                # more about it than the village it is in.
+                links=_links(
+                    _link("sabha_meeting", p.sabha_meeting_id, "decided at"),
+                    *(
+                        _link("grievance", g.id, "a complaint behind")
+                        for g in sorted(p.grievances, key=lambda g: g.submitted_date)[:2]
+                    ),
+                    _link("village", p.village_id, "in village"),
+                ),
                 source_changed_at=p.updated_at,
             )
         )
@@ -216,16 +313,21 @@ def _facility_drafts(db: Session) -> list[Draft]:
     drafts: list[Draft] = []
     for f in db.scalars(select(Facility)):
         ward = f" in ward {f.ward}" if f.ward else ""
+        added = f" Added to the register on {f.installed_on}." if f.installed_on else ""
         drafts.append(
             Draft(
                 entity_type="facility",
                 entity_id=f.id,
                 village_id=f.village_id,
                 content=(
-                    f"{f.name} is a {f.facility_type} facility{ward}. {f.details or ''}"
+                    f"{f.name} is a {f.facility_type} facility{ward}. "
+                    f"{f.details or ''}{added}"
                 ).strip(),
                 content_mr=f.name_mr,
-                links=_links(_link("village", f.village_id, "in village")),
+                links=_links(
+                    _link("project", f.project_id, "built by"),
+                    _link("village", f.village_id, "in village"),
+                ),
                 source_changed_at=f.updated_at,
             )
         )

@@ -162,8 +162,11 @@ def get_village(
         open_grievances=count(
             Grievance, Grievance.village_id == village_id, Grievance.status != "Resolved"
         ),
+        # Active means started and not finished. "Not Completed" stopped being
+        # the same thing once a work could also be proposed, rejected or held.
         active_projects=count(
-            Project, Project.village_id == village_id, Project.status != "Completed"
+            Project, Project.village_id == village_id,
+            Project.status.in_(("Ongoing", "Delayed")),
         ),
     )
 
@@ -193,7 +196,7 @@ def district_summary(
     projects = dict(
         db.execute(
             select(Project.village_id, func.count())
-            .where(Project.status != "Completed")
+            .where(Project.status.in_(("Ongoing", "Delayed")))
             .group_by(Project.village_id)
         ).all()
     )

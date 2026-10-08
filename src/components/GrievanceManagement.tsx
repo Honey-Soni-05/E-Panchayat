@@ -20,6 +20,15 @@
  *  - The old form generated coordinates by jittering MAP_CENTER. Made-up
  *    positions put pins on the GIS map that no one had ever surveyed, so the
  *    form no longer sends any.
+ *
+ * A complaint is now one of two kinds, and the screen treats them differently.
+ * A repair is closed from here. A request for something new — twenty
+ * streetlights, a drain that does not exist yet — cannot be: it has to become a
+ * work, with a decision and a budget behind it. So a complaint shows how many
+ * other residents have reported the same problem, and offers to open a work
+ * proposal out of all of them at once. Which kind a complaint is, and which
+ * complaints are "the same problem", are keyword rules on the server; both are
+ * shown as suggestions the officer can overrule.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -31,12 +40,14 @@ import {
   ChevronRight,
   CircleDot,
   Clock,
+  Construction,
   Filter,
   Loader2,
   Megaphone,
   Plus,
   Sparkles,
   UserCheck,
+  Users,
   X,
 } from 'lucide-react';
 
@@ -48,10 +59,14 @@ import {
   type GrievanceDetail,
   type GrievanceStatus,
   type Priority,
+  type ProjectDetail,
+  type RequestType,
   type Village,
 } from '../lib/api';
 import { useMutation, useQuery } from '../lib/useApi';
 import { EmptyState, ErrorNotice } from './schemes/SchemeBits';
+import { ProposalForm } from './works/ProposalForm';
+import { StageBar, pick, rupees } from './works/WorkBits';
 
 const STATUSES: GrievanceStatus[] = ['Pending', 'In Progress', 'Resolved'];
 const PRIORITIES: Priority[] = ['Low', 'Medium', 'High', 'Critical'];
@@ -90,14 +105,51 @@ const formatDate = (value: string, isEnglish: boolean) =>
 const SELECT_CLASS =
   'w-full px-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-govnavy/25';
 
+const REQUEST_TYPE_LABEL: Record<RequestType, { en: string; mr: string }> = {
+  service: { en: 'Repair or service', mr: 'दुरुस्ती / सेवा' },
+  development: { en: 'New work', mr: 'नवीन काम' },
+};
+
+const CHIP = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border';
+
+/** "New work · 20" — the kind of request and, where the text gave one, the
+ *  number asked for. Shown only for new work: a repair is the ordinary case. */
+const RequestChip: React.FC<{ grievance: Grievance; isEnglish: boolean }> = ({
+  grievance,
+  isEnglish,
+}) =>
+  grievance.requestType === 'development' ? (
+    <span className={`inline-flex items-center gap-1 ${CHIP} border-violet-200 bg-violet-50 text-violet-800`}>
+      <Construction size={10} />
+      {isEnglish ? 'New work' : 'नवीन काम'}
+      {grievance.requestedQuantity ? ` · ${grievance.requestedQuantity}` : ''}
+    </span>
+  ) : null;
+
+/** People, not complaints: one resident filing twice asked once. */
+const residentsBehind = (complaints: Grievance[]): number =>
+  new Set(complaints.map((g) => g.citizenId ?? g.id)).size;
+
 // ─── Detail panel: history plus the controls that write to it ───────────────
+
+type GrievanceChanges = {
+  status?: GrievanceStatus;
+  priority?: Priority;
+  officerNotes?: string;
+  requestType?: RequestType;
+  requestedQuantity?: number | null;
+};
 
 const DetailPanel: React.FC<{
   grievanceId: string;
   isEnglish: boolean;
+  /** Null for an administrator, who has no village of their own. */
+  village: Village | null;
   onClose: () => void;
   onSaved: () => void;
-}> = ({ grievanceId, isEnglish, onClose, onSaved }) => {
+  /** Go to the works register with this work open. */
+  onOpenWork?: (projectId: string) => void;
+}> = ({ grievanceId, isEnglish, village, onClose, onSaved, onOpenWork }) => {
   const detail = useQuery<GrievanceDetail>(
     () => api.grievances.get(grievanceId),
     [grievanceId],
@@ -106,6 +158,8 @@ const DetailPanel: React.FC<{
   const [status, setStatus] = useState<GrievanceStatus | ''>('');
   const [priority, setPriority] = useState<Priority | ''>('');
   const [notes, setNotes] = useState('');
+  const [requestType, setRequestType] = useState<RequestType>('service');
+  const [quantity, setQuantity] = useState('');
 
   // Seed the controls from whatever the server last confirmed. This also runs
   // after a successful save, so the form shows what was stored rather than
@@ -115,6 +169,8 @@ const DetailPanel: React.FC<{
     setStatus(detail.data.status);
     setPriority(detail.data.priority);
     setNotes(detail.data.officerNotes ?? '');
+    setRequestType(detail.data.requestType);
+    setQuantity(detail.data.requestedQuantity ? String(detail.data.requestedQuantity) : '');
   }, [detail.data]);
 
   const record = detail.data;
@@ -122,22 +178,59 @@ const DetailPanel: React.FC<{
   // Send only what the officer actually changed — an unchanged field would
   // otherwise be logged as an event on the resident's timeline for nothing.
   const changes = useMemo(() => {
-    if (!record) return {} as {
-      status?: GrievanceStatus;
-      priority?: Priority;
-      officerNotes?: string;
-    };
-    const next: { status?: GrievanceStatus; priority?: Priority; officerNotes?: string } = {};
+    const next: GrievanceChanges = {};
+    if (!record) return next;
     if (status && status !== record.status) next.status = status;
     if (priority && priority !== record.priority) next.priority = priority;
     if (notes !== (record.officerNotes ?? '')) next.officerNotes = notes;
+    if (requestType !== record.requestType) next.requestType = requestType;
+    const wanted = quantity.trim() === '' ? null : Number(quantity);
+    if (wanted !== (record.requestedQuantity ?? null) && (wanted === null || wanted >= 1)) {
+      next.requestedQuantity = wanted;
+    }
     return next;
-  }, [record, status, priority, notes]);
+  }, [record, status, priority, notes, requestType, quantity]);
 
   const dirty = Object.keys(changes).length > 0;
 
   const save = useMutation(
     () => api.grievances.update(grievanceId, changes),
+    () => {
+      detail.refetch();
+      onSaved();
+    },
+  );
+
+  // ── The same problem, reported by other residents ─────────────────────────
+  const open = record ? record.status !== 'Resolved' : false;
+  const similar = useQuery<Grievance[]>(
+    () => (open ? api.grievances.similar(grievanceId) : Promise.resolve([])),
+    [grievanceId, open, record?.projectId, record?.requestType],
+  );
+  const others = useMemo(() => similar.data ?? [], [similar.data]);
+
+  // Which of the others go into a proposal with this one. All of them that are
+  // not already answered by a work, until the officer says otherwise.
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const unlinked = useMemo(() => others.filter((g) => !g.projectId), [others]);
+  const chosen = useMemo(
+    () => unlinked.filter((g) => !excluded.has(g.id)),
+    [unlinked, excluded],
+  );
+
+  // If a neighbour's complaint about the same thing is already part of a work,
+  // the right move is to join it, not to open a second proposal.
+  const existingWorkId = record?.projectId ? null : (others.find((g) => g.projectId)?.projectId ?? null);
+  const existingWork = useQuery<ProjectDetail | null>(
+    () => (existingWorkId ? api.projects.get(existingWorkId) : Promise.resolve(null)),
+    [existingWorkId],
+  );
+
+  const [proposing, setProposing] = useState(false);
+
+  const join = useMutation(
+    (projectId: string) =>
+      api.projects.linkGrievances(projectId, [grievanceId, ...chosen.map((g) => g.id)]),
     () => {
       detail.refetch();
       onSaved();
@@ -209,6 +302,7 @@ const DetailPanel: React.FC<{
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border border-slate-200 bg-slate-50 text-slate-600">
                     {isEnglish ? record.category : record.categoryMr}
                   </span>
+                  <RequestChip grievance={record} isEnglish={isEnglish} />
                   {record.autoClassified && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border border-govblue-200 bg-govblue-50 text-govnavy">
                       <Sparkles size={10} />
@@ -257,7 +351,192 @@ const DetailPanel: React.FC<{
                     </dd>
                   </div>
                 </dl>
+
+                {/* What the resident said once it was marked resolved. */}
+                {record.citizenFeedback === 'confirmed' && (
+                  <p className="text-[11px] text-govgreen font-semibold m-0 flex items-start gap-1.5">
+                    <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0" />
+                    {isEnglish
+                      ? 'The resident has confirmed that this is resolved.'
+                      : 'समस्या सुटल्याची रहिवाशाने खात्री केली आहे.'}
+                    {record.feedbackNote ? ` “${record.feedbackNote}”` : ''}
+                  </p>
+                )}
+                {record.citizenFeedback === 'reopened' && (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 leading-relaxed">
+                    <strong className="flex items-center gap-1.5">
+                      <AlertTriangle size={13} />
+                      {isEnglish
+                        ? 'The resident says this is not resolved'
+                        : 'रहिवाशाच्या मते समस्या सुटलेली नाही'}
+                    </strong>
+                    {record.feedbackNote}
+                  </div>
+                )}
               </div>
+
+              {/* The work this complaint became */}
+              {record.project && (
+                <section className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 space-y-2.5">
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-violet-900 m-0 flex items-center gap-1.5">
+                    <Construction size={13} />
+                    {isEnglish ? 'Being answered by a development work' : 'विकास कामाद्वारे उत्तर दिले जात आहे'}
+                  </h3>
+                  <p className="text-xs font-bold text-slate-800 m-0">
+                    {pick(record.project.name, record.project.nameMr, isEnglish)}
+                  </p>
+                  <StageBar
+                    stageIndex={record.project.stageIndex}
+                    stageTotal={record.project.stageTotal}
+                    label={pick(record.project.stageLabel, record.project.stageLabelMr, isEnglish)}
+                    isEnglish={isEnglish}
+                  />
+                  <p className="text-[11px] text-slate-600 m-0 tabular-nums">
+                    {record.project.approved !== null
+                      ? isEnglish
+                        ? `${rupees(record.project.spent)} spent of ${rupees(record.project.approved)} approved`
+                        : `${rupees(record.project.approved)} मंजूर, त्यापैकी ${rupees(record.project.spent)} खर्च`
+                      : record.project.estimated !== null
+                        ? isEnglish
+                          ? `Estimated at ${rupees(record.project.estimated)}`
+                          : `अंदाजित खर्च ${rupees(record.project.estimated)}`
+                        : isEnglish
+                          ? 'No cost estimate recorded yet'
+                          : 'अद्याप खर्चाचा अंदाज नोंदवलेला नाही'}
+                    {record.project.linkedGrievances > 1 &&
+                      (isEnglish
+                        ? ` · asked for by ${record.project.linkedGrievances} residents`
+                        : ` · ${record.project.linkedGrievances} रहिवाशांची मागणी`)}
+                  </p>
+                  {onOpenWork && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenWork(record.project!.id)}
+                      className="text-xs font-bold text-govnavy hover:underline"
+                    >
+                      {isEnglish ? 'Open the work →' : 'काम उघडा →'}
+                    </button>
+                  )}
+                </section>
+              )}
+
+              {/* Other residents with the same problem, and what to do about it */}
+              {open && !record.project && (
+                <section className="rounded-xl border border-slate-200 p-4 space-y-3">
+                  <div>
+                    <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 m-0 flex items-center gap-1.5">
+                      <Users size={13} />
+                      {others.length > 0
+                        ? isEnglish
+                          ? `${residentsBehind(others)} other resident(s) report the same problem`
+                          : `${residentsBehind(others)} इतर रहिवाशांनी हीच समस्या नोंदवली आहे`
+                        : isEnglish
+                          ? 'No other resident has reported this'
+                          : 'इतर कोणत्याही रहिवाशाने ही समस्या नोंदवलेली नाही'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 leading-relaxed mt-1 m-0">
+                      {isEnglish
+                        ? 'Matched by rule: same ward, same category, same kind of request, and a keyword in common. Untick any that are not the same thing.'
+                        : 'नियमानुसार जुळवलेले: तोच वॉर्ड, तोच वर्ग, तोच मागणी प्रकार आणि एक समान शब्द. वेगळ्या असलेल्या तक्रारींची खूण काढा.'}
+                    </p>
+                  </div>
+
+                  {similar.error && <ErrorNotice message={similar.error} onRetry={similar.refetch} />}
+
+                  {others.length > 0 && (
+                    <ul className="divide-y divide-slate-100 border border-slate-200 rounded-lg m-0 p-0 list-none">
+                      {others.map((g) => (
+                        <li key={g.id} className="p-2.5 flex items-start gap-2.5">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 accent-govnavy"
+                            aria-label={isEnglish ? `Include ${g.title}` : `${g.titleMr} समाविष्ट करा`}
+                            checked={!g.projectId && !excluded.has(g.id)}
+                            disabled={Boolean(g.projectId)}
+                            onChange={(e) => {
+                              const next = new Set(excluded);
+                              if (e.target.checked) next.delete(g.id);
+                              else next.add(g.id);
+                              setExcluded(next);
+                            }}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 m-0 leading-snug">
+                              {pick(g.title, g.titleMr, isEnglish)}
+                            </p>
+                            <p className="text-[11px] text-slate-500 m-0">
+                              {g.citizenName} · {formatDate(g.submittedDate, isEnglish)}
+                              {g.projectId
+                                ? isEnglish
+                                  ? ' · already part of a work'
+                                  : ' · आधीच एका कामाचा भाग'
+                                : ''}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {join.error && <ErrorNotice message={join.error} />}
+
+                  {existingWork.data ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-slate-700 m-0 leading-relaxed">
+                        {isEnglish ? 'A work already exists for this problem: ' : 'या समस्येसाठी आधीच एक काम आहे: '}
+                        <strong>{pick(existingWork.data.name, existingWork.data.nameMr, isEnglish)}</strong>
+                        {' — '}
+                        {pick(existingWork.data.stageLabel, existingWork.data.stageLabelMr, isEnglish)}
+                      </p>
+                      <button
+                        type="button"
+                        disabled={join.saving}
+                        onClick={() => join.run(existingWork.data!.id)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-govnavy hover:bg-govblue-700 disabled:opacity-60 text-white text-xs font-bold transition-colors"
+                      >
+                        {join.saving && <Loader2 size={13} className="animate-spin" />}
+                        {chosen.length > 0
+                          ? isEnglish
+                            ? `Add this and ${chosen.length} other(s) to that work`
+                            : `ही व इतर ${chosen.length} तक्रारी त्या कामाशी जोडा`
+                          : isEnglish
+                            ? 'Add this complaint to that work'
+                            : 'ही तक्रार त्या कामाशी जोडा'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setProposing(true)}
+                        className={
+                          record.requestType === 'development'
+                            ? 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-govnavy hover:bg-govblue-700 text-white text-xs font-bold transition-colors'
+                            : 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors'
+                        }
+                      >
+                        <Construction size={13} />
+                        {chosen.length > 0
+                          ? isEnglish
+                            ? `Open a work proposal from these ${chosen.length + 1} complaints`
+                            : `या ${chosen.length + 1} तक्रारींमधून काम प्रस्ताव उघडा`
+                          : isEnglish
+                            ? 'Open a work proposal from this complaint'
+                            : 'या तक्रारीमधून काम प्रस्ताव उघडा'}
+                      </button>
+                      <p className="text-[11px] text-slate-500 m-0 leading-relaxed">
+                        {record.requestType === 'development'
+                          ? isEnglish
+                            ? 'This asks for something that does not exist yet, so it cannot be closed from here. A proposal is where it gets checked, decided and funded.'
+                            : 'ही मागणी अद्याप अस्तित्वात नसलेल्या गोष्टीची आहे, त्यामुळे ती येथून बंद करता येणार नाही. प्रस्तावात तिची पडताळणी, निर्णय व निधी होतो.'
+                          : isEnglish
+                            ? 'Recorded as a repair. If it needs a sanctioned work rather than a repair, open a proposal.'
+                            : 'दुरुस्ती म्हणून नोंद. दुरुस्तीऐवजी मंजूर काम आवश्यक असल्यास प्रस्ताव उघडा.'}
+                      </p>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {/* Officer controls */}
               <section className="rounded-xl border border-govblue-200 bg-govblue-50/60 p-4 space-y-3">
@@ -316,6 +595,46 @@ const DetailPanel: React.FC<{
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* The rules suggested one; the officer decides. */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="detail-kind"
+                      className="block text-[10px] font-bold uppercase tracking-wide text-slate-500"
+                    >
+                      {isEnglish ? 'Kind of request' : 'मागणीचा प्रकार'}
+                    </label>
+                    <select
+                      id="detail-kind"
+                      value={requestType}
+                      onChange={(e) => setRequestType(e.target.value as RequestType)}
+                      className={SELECT_CLASS}
+                    >
+                      {(Object.keys(REQUEST_TYPE_LABEL) as RequestType[]).map((value) => (
+                        <option key={value} value={value}>
+                          {isEnglish ? REQUEST_TYPE_LABEL[value].en : REQUEST_TYPE_LABEL[value].mr}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="detail-quantity"
+                      className="block text-[10px] font-bold uppercase tracking-wide text-slate-500"
+                    >
+                      {isEnglish ? 'Number asked for' : 'मागितलेली संख्या'}
+                    </label>
+                    <input
+                      id="detail-quantity"
+                      type="number"
+                      min={1}
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder={isEnglish ? 'None given' : 'दिलेली नाही'}
+                      className={SELECT_CLASS}
+                    />
                   </div>
                 </div>
 
@@ -442,6 +761,27 @@ const DetailPanel: React.FC<{
           )}
         </div>
       </div>
+
+      {proposing && record && (
+        <ProposalForm
+          isEnglish={isEnglish}
+          village={village}
+          seed={{
+            name: record.title,
+            description: record.description,
+            ward: record.ward,
+            category: record.category,
+            unitsPlanned: record.requestedQuantity,
+            grievances: [record, ...chosen],
+          }}
+          onClose={() => setProposing(false)}
+          onCreated={() => {
+            setProposing(false);
+            detail.refetch();
+            onSaved();
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -616,10 +956,24 @@ const FilingModal: React.FC<{
                 {' · '}
                 {isEnglish ? `${preview.priority} priority` : `${preview.priorityMr} प्राधान्य`}
               </p>
+              {preview.requestType === 'development' && (
+                <p className="text-xs text-violet-900 font-semibold m-0">
+                  {isEnglish
+                    ? `Reads as a request for new work${preview.requestedQuantity ? ` (${preview.requestedQuantity} asked for)` : ''}, not a repair.`
+                    : `ही दुरुस्ती नसून नवीन कामाची मागणी दिसते${preview.requestedQuantity ? ` (${preview.requestedQuantity} मागितले)` : ''}.`}
+                </p>
+              )}
+              {preview.similarCount > 0 && (
+                <p className="text-xs text-slate-700 font-semibold m-0">
+                  {isEnglish
+                    ? `${preview.similarCount} other resident(s) in ward ${ward} have already reported this.`
+                    : `वॉर्ड ${ward} मधील ${preview.similarCount} इतर रहिवाशांनी हीच समस्या आधीच नोंदवली आहे.`}
+                </p>
+              )}
               <p className="text-[11px] text-slate-500 m-0">
                 {isEnglish
-                  ? 'You can change the category and priority after it is filed.'
-                  : 'नोंदणीनंतर वर्ग व प्राधान्य बदलता येईल.'}
+                  ? 'You can change the category, priority and kind of request after it is filed.'
+                  : 'नोंदणीनंतर वर्ग, प्राधान्य व मागणीचा प्रकार बदलता येईल.'}
               </p>
             </div>
           )}
@@ -654,7 +1008,10 @@ interface SummaryBundle {
   village: Village | null;
 }
 
-export const GrievanceManagement: React.FC = () => {
+export const GrievanceManagement: React.FC<{
+  /** Go to the works register with this work open. */
+  onOpenWork?: (projectId: string) => void;
+}> = ({ onOpenWork }) => {
   const { t, i18n } = useTranslation();
   const isEnglish = i18n.language === 'en';
 
@@ -662,6 +1019,7 @@ export const GrievanceManagement: React.FC = () => {
   const [priority, setPriority] = useState<string>('');
   const [category, setCategory] = useState<string>('');
   const [ward, setWard] = useState<string>('');
+  const [kind, setKind] = useState<RequestType | ''>('');
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [filing, setFiling] = useState(false);
@@ -685,8 +1043,9 @@ export const GrievanceManagement: React.FC = () => {
         priority: priority || undefined,
         category: category || undefined,
         ward: ward ? Number(ward) : undefined,
+        requestType: kind || undefined,
       }),
-    [status, priority, category, ward],
+    [status, priority, category, ward, kind],
   );
 
   const rows = useMemo(() => queue.data ?? [], [queue.data]);
@@ -818,7 +1177,7 @@ export const GrievanceManagement: React.FC = () => {
           <Filter size={12} />
           {isEnglish ? 'Filter the register' : 'नोंदवही गाळा'}
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="space-y-1">
             <label
               htmlFor="filter-status"
@@ -906,6 +1265,28 @@ export const GrievanceManagement: React.FC = () => {
               ))}
             </select>
           </div>
+
+          <div className="space-y-1">
+            <label
+              htmlFor="filter-kind"
+              className="block text-[10px] font-bold uppercase tracking-wide text-slate-500"
+            >
+              {isEnglish ? 'Kind' : 'प्रकार'}
+            </label>
+            <select
+              id="filter-kind"
+              value={kind}
+              onChange={(e) => setKind(e.target.value as RequestType | '')}
+              className={SELECT_CLASS}
+            >
+              <option value="">{isEnglish ? 'All' : 'सर्व'}</option>
+              {(Object.keys(REQUEST_TYPE_LABEL) as RequestType[]).map((value) => (
+                <option key={value} value={value}>
+                  {isEnglish ? REQUEST_TYPE_LABEL[value].en : REQUEST_TYPE_LABEL[value].mr}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -923,7 +1304,7 @@ export const GrievanceManagement: React.FC = () => {
       {queue.data !== null && rows.length === 0 && (
         <EmptyState
           title={
-            status || priority || category || ward
+            status || priority || category || ward || kind
               ? isEnglish
                 ? 'No complaints match these filters'
                 : 'या निकषांशी जुळणारी तक्रार नाही'
@@ -932,7 +1313,7 @@ export const GrievanceManagement: React.FC = () => {
                 : 'नोंदवहीत एकही तक्रार नाही'
           }
           hint={
-            status || priority || category || ward
+            status || priority || category || ward || kind
               ? isEnglish
                 ? 'Widen or clear a filter above.'
                 : 'वरील निकष बदला किंवा काढून टाका.'
@@ -997,6 +1378,26 @@ export const GrievanceManagement: React.FC = () => {
                   >
                     {isEnglish ? row.priority : row.priorityMr}
                   </span>
+                  <RequestChip grievance={row} isEnglish={isEnglish} />
+                  {row.similarCount > 0 && (
+                    <span className={`inline-flex items-center gap-1 ${CHIP} border-slate-200 bg-white text-slate-600`}>
+                      <Users size={10} />
+                      {isEnglish
+                        ? `+${row.similarCount} resident(s)`
+                        : `+${row.similarCount} रहिवासी`}
+                    </span>
+                  )}
+                  {row.projectId && (
+                    <span className={`${CHIP} border-violet-200 bg-white text-violet-800`}>
+                      {isEnglish ? 'Part of a work' : 'कामाचा भाग'}
+                    </span>
+                  )}
+                  {row.citizenFeedback === 'reopened' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600">
+                      <AlertTriangle size={11} />
+                      {isEnglish ? 'Reopened by the resident' : 'रहिवाशाने पुन्हा उघडली'}
+                    </span>
+                  )}
                   {row.priority === 'Critical' && row.status !== 'Resolved' && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600">
                       <AlertTriangle size={11} />
@@ -1042,8 +1443,10 @@ export const GrievanceManagement: React.FC = () => {
         <DetailPanel
           grievanceId={openId}
           isEnglish={isEnglish}
+          village={summary.data?.village ?? null}
           onClose={() => setOpenId(null)}
           onSaved={refreshAll}
+          onOpenWork={onOpenWork}
         />
       )}
 

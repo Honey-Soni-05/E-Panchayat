@@ -418,7 +418,33 @@ class Grievance(Base, TimestampMixin):
     # how often an officer overrode it.
     auto_classified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # 'service' — something that exists has stopped working, and a repair closes
+    # it. 'development' — a request for something that is not there yet, which
+    # nobody can close from a desk: it has to become a project. Suggested by the
+    # classifier's rules, confirmed or changed by an officer.
+    request_type: Mapped[str] = mapped_column(
+        String(20), default="service", nullable=False, index=True
+    )
+    # "20" in "we need 20 more streetlights", when the text gave one.
+    requested_quantity: Mapped[int | None] = mapped_column(Integer)
+
+    # The work this complaint led to. Many complaints may point at one project —
+    # thirty people reporting the same dark lane is one work, not thirty — and
+    # none of them is deleted or merged to make that so. Each resident keeps
+    # their own complaint, with their own timeline, pointing at the shared work.
+    project_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("projects.id", ondelete="SET NULL"), index=True
+    )
+
+    # What the resident said once the office marked it resolved:
+    # 'confirmed' | 'reopened'. Resolved is the office's claim; this is the
+    # answer of the person who raised it, and it is the only place they get one.
+    citizen_feedback: Mapped[str | None] = mapped_column(String(20))
+    feedback_note: Mapped[str | None] = mapped_column(Text)
+    feedback_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     citizen: Mapped[Citizen | None] = relationship(back_populates="grievances")
+    project: Mapped[Project | None] = relationship(back_populates="grievances")
     events: Mapped[list[GrievanceEvent]] = relationship(
         back_populates="grievance", cascade="all, delete-orphan",
         order_by="GrievanceEvent.created_at",
@@ -443,6 +469,7 @@ class GrievanceEvent(Base):
     )
 
     # 'filed' | 'status_changed' | 'priority_changed' | 'note_added'
+    # | 'linked_to_project' | 'confirmed' | 'reopened'
     event_type: Mapped[str] = mapped_column(String(30), nullable=False)
     from_status: Mapped[str | None] = mapped_column(String(30))
     to_status: Mapped[str | None] = mapped_column(String(30))
@@ -467,6 +494,26 @@ class GrievanceEvent(Base):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class Project(Base, TimestampMixin):
+    """A development work, from the moment somebody asks for it to the moment
+    the resident who asked says it is done.
+
+    This used to be a name, a percentage and two numbers — sanctioned and spent
+    — with no way to say how the work came about or where the money stood. It is
+    now the thing everything else attaches to: the complaints that asked for it,
+    the Gram Sabha meeting that decided it, each step of its money, and the
+    assets it leaves behind.
+
+    `stage` is where it is in that life. `status` is the older, coarser label
+    the dashboards and the map already read (Planned, Ongoing, Delayed,
+    Completed …) and is derived from the stage, except that an officer may mark
+    a work in progress as Delayed.
+
+    `budget` and `utilized` are kept, and are no longer typed in. They are the
+    approved and spent totals of the `budget_entries` ledger, rewritten whenever
+    an entry is added, so the screens that read them need not know the ledger
+    exists and the two can never disagree.
+    """
+
     __tablename__ = "projects"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -493,6 +540,161 @@ class Project(Base, TimestampMixin):
 
     start_date: Mapped[date | None] = mapped_column(Date)
     expected_completion: Mapped[date | None] = mapped_column(Date)
+
+    # 'proposed' | 'verified' | 'approved' | 'budget_requested'
+    # | 'budget_approved' | 'funds_received' | 'in_progress' | 'completed'
+    # | 'rejected' | 'on_hold'.  See services/works.py for what moves it.
+    stage: Mapped[str] = mapped_column(
+        String(30), default="in_progress", nullable=False, index=True
+    )
+    # When it entered that stage, so "stuck in budget-pending for 75 days" is a
+    # subtraction rather than a guess.
+    stage_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Where it was when it was put on hold, so resuming returns it there.
+    held_from_stage: Mapped[str | None] = mapped_column(String(30))
+
+    # The same categories complaints use, so "similar complaints" and "the work
+    # that answers them" can be matched.
+    category: Mapped[str | None] = mapped_column(String(60))
+
+    # Physical progress as a count where the work has one: 14 of 20 streetlights
+    # is a fact an officer can check on site; "70%" is an opinion.
+    units_planned: Mapped[int | None] = mapped_column(Integer)
+    units_done: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    unit_label: Mapped[str | None] = mapped_column(String(60))
+    unit_label_mr: Mapped[str | None] = mapped_column(String(60))
+    # What the finished work adds to the asset register ('streetlight'), if it
+    # adds anything. Null for a repair or a service.
+    asset_type: Mapped[str | None] = mapped_column(String(40))
+
+    # A code from services/works.FUNDING_SOURCES. A label, never a rule: nothing
+    # here decides which fund a work must be paid from.
+    funding_source: Mapped[str | None] = mapped_column(String(30))
+
+    # The Panchayat's decision on the proposal, and the Gram Sabha meeting it
+    # was taken in when there was one.
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    sabha_meeting_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("sabha_meetings.id", ondelete="SET NULL")
+    )
+
+    grievances: Mapped[list[Grievance]] = relationship(back_populates="project")
+    entries: Mapped[list[BudgetEntry]] = relationship(
+        back_populates="project", cascade="all, delete-orphan",
+        order_by="BudgetEntry.entry_date, BudgetEntry.created_at",
+    )
+    events: Mapped[list[ProjectEvent]] = relationship(
+        back_populates="project", cascade="all, delete-orphan",
+        order_by="ProjectEvent.created_at",
+    )
+
+
+class BudgetEntry(Base):
+    """One step in a project's money, written once and never edited.
+
+    A ledger rather than five columns on the project, because the columns could
+    only say where the money stands and not how it got there. "Approved:
+    ₹3,50,000" does not tell you it was requested at ₹4,00,000 in June and cut
+    in August, and that history is exactly what a resident, an auditor or the
+    next officer wants.
+
+    What each kind means, and how the totals read them:
+
+      estimate    what the work is expected to cost      latest entry stands
+      requested   what was asked for                     latest entry stands
+      approved    what was sanctioned                    latest entry stands
+      received    money that has actually arrived        entries add up
+      spent       money that has actually been paid out  entries add up
+
+    A revision is a new row, not an edit, so the earlier figure stays on the
+    record. There is no update or delete route for this table.
+
+    A mistake in a receipt or a payment is put right the same way. Those two add
+    up, so a mistyped one cannot be replaced by typing another: it is corrected
+    by a further row that points back at it through `corrects_id` and carries
+    the difference, which may be negative. The wrong figure, the right figure,
+    who corrected it and why all stay on the record — which is the point of not
+    letting anyone simply overtype the number.
+
+    This is budget tracking, not bookkeeping. There are no vouchers, no vendor
+    accounts and no connection to PFMS: a "received" entry is an officer
+    recording that funds arrived, not this system moving them.
+    """
+
+    __tablename__ = "budget_entries"
+    __table_args__ = (
+        Index("ix_budget_entries_project_kind", "project_id", "kind"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    project_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    # The date the thing happened, which is not always the date it was typed in.
+    entry_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+
+    funding_source: Mapped[str | None] = mapped_column(String(30))
+    # A sanction order or bill number, as free text. Recorded, not validated.
+    reference: Mapped[str | None] = mapped_column(String(120))
+    note: Mapped[str | None] = mapped_column(Text)
+
+    # Set on a correction: the receipt or payment it puts right. `amount` on
+    # such a row is the difference to apply, not a sum of money in itself.
+    corrects_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("budget_entries.id", ondelete="SET NULL"), index=True
+    )
+
+    created_by_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_by_name: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False, index=True
+    )
+
+    project: Mapped[Project] = relationship(back_populates="entries")
+
+
+class ProjectEvent(Base):
+    """One entry in a work's history: who moved it, from where to where, and why.
+
+    The same idea as `GrievanceEvent`, for the same reason. A resident whose
+    complaint became a project needs to see what has happened to it, and an
+    officer who approved, held or rejected it should be on the record as having
+    done so, with the reason they gave.
+    """
+
+    __tablename__ = "project_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    project_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+
+    # 'proposed' | 'registered' | 'stage_changed' | 'budget_entry' | 'progress'
+    # | 'grievance_linked' | 'grievance_unlinked' | 'updated'
+    event_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    from_stage: Mapped[str | None] = mapped_column(String(30))
+    to_stage: Mapped[str | None] = mapped_column(String(30))
+
+    note: Mapped[str | None] = mapped_column(Text)
+    note_mr: Mapped[str | None] = mapped_column(Text)
+
+    actor_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    actor_name: Mapped[str | None] = mapped_column(String(255))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False, index=True
+    )
+
+    project: Mapped[Project] = relationship(back_populates="events")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -591,7 +793,17 @@ class SabhaActionItem(Base, TimestampMixin):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class Facility(Base, TimestampMixin):
-    """Village assets shown on the map: schools, health centres, water points."""
+    """Village assets shown on the map: schools, health centres, water points —
+    and what completed works leave behind.
+
+    A finished project that built something adds a row here, so the map and the
+    register reflect it without anyone entering it twice. `quantity` exists
+    because of that: twenty streetlights installed by one work are recorded as
+    one row of twenty at the place the work was done. This system knows the work
+    happened and where; it does not know where each of the twenty poles stands,
+    and placing twenty pins at invented coordinates would be drawing a survey
+    nobody carried out.
+    """
 
     __tablename__ = "facilities"
 
@@ -607,6 +819,13 @@ class Facility(Base, TimestampMixin):
     ward: Mapped[int | None] = mapped_column(Integer)
     details: Mapped[str | None] = mapped_column(Text)
     details_mr: Mapped[str | None] = mapped_column(Text)
+
+    quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    # The work that created it, when one did.
+    project_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("projects.id", ondelete="SET NULL"), index=True
+    )
+    installed_on: Mapped[date | None] = mapped_column(Date)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
