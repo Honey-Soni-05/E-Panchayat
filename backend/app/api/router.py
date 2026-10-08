@@ -7,6 +7,7 @@ from app.api.routes import (
     assistant,
     audit,
     auth,
+    budget,
     citizens,
     documents,
     grievances,
@@ -23,6 +24,7 @@ api_router.include_router(citizens.router)
 api_router.include_router(schemes.router)
 api_router.include_router(grievances.router)
 api_router.include_router(projects.router)
+api_router.include_router(budget.router)
 api_router.include_router(documents.router)
 api_router.include_router(sabha.router)
 api_router.include_router(analytics.router)

@@ -568,9 +568,21 @@ def test_full_progress_marks_a_project_completed(client, officer):
 
 
 def test_spending_beyond_the_sanctioned_budget_is_refused(client, officer):
-    resp = client.patch(f"{API}/projects/proj_302", headers=officer,
-                        json={"utilized": 99_000_000})
+    """Spending is a dated ledger entry now, and it is checked against the
+    money that has actually arrived for the work."""
+    resp = client.post(f"{API}/projects/proj_302/budget-entries", headers=officer,
+                       json={"kind": "spent", "amount": 99_000_000})
     assert resp.status_code == 400
+    assert "received" in resp.json()["detail"]
+
+
+def test_a_spent_total_can_no_longer_be_typed_over_the_ledger(client, officer):
+    """The old way in — PATCH a new total — is refused whatever the figure, and
+    says where spending is recorded instead."""
+    resp = client.patch(f"{API}/projects/proj_302", headers=officer,
+                        json={"utilized": 1})
+    assert resp.status_code == 400
+    assert "budget-entries" in resp.json()["detail"]
 
 
 # ── Analytics ───────────────────────────────────────────────────────────────

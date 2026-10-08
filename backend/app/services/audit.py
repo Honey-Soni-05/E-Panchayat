@@ -83,7 +83,23 @@ _IGNORED = re.compile(r"^/(health|docs|redoc|openapi\.json|favicon\.ico)")
 #
 # Default is to record. A new endpoint has to be named here to be exempt, so
 # forgetting this list makes the trail noisier, never emptier.
-_READ_ONLY_POSTS = re.compile(r"/assistant/(ask|context)$")
+#
+# /grievances/classify is the same kind of thing: the complaint form calls it to
+# preview a category before anything is filed.
+_READ_ONLY_POSTS = re.compile(r"/assistant/(ask|context)$|/grievances/classify$")
+
+# Path segments that sit where an ID would but are not one. Without this,
+# loading the works screen recorded "read project vocabulary" on every visit,
+# opening a proposal was filed under a project called "proposals", and the
+# scheme list had been logging a read of a scheme called "feed" all along.
+# A request to one of these is still recorded when it changes something — it
+# just is not attributed to a record that does not exist.
+_NOT_IDS = frozenset({
+    "vocabulary", "proposals",          # /projects/…
+    "classify",                         # /grievances/…
+    "feed", "read",                     # /schemes/…
+    "process",                          # /sabha/meetings/…
+})
 
 
 def identify(path: str) -> tuple[str | None, str | None]:
@@ -95,6 +111,8 @@ def identify(path: str) -> tuple[str | None, str | None]:
     for pattern, entity_type in _ENTITY_PATTERNS:
         match = pattern.search(path)
         if match:
+            if match.group("id") in _NOT_IDS:
+                return None, None
             return entity_type, match.group("id")
     return None, None
 

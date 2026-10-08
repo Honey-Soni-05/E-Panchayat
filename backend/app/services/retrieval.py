@@ -48,7 +48,7 @@ from app.models import (
 )
 from app.services import eligibility as elig
 from app.services.classifier import CATEGORY_KEYWORDS
-from app.services import graph
+from app.services import graph, works
 from app.services.llm import LLMUnavailable, embed
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -81,9 +81,11 @@ TOPIC_KEYWORDS: dict[str, list[str]] = {
         "योजना", "पात्र", "पेन्शन", "निवृत्तिवेतन", "अनुदान", "लाभ",
     ],
     "projects": [
-        "project", "work", "construction", "road", "budget", "spend", "delayed",
-        "progress", "fund", "expenditure",
+        "project", "work", "construction", "road", "budget", "spend", "spent",
+        "delayed", "progress", "fund", "expenditure", "proposal", "estimate",
+        "sanction", "stalled",
         "प्रकल्प", "काम", "बांधकाम", "रस्ता", "निधी", "बजेट", "खर्च", "विलंब",
+        "प्रस्ताव", "अंदाजपत्रक",
     ],
     "citizens": [
         # "ward" deliberately absent: nearly every question about a village
@@ -302,35 +304,87 @@ def gather(
             out.add(f"There are {open_count} unresolved grievances.")
 
         for g in db.scalars(
-            stmt.where(Grievance.status != "Resolved")
+            stmt.options(selectinload(Grievance.project))
+            .where(Grievance.status != "Resolved")
             .order_by(Grievance.priority.desc(), Grievance.submitted_date.desc())
             .limit(limit)
         ):
+            kind = ", a request for new work" if g.request_type == "development" else ""
+            # Once a complaint has become a work, "what is happening with it"
+            # is answered by the work's stage, not by the word "In Progress".
+            work = (
+                f' It is being answered by the work "{g.project.name}", now at '
+                f"the stage: {works.stage_label(g.project.stage)[0]}."
+                if g.project is not None
+                else ""
+            )
             out.add(
-                f'Grievance {g.id}: "{g.title}" in ward {g.ward}, category {g.category}, '
-                f"priority {g.priority}, status {g.status}, with {g.department}, "
-                f"filed {g.submitted_date}.",
+                f'Grievance {g.id}: "{g.title}" in ward {g.ward}, category {g.category}'
+                f"{kind}, priority {g.priority}, status {g.status}, with {g.department}, "
+                f"filed {g.submitted_date}.{work}",
                 Source("grievance", g.id, g.title),
             )
 
     # ── Projects ─────────────────────────────────────────────────────────────
     if "projects" in want:
-        stmt = select(Project).where(*_village_filter(Project, village_id))
+        stmt = (
+            select(Project)
+            .options(selectinload(Project.entries), selectinload(Project.grievances))
+            .where(*_village_filter(Project, village_id))
+        )
         projects = list(db.scalars(stmt.order_by(Project.ward)))
 
         if projects:
-            total = sum(float(p.budget) for p in projects)
-            used = sum(float(p.utilized) for p in projects)
+            # A proposal the Panchayat turned down has no claim on the budget.
+            ledgers = [works.money(p.entries) for p in projects if p.stage != "rejected"]
+            approved = sum(m.approved or 0 for m in ledgers)
+            received = sum(m.received for m in ledgers)
+            spent = sum(m.spent for m in ledgers)
+            waiting = sum(1 for p in projects if p.stage == "budget_requested")
             out.add(
-                f"There are {len(projects)} development projects with a combined "
-                f"sanctioned budget of {_rupees(total)}, of which {_rupees(used)} "
-                f"has been spent, leaving {_rupees(total - used)}."
+                f"There are {len(projects)} development works on record. Across them "
+                f"{_rupees(approved)} has been approved, {_rupees(received)} received "
+                f"and {_rupees(spent)} spent, leaving {_rupees(received - spent)} in hand."
+                + (
+                    f" {waiting} of them {'is' if waiting == 1 else 'are'} waiting "
+                    f"for a budget decision."
+                    if waiting
+                    else ""
+                )
             )
-            for p in projects[:limit]:
+            # Only so many works fit in an answer. The ones with something to
+            # check go first, then the ones still open, and finished works
+            # last — listing them by ward put a completed road ahead of a
+            # proposal that had been waiting three months.
+            #
+            # The flags are computed now rather than indexed, because half of
+            # them are about elapsed time. Each is a comparison of recorded
+            # figures; the wording already says it is something to check, not
+            # a finding.
+            assessed = [(p, works.money(p.entries)) for p in projects]
+            assessed = [(p, m, works.flags(p, m)) for p, m in assessed]
+            assessed.sort(key=lambda item: (
+                -sum(1 for flag in item[2] if flag.severity == "warning"),
+                -len(item[2]),
+                item[0].stage in ("completed", "rejected"),
+                item[0].ward,
+            ))
+            for p, m, flags in assessed[:limit]:
+                physical = (
+                    f"{p.units_done} of {p.units_planned} {p.unit_label or 'units'} done"
+                    if p.units_planned
+                    else f"{works.physical_percent(p)}% complete"
+                )
+                attention = (
+                    " Worth checking: " + " ".join(f.message for f in flags)
+                    if flags
+                    else ""
+                )
                 out.add(
-                    f'Project {p.id}: "{p.name}" in ward {p.ward} at {p.location} is '
-                    f"{p.status}, {p.progress}% complete, budget {_rupees(p.budget)}, "
-                    f"spent {_rupees(p.utilized)}.",
+                    f'Project {p.id}: "{p.name}" in ward {p.ward} at {p.location} — '
+                    f"stage {works.stage_label(p.stage)[0]}, status {p.status}, "
+                    f"{physical}; approved {_rupees(m.approved)}, received "
+                    f"{_rupees(m.received)}, spent {_rupees(m.spent)}.{attention}",
                     Source("project", p.id, p.name),
                 )
 

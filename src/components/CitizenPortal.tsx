@@ -49,6 +49,8 @@ import {
 } from '../lib/api';
 import { useMutation, useQuery } from '../lib/useApi';
 import { EmptyState, ErrorNotice } from './schemes/SchemeBits';
+import { STATUS_BAR, rupees } from './works/WorkBits';
+import { WorkDetail } from './works/WorkDetail';
 
 interface CitizenPortalProps {
   currentTab: string;
@@ -74,12 +76,6 @@ const DOC_ICON_STYLE: Record<CitizenDocument['status'], string> = {
   Verified: 'bg-emerald-50 text-emerald-600 border-emerald-150',
   'Pending Verification': 'bg-amber-50 text-amber-600 border-amber-150',
   Rejected: 'bg-rose-50 text-rose-600 border-rose-150',
-};
-
-const PROJECT_BAR: Record<Project['status'], string> = {
-  Completed: 'bg-govgreen',
-  Ongoing: 'bg-govnavy',
-  Delayed: 'bg-rose-500',
 };
 
 /** Facilities carry a bare type string and no Marathi for it, so the label is
@@ -108,8 +104,6 @@ const formatDate = (value: string | null, isEnglish: boolean): string => {
     year: 'numeric',
   });
 };
-
-const formatLakh = (rupees: number): string => `₹${(rupees / 100000).toFixed(1)}`;
 
 const formatSize = (bytes: number | null): string | null => {
   if (bytes === null || bytes <= 0) return null;
@@ -186,6 +180,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [uploaded, setUploaded] = useState<CitizenDocument | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // A public work a resident has opened to read. They see the same record an
+  // officer does, without the controls and without the names of who asked.
+  const [openWorkId, setOpenWorkId] = useState<string | null>(null);
+
   const upload = useMutation(
     (chosen: File, type: string) => {
       const match = DOC_TYPES.find((d) => d.en === type);
@@ -209,6 +207,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   const projectCounts = useMemo(
     () => ({
+      planned: projectRows.filter((p) => p.status === 'Planned').length,
       ongoing: projectRows.filter((p) => p.status === 'Ongoing').length,
       delayed: projectRows.filter((p) => p.status === 'Delayed').length,
       completed: projectRows.filter((p) => p.status === 'Completed').length,
@@ -649,8 +648,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {projectRows.length > 0 && (
                 <span className="text-[10px] text-slate-500 font-semibold">
                   {isEnglish
-                    ? `${projectCounts.ongoing} ongoing · ${projectCounts.delayed} delayed · ${projectCounts.completed} completed`
-                    : `${projectCounts.ongoing} सुरू · ${projectCounts.delayed} विलंबित · ${projectCounts.completed} पूर्ण`}
+                    ? `${projectCounts.planned} proposed · ${projectCounts.ongoing} ongoing · ${projectCounts.delayed} delayed · ${projectCounts.completed} completed`
+                    : `${projectCounts.planned} प्रस्तावित · ${projectCounts.ongoing} सुरू · ${projectCounts.delayed} विलंबित · ${projectCounts.completed} पूर्ण`}
                 </span>
               )}
             </div>
@@ -691,9 +690,17 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       </span>
                     </div>
 
+                    {/* The stage says more than the status: "Budget requested"
+                        tells a resident what the work is waiting for. */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500">
-                        {isEnglish ? project.status : project.statusMr}
+                        {project.status === 'Delayed'
+                          ? isEnglish
+                            ? project.status
+                            : project.statusMr
+                          : isEnglish
+                            ? project.stageLabel
+                            : project.stageLabelMr}
                       </span>
                       <span className="text-[10px] font-bold text-slate-700">
                         {project.progress}%
@@ -710,17 +717,25 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       }
                     >
                       <div
-                        className={`h-full rounded-full ${PROJECT_BAR[project.status]}`}
+                        className={`h-full rounded-full ${STATUS_BAR[project.status]}`}
                         style={{ width: `${Math.min(100, Math.max(0, project.progress))}%` }}
                       />
                     </div>
 
-                    {/* Project.budget and .utilized are rupees; converted to
-                        lakh here so the two figures read at village scale. */}
-                    <span className="text-[10px] text-slate-500 block">
-                      {isEnglish ? 'Spent' : 'खर्च'} {formatLakh(project.utilized)}{' '}
-                      {isEnglish ? 'lakh of' : 'लाख, एकूण'} {formatLakh(project.budget)}{' '}
-                      {isEnglish ? 'lakh' : 'लाख'}
+                    {/* A work with no sanction yet says so, rather than
+                        reading "spent ₹0 of ₹0". */}
+                    <span className="text-[10px] text-slate-500 block tabular-nums">
+                      {project.finance.approved !== null
+                        ? isEnglish
+                          ? `${rupees(project.finance.spent)} spent of ${rupees(project.finance.approved)} approved`
+                          : `${rupees(project.finance.approved)} मंजूर, त्यापैकी ${rupees(project.finance.spent)} खर्च`
+                        : project.finance.estimated !== null
+                          ? isEnglish
+                            ? `Estimated at ${rupees(project.finance.estimated)}; not yet sanctioned`
+                            : `अंदाजित खर्च ${rupees(project.finance.estimated)}; अद्याप मंजुरी नाही`
+                          : isEnglish
+                            ? 'No cost estimate yet'
+                            : 'अद्याप खर्चाचा अंदाज नाही'}
                     </span>
 
                     {project.expectedCompletion && (
@@ -729,6 +744,14 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         {formatDate(project.expectedCompletion, isEnglish)}
                       </span>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => setOpenWorkId(project.id)}
+                      className="text-[11px] font-bold text-govnavy hover:underline"
+                    >
+                      {isEnglish ? 'See stages and money' : 'टप्पे व निधी पहा'}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -942,6 +965,15 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {openWorkId && (
+        <WorkDetail
+          projectId={openWorkId}
+          isEnglish={isEnglish}
+          canAct={false}
+          onClose={() => setOpenWorkId(null)}
+        />
       )}
     </div>
   );

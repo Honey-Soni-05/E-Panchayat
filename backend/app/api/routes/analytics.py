@@ -60,8 +60,15 @@ def dashboard(
             select(func.count()).select_from(model).where(*scoped(model, *where))
         ) or 0
 
-    budget_stmt = select(func.coalesce(func.sum(Project.budget), 0))
-    used_stmt = select(func.coalesce(func.sum(Project.utilized), 0))
+    # A proposal the Panchayat turned down may have had a budget approved before
+    # it was. That money is not committed to anything, so it is left out here,
+    # as it is on the budget screen.
+    budget_stmt = select(func.coalesce(func.sum(Project.budget), 0)).where(
+        Project.stage != "rejected"
+    )
+    used_stmt = select(func.coalesce(func.sum(Project.utilized), 0)).where(
+        Project.stage != "rejected"
+    )
     if scope is not None:
         budget_stmt = budget_stmt.where(Project.village_id == scope)
         used_stmt = used_stmt.where(Project.village_id == scope)
@@ -95,8 +102,13 @@ def dashboard(
             Grievance, Grievance.priority == "Critical", Grievance.status != "Resolved"
         ),
         resolved_grievances=count(Grievance, Grievance.status == "Resolved"),
-        active_projects=count(Project, Project.status != "Completed"),
+        # A work is active once it has started. A proposal still waiting on a
+        # decision or on money is planned, and counting it here would show a
+        # Panchayat as building things it has only been asked for.
+        active_projects=count(Project, Project.status.in_(("Ongoing", "Delayed"))),
         delayed_projects=count(Project, Project.status == "Delayed"),
+        planned_projects=count(Project, Project.status == "Planned"),
+        budget_pending_projects=count(Project, Project.stage == "budget_requested"),
         total_budget=float(total_budget),
         total_utilized=float(total_utilized),
         pending_documents=pending_documents,
@@ -166,9 +178,11 @@ def project_budgets(
     user: User = Depends(require_officer), db: Session = Depends(get_db)
 ) -> list[dict]:
     """Budget vs. expenditure per project, in lakhs — the units the charts use."""
+    # Only works with money sanctioned. A proposal that has not reached a budget
+    # decision would otherwise sit in the chart as an empty pair of bars.
     projects = db.scalars(
         select(Project)
-        .where(*_in_village(Project, user))
+        .where(Project.budget > 0, *_in_village(Project, user))
         .order_by(Project.ward, Project.name)
     )
     return [

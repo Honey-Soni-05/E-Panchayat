@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.api import presenters
+from app.core import clock
 from app.core.deps import (
     assert_can_access_village,
     get_current_user,
@@ -14,14 +16,17 @@ from app.core.deps import (
     village_scope,
 )
 from app.db.session import get_db
-from app.models import Citizen, Grievance, GrievanceEvent, User
+from app.models import Citizen, Grievance, User
 from app.schemas import (
     GrievanceCreate,
     GrievanceDetail,
+    GrievanceFeedback,
     GrievanceOut,
     GrievanceUpdate,
 )
-from app.services.classifier import PRIORITY_MR, classify
+from app.services import demand
+from app.services.classifier import PRIORITY_MR, REQUEST_TYPE_MR, classify
+from app.services.timeline import grievance_event as log_event
 
 router = APIRouter(prefix="/grievances", tags=["grievances"])
 
@@ -32,34 +37,25 @@ STATUS_MR = {"Pending": "प्रलंबित", "In Progress": "प्रग
 STATUS_SEQUENCE = ["Pending", "In Progress", "Resolved"]
 
 
-def log_event(
-    db: Session,
-    grievance: Grievance,
-    event_type: str,
-    actor: User | None,
-    *,
-    from_status: str | None = None,
-    to_status: str | None = None,
-    note: str | None = None,
-    note_mr: str | None = None,
-) -> None:
-    """Record one step in a complaint's history.
+def _load(db: Session, grievance_id: str) -> Grievance:
+    grievance = db.scalar(
+        select(Grievance)
+        .options(selectinload(Grievance.events))
+        .where(Grievance.id == grievance_id)
+    )
+    if grievance is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No grievance with that ID.")
+    return grievance
 
-    Every change goes through here, so the timeline a citizen sees is the
-    actual record of what happened rather than something reconstructed from
-    the current state.
-    """
-    db.add(GrievanceEvent(
-        id=f"gev_{uuid4().hex[:12]}",
-        grievance_id=grievance.id,
-        event_type=event_type,
-        from_status=from_status,
-        to_status=to_status,
-        note=note,
-        note_mr=note_mr,
-        actor_id=actor.id if actor else None,
-        actor_name=actor.full_name if actor else None,
-    ))
+
+def _filing_village(db: Session, user: User) -> tuple[Citizen | None, str | None]:
+    """Who is filing, and which village the complaint belongs to: the filer's
+    own when they are a resident, the officer's otherwise."""
+    citizen: Citizen | None = None
+    if user.role == "citizen" and user.citizen_id:
+        citizen = db.get(Citizen, user.citizen_id)
+    village_id = (citizen.village_id if citizen else None) or village_scope(user)
+    return citizen, village_id
 
 
 @router.get("", response_model=list[GrievanceOut])
@@ -68,9 +64,10 @@ def list_grievances(
     category: str | None = None,
     priority: str | None = None,
     ward: int | None = None,
+    request_type: str | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[Grievance]:
+) -> list[GrievanceOut]:
     stmt = select(Grievance)
 
     # A citizen sees only the complaints they filed.
@@ -92,8 +89,12 @@ def list_grievances(
         stmt = stmt.where(Grievance.priority == priority)
     if ward is not None:
         stmt = stmt.where(Grievance.ward == ward)
+    if request_type:
+        stmt = stmt.where(Grievance.request_type == request_type)
 
-    return list(db.scalars(stmt.order_by(Grievance.submitted_date.desc())))
+    rows = list(db.scalars(stmt.order_by(Grievance.submitted_date.desc())))
+    counts = demand.counts_for(db, rows)
+    return [presenters.grievance_out(g, counts.get(g.id, 0)) for g in rows]
 
 
 @router.post("", response_model=GrievanceOut, status_code=status.HTTP_201_CREATED)
@@ -101,17 +102,19 @@ def create_grievance(
     body: GrievanceCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> Grievance:
+) -> GrievanceOut:
     """Anyone signed in may file. Category, priority and routing department are
     assigned by the classifier unless an officer supplies them explicitly."""
     result = classify(body.title, body.description)
-
-    citizen: Citizen | None = None
-    if user.role == "citizen" and user.citizen_id:
-        citizen = db.get(Citizen, user.citizen_id)
+    citizen, village_id = _filing_village(db, user)
 
     citizen_name = body.citizen_name or (citizen.name if citizen else user.full_name)
     overridden = bool(body.category or body.priority)
+
+    request_type = body.request_type or result.request_type
+    quantity = body.requested_quantity
+    if quantity is None and request_type == "development":
+        quantity = result.requested_quantity
 
     grievance = Grievance(
         id=f"griev_{uuid4().hex[:10]}",
@@ -136,7 +139,9 @@ def create_grievance(
         submitted_date=date.today(),
         auto_classified=not overridden,
         # A complaint belongs to the filer's village, or the officer's.
-        village_id=(citizen.village_id if citizen else None) or village_scope(user),
+        village_id=village_id,
+        request_type=request_type,
+        requested_quantity=quantity,
     )
     db.add(grievance)
     db.flush()
@@ -146,9 +151,55 @@ def create_grievance(
         note="Complaint received and routed to " + grievance.department,
         note_mr="तक्रार प्राप्त झाली असून " + grievance.department_mr + " कडे वर्ग करण्यात आली आहे",
     )
+
+    # More residents reporting the same problem makes it more urgent, for this
+    # complaint and for the ones already waiting.
+    residents = demand.apply_demand(db, grievance)
+
     db.commit()
     db.refresh(grievance)
-    return grievance
+    return presenters.grievance_out(grievance, residents - 1)
+
+
+@router.post("/classify", response_model=dict)
+def preview_classification(
+    body: GrievanceCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Run the classifier without saving — lets the submission form show the
+    suggested category and priority before the citizen presses send, and how
+    many neighbours have already reported the same thing."""
+    result = classify(body.title, body.description)
+    citizen, village_id = _filing_village(db, user)
+
+    # Never added to the session: it exists only to ask "who else reported this".
+    draft = Grievance(
+        id="",
+        title=body.title,
+        description=body.description,
+        category=body.category or result.category,
+        ward=body.ward,
+        village_id=village_id,
+        citizen_id=citizen.id if citizen else None,
+        request_type=body.request_type or result.request_type,
+        status="Pending",
+    )
+    others = demand.other_reporters(draft, demand.similar_open(db, draft))
+
+    return {
+        "category": result.category,
+        "categoryMr": result.category_mr,
+        "priority": result.priority,
+        "priorityMr": result.priority_mr,
+        "department": result.department,
+        "departmentMr": result.department_mr,
+        "matchedTerms": result.matched_terms,
+        "requestType": result.request_type,
+        "requestTypeMr": result.request_type_mr,
+        "requestedQuantity": result.requested_quantity,
+        "similarCount": others,
+    }
 
 
 @router.get("/{grievance_id}", response_model=GrievanceDetail)
@@ -156,25 +207,39 @@ def get_grievance(
     grievance_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> Grievance:
-    grievance = db.scalar(
-        select(Grievance)
-        .options(selectinload(Grievance.events))
-        .where(Grievance.id == grievance_id)
-    )
-    if grievance is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No grievance with that ID.")
+) -> GrievanceDetail:
+    grievance = _load(db, grievance_id)
     if user.role == "citizen":
         if grievance.citizen_id != user.citizen_id:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, "You can only view your own complaints."
             )
-        return grievance
-    # A resident was held to their own complaints and an officer was held to
-    # nothing: the list was scoped by village, this was not. A complaint
-    # carries the complainant's name and phone number.
-    assert_can_access_village(user, grievance.village_id)
-    return grievance
+    else:
+        # A resident was held to their own complaints and an officer was held to
+        # nothing: the list was scoped by village, this was not. A complaint
+        # carries the complainant's name and phone number.
+        assert_can_access_village(user, grievance.village_id)
+
+    similar = demand.similar_open(db, grievance) if grievance.status != "Resolved" else []
+    return presenters.grievance_detail(
+        grievance, demand.other_reporters(grievance, similar)
+    )
+
+
+@router.get("/{grievance_id}/similar", response_model=list[GrievanceOut])
+def similar_grievances(
+    grievance_id: str,
+    officer: User = Depends(require_officer),
+    db: Session = Depends(get_db),
+) -> list[GrievanceOut]:
+    """Other open complaints that look like the same problem.
+
+    Officers only. A resident is told how many neighbours reported the same
+    thing; they are not shown who, or what those neighbours wrote.
+    """
+    grievance = _load(db, grievance_id)
+    assert_can_access_village(officer, grievance.village_id)
+    return [presenters.grievance_out(g) for g in demand.similar_open(db, grievance)]
 
 
 @router.patch("/{grievance_id}", response_model=GrievanceOut)
@@ -183,7 +248,7 @@ def update_grievance(
     body: GrievanceUpdate,
     officer: User = Depends(require_officer),
     db: Session = Depends(get_db),
-) -> Grievance:
+) -> GrievanceOut:
     grievance = db.get(Grievance, grievance_id)
     if grievance is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No grievance with that ID.")
@@ -197,6 +262,11 @@ def update_grievance(
         grievance.status = new_status
         grievance.status_mr = STATUS_MR.get(new_status, new_status)
         grievance.resolved_date = date.today() if new_status == "Resolved" else None
+        if new_status == "Resolved":
+            # A fresh resolution deserves a fresh answer from the resident.
+            grievance.citizen_feedback = None
+            grievance.feedback_note = None
+            grievance.feedback_at = None
         log_event(
             db, grievance, "status_changed", officer,
             from_status=previous, to_status=new_status,
@@ -218,6 +288,18 @@ def update_grievance(
         grievance.category = new_category
         grievance.auto_classified = False
 
+    if (new_type := data.get("request_type")) is not None and new_type != grievance.request_type:
+        grievance.request_type = new_type
+        kind = "a request for new work" if new_type == "development" else "a repair or service request"
+        log_event(
+            db, grievance, "note_added", officer,
+            note=f"Recorded as {kind}.",
+            note_mr=f"“{REQUEST_TYPE_MR[new_type]}” म्हणून नोंद.",
+        )
+
+    if "requested_quantity" in data:
+        grievance.requested_quantity = data["requested_quantity"]
+
     if "officer_notes" in data:
         # A note without a status change is still worth showing the citizen.
         if note and data.get("status") is None:
@@ -229,22 +311,70 @@ def update_grievance(
 
     db.commit()
     db.refresh(grievance)
-    return grievance
+    return presenters.grievance_out(grievance)
 
 
-@router.post("/classify", response_model=dict)
-def preview_classification(
-    body: GrievanceCreate, _: User = Depends(get_current_user)
-) -> dict:
-    """Run the classifier without saving — lets the submission form show the
-    suggested category and priority before the citizen presses send."""
-    result = classify(body.title, body.description)
-    return {
-        "category": result.category,
-        "categoryMr": result.category_mr,
-        "priority": result.priority,
-        "priorityMr": result.priority_mr,
-        "department": result.department,
-        "departmentMr": result.department_mr,
-        "matchedTerms": result.matched_terms,
-    }
+@router.post("/{grievance_id}/feedback", response_model=GrievanceDetail)
+def give_feedback(
+    grievance_id: str,
+    body: GrievanceFeedback,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> GrievanceDetail:
+    """The resident's answer to "was this resolved?".
+
+    "Resolved" is the office's claim. Until now it was also the end of the
+    story: nobody asked the person who raised the complaint, and a work signed
+    off from a desk looked exactly like one that was actually done. Only the
+    resident who filed may answer, and a "no" puts the complaint back in front
+    of the office with their reason attached.
+    """
+    grievance = _load(db, grievance_id)
+    if user.role != "citizen" or not user.citizen_id or grievance.citizen_id != user.citizen_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Only the resident who raised a complaint can confirm or reopen it.",
+        )
+    if grievance.status != "Resolved":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This complaint has not been marked resolved yet.",
+        )
+    if grievance.citizen_feedback == "confirmed":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "You have already confirmed this. If the problem has come back, file a new complaint.",
+        )
+
+    note = (body.note or "").strip() or None
+    grievance.feedback_note = note
+    grievance.feedback_at = clock.now()
+
+    if body.resolved:
+        grievance.citizen_feedback = "confirmed"
+        log_event(
+            db, grievance, "confirmed", user,
+            note="Confirmed by the resident: the problem is resolved."
+            + (f" “{note}”" if note else ""),
+            note_mr="रहिवाशाने खात्री केली: समस्या सुटली आहे.",
+        )
+    else:
+        if not note:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Say what is still wrong, so the office knows what to look at.",
+            )
+        grievance.citizen_feedback = "reopened"
+        grievance.status = "In Progress"
+        grievance.status_mr = STATUS_MR["In Progress"]
+        grievance.resolved_date = None
+        log_event(
+            db, grievance, "reopened", user,
+            from_status="Resolved", to_status="In Progress",
+            note=f"Reopened by the resident: {note}",
+            note_mr=f"रहिवाशाने पुन्हा उघडली: {note}",
+        )
+
+    db.commit()
+    db.refresh(grievance)
+    return presenters.grievance_detail(grievance)

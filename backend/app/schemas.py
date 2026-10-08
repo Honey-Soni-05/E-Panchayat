@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 def to_camel(s: str) -> str:
@@ -420,6 +420,9 @@ class EligibilityResult(ApiModel):
 
 Priority = Literal["Low", "Medium", "High", "Critical"]
 GrievanceStatus = Literal["Pending", "In Progress", "Resolved"]
+# 'service' is a repair to something that exists; 'development' is a request
+# for something new, which has to become a project to be answered.
+RequestType = Literal["service", "development"]
 
 
 class GrievanceCreate(ApiModel):
@@ -435,6 +438,8 @@ class GrievanceCreate(ApiModel):
     # Optional overrides; the classifier fills these when omitted.
     category: str | None = None
     priority: Priority | None = None
+    request_type: RequestType | None = None
+    requested_quantity: int | None = Field(default=None, ge=1, le=9999)
 
 
 class GrievanceUpdate(ApiModel):
@@ -443,6 +448,17 @@ class GrievanceUpdate(ApiModel):
     category: str | None = None
     officer_notes: str | None = None
     department: str | None = None
+    # The officer's confirmation or correction of what the rules suggested.
+    request_type: RequestType | None = None
+    requested_quantity: int | None = Field(default=None, ge=1, le=9999)
+
+
+class GrievanceFeedback(ApiModel):
+    """The resident's answer once the office has marked a complaint resolved."""
+
+    resolved: bool
+    # Required when the answer is no: what is still wrong.
+    note: str | None = Field(default=None, max_length=1000)
 
 
 class GrievanceEventOut(ApiModel):
@@ -482,27 +498,267 @@ class GrievanceOut(ApiModel):
     auto_classified: bool = False
     village_id: str | None = None
 
+    request_type: RequestType = "service"
+    request_type_mr: str | None = None
+    requested_quantity: int | None = None
+    # The work this complaint led to, once an officer has linked it to one.
+    project_id: str | None = None
+    # How many *other* residents have reported the same problem. A count and
+    # nothing else, so it is safe to show someone who may see only their own
+    # complaint.
+    similar_count: int = 0
+    # 'confirmed' | 'reopened' — the resident's answer after resolution.
+    citizen_feedback: str | None = None
+    feedback_note: str | None = None
+    feedback_at: datetime | None = None
+
+
+class ProjectEventOut(ApiModel):
+    """One entry in a work's history. Defined here, ahead of the project
+    schemas, because a complaint's detail view carries its work's history."""
+
+    id: str
+    event_type: str
+    from_stage: str | None = None
+    to_stage: str | None = None
+    note: str | None = None
+    note_mr: str | None = None
+    actor_name: str | None = None
+    created_at: datetime
+
+
+class ProjectBrief(ApiModel):
+    """What a resident is shown about the work their complaint became.
+
+    Plain enough to read without knowing how a Panchayat budgets: what stage it
+    is at, whether the money has been approved and has arrived, how much of the
+    work exists, and when it is expected. All of it is public within the
+    village; none of it is about any other resident.
+    """
+
+    id: str
+    name: str
+    name_mr: str
+    stage: str
+    stage_label: str
+    stage_label_mr: str
+    # Position in the eight-step sequence, for drawing progress. Null when the
+    # work has been rejected or put on hold.
+    stage_index: int | None = None
+    stage_total: int = 8
+    status: str
+    status_mr: str
+    decision_note: str | None = None
+    estimated: float | None = None
+    requested: float | None = None
+    approved: float | None = None
+    received: float = 0
+    spent: float = 0
+    units_planned: int | None = None
+    units_done: int = 0
+    unit_label: str | None = None
+    unit_label_mr: str | None = None
+    physical_percent: int = 0
+    expected_completion: date | None = None
+    # Other residents whose complaints led to the same work — a count only.
+    linked_grievances: int = 0
+    history: list[ProjectEventOut] = []
+
 
 class GrievanceDetail(GrievanceOut):
     """A single complaint with its full history — what the citizen's tracking
     view reads."""
 
     events: list[GrievanceEventOut] = []
+    project: ProjectBrief | None = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Projects
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ProjectBase(ApiModel):
+class ProjectCreate(ApiModel):
+    """A work that is already under way, registered from its two totals.
+
+    The Marathi fields are optional and fall back to the English, as they do on
+    a complaint. They used to be required here while the form that posts to
+    this left them out unless the officer typed them, so registering a work
+    from the screen was refused every time with a list of missing fields.
+    """
+
+    id: str | None = None
+    name: str = Field(min_length=1, max_length=255)
+    name_mr: str | None = None
+    description: str = ""
+    description_mr: str | None = None
+    progress: int = Field(default=0, ge=0, le=100)
+    budget: float = Field(ge=0)
+    utilized: float = Field(default=0, ge=0)
+    status: Literal["Ongoing", "Completed", "Delayed"] = "Ongoing"
+    # Accepted and ignored: the Marathi label is derived from `status`.
+    status_mr: str | None = None
+    ward: int
+    location: str = Field(min_length=1, max_length=255)
+    location_mr: str | None = None
+    latitude: float
+    longitude: float
+    start_date: date | None = None
+    expected_completion: date | None = None
+
+
+class ProjectUpdate(ApiModel):
+    progress: int | None = Field(default=None, ge=0, le=100)
+    # Still accepted so that an old client gets an explanation rather than
+    # silence: spending is a dated ledger entry now, and this is refused with a
+    # message saying where to record it.
+    utilized: float | None = Field(default=None, ge=0)
+    status: Literal["Ongoing", "Completed", "Delayed"] | None = None
+    status_mr: str | None = None
+    description: str | None = None
+    expected_completion: date | None = None
+    units_planned: int | None = Field(default=None, ge=1, le=100000)
+
+
+ProjectStatus = Literal["Planned", "Ongoing", "Delayed", "Completed", "On Hold", "Rejected"]
+StageAction = Literal["verify", "approve", "reject", "start", "complete", "hold", "resume"]
+EntryKind = Literal["estimate", "requested", "approved", "received", "spent"]
+
+
+class ProposalCreate(ApiModel):
+    """A work somebody thinks should be done. No money and no approval yet.
+
+    Coordinates are optional because an officer turning a complaint into a
+    proposal should not have to look them up: they default to the complaint's
+    own location, and failing that to the village centre.
+    """
+
+    name: str = Field(min_length=3, max_length=255)
+    name_mr: str | None = None
+    description: str = Field(min_length=3)
+    description_mr: str | None = None
+    ward: int = Field(ge=1)
+    location: str = Field(min_length=2, max_length=255)
+    location_mr: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    category: str | None = None
+    units_planned: int | None = Field(default=None, ge=1, le=100000)
+    unit_label: str | None = Field(default=None, max_length=60)
+    unit_label_mr: str | None = Field(default=None, max_length=60)
+    asset_type: str | None = None
+    expected_completion: date | None = None
+    # What the officer expects it to cost, if they can say at this point. It is
+    # recorded as the first estimate in the ledger, typed by a person and
+    # revisable later; leaving it out is fine.
+    estimate: float | None = Field(default=None, gt=0, le=1_000_000_000_000)
+    estimate_note: str | None = Field(default=None, max_length=1000)
+    # The complaints this proposal answers. The first is taken as its origin.
+    grievance_ids: list[str] = []
+    # Only read for an admin, who has no village of their own. An officer's
+    # proposal always belongs to the Gram Panchayat they serve.
+    village_id: str | None = None
+
+
+class StageDecision(ApiModel):
+    action: StageAction
+    # Required for verify, reject and hold — see services/works.py.
+    note: str | None = Field(default=None, max_length=2000)
+    # For 'approve': the Gram Sabha meeting the decision was taken in.
+    sabha_meeting_id: str | None = None
+
+
+class BudgetEntryCreate(ApiModel):
+    kind: EntryKind
+    amount: float = Field(gt=0, le=1_000_000_000_000)
+    entry_date: date | None = None
+    funding_source: str | None = None
+    reference: str | None = Field(default=None, max_length=120)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class ProgressUpdate(ApiModel):
+    units_done: int | None = Field(default=None, ge=0)
+    progress: int | None = Field(default=None, ge=0, le=100)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class LinkGrievances(ApiModel):
+    grievance_ids: list[str] = Field(min_length=1)
+
+
+class BudgetEntryOut(ApiModel):
+    id: str
+    kind: str
+    kind_label: str
+    kind_label_mr: str
+    amount: float
+    entry_date: date
+    funding_source: str | None = None
+    funding_source_label: str | None = None
+    funding_source_label_mr: str | None = None
+    reference: str | None = None
+    note: str | None = None
+    created_by_name: str | None = None
+    created_at: datetime
+    # Set on a correction: the entry it puts right. `amount` is then the
+    # difference applied, and may be negative.
+    corrects_id: str | None = None
+    # On an entry that has been corrected: what it stands at now.
+    corrected_to: float | None = None
+    # Whether a correction may be recorded against this entry.
+    can_correct: bool = False
+
+
+class EntryCorrection(ApiModel):
+    """What a receipt or a payment should have been, and why it was wrong."""
+
+    amount: float = Field(ge=0, le=1_000_000_000_000)
+    reason: str = Field(min_length=3, max_length=1000)
+
+
+class ProjectFlag(ApiModel):
+    """Something a person should look at. A comparison of recorded figures,
+    never a finding that anything is wrong."""
+
+    code: str
+    severity: Literal["warning", "info"]
+    message: str
+    message_mr: str
+
+
+class ProjectFinance(ApiModel):
+    estimated: float | None = None
+    requested: float | None = None
+    approved: float | None = None
+    received: float = 0
+    spent: float = 0
+    # Sanctioned but not yet arrived, and arrived but not yet paid out.
+    awaiting: float = 0
+    balance: float = 0
+    # Approved less spent — the two above added together.
+    remaining: float = 0
+    financial_percent: int = 0
+
+
+class ProjectSteps(ApiModel):
+    """What may be done to this work now. The screen offers exactly these."""
+
+    actions: list[str] = []
+    entry_kinds: list[str] = []
+    can_record_progress: bool = False
+
+
+class ProjectOut(ApiModel):
+    id: str
+    village_id: str | None = None
     name: str
     name_mr: str
     description: str
     description_mr: str
-    progress: int = Field(ge=0, le=100)
-    budget: float = Field(ge=0)
-    utilized: float = Field(ge=0)
-    status: Literal["Ongoing", "Completed", "Delayed"]
+    progress: int
+    budget: float
+    utilized: float
+    status: ProjectStatus
     status_mr: str
     ward: int
     location: str
@@ -512,28 +768,135 @@ class ProjectBase(ApiModel):
     start_date: date | None = None
     expected_completion: date | None = None
 
+    stage: str
+    stage_label: str
+    stage_label_mr: str
+    stage_index: int | None = None
+    stage_total: int = 8
+    stage_changed_at: datetime | None = None
+    days_in_stage: int | None = None
+    # Where a work on hold will return to when it is resumed.
+    held_from_stage: str | None = None
+    category: str | None = None
+    units_planned: int | None = None
+    units_done: int = 0
+    unit_label: str | None = None
+    unit_label_mr: str | None = None
+    asset_type: str | None = None
+    physical_percent: int = 0
+    funding_source: str | None = None
+    funding_source_label: str | None = None
+    funding_source_label_mr: str | None = None
+    decision_note: str | None = None
+    sabha_meeting_id: str | None = None
+    financial_year: str | None = None
 
-class ProjectCreate(ProjectBase):
-    id: str | None = None
+    finance: ProjectFinance = ProjectFinance()
+    flags: list[ProjectFlag] = []
+    linked_grievances: int = 0
+    # Residents whose complaints led here — people, not complaints.
+    residents_affected: int = 0
+    steps: ProjectSteps = ProjectSteps()
 
 
-class ProjectUpdate(ApiModel):
-    progress: int | None = Field(default=None, ge=0, le=100)
-    utilized: float | None = Field(default=None, ge=0)
-    status: Literal["Ongoing", "Completed", "Delayed"] | None = None
-    status_mr: str | None = None
-    description: str | None = None
-    expected_completion: date | None = None
+class LinkedGrievance(ApiModel):
+    """A complaint attached to a work, as an officer sees it."""
 
-
-class ProjectOut(ProjectBase):
     id: str
-    village_id: str | None = None
+    title: str
+    title_mr: str
+    ward: int
+    status: str
+    priority: str
+    citizen_name: str
+    submitted_date: date
+    citizen_feedback: str | None = None
+    feedback_note: str | None = None
 
-    @field_validator("budget", "utilized", mode="before")
-    @classmethod
-    def _decimal_to_float(cls, v: Any) -> Any:
-        return float(v) if v is not None else v
+
+class ProjectDetail(ProjectOut):
+    entries: list[BudgetEntryOut] = []
+    events: list[ProjectEventOut] = []
+    # Officers only. A resident opening a public work is told how many people
+    # asked for it, not who they were.
+    grievances: list[LinkedGrievance] = []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Budget
+# ─────────────────────────────────────────────────────────────────────────────
+
+class FundingSourceOut(ApiModel):
+    code: str
+    label: str
+    label_mr: str
+
+
+class BudgetTotals(ApiModel):
+    estimated: float = 0
+    # Asked for and still awaiting a decision.
+    requested_pending: float = 0
+    approved: float = 0
+    received: float = 0
+    spent: float = 0
+    awaiting: float = 0
+    balance: float = 0
+    # Approved less spent: in hand plus still to arrive.
+    remaining: float = 0
+    utilisation_percent: int = 0
+
+
+class BudgetProjectRow(ApiModel):
+    id: str
+    name: str
+    name_mr: str
+    ward: int
+    stage: str
+    stage_label: str
+    stage_label_mr: str
+    status: str
+    funding_source: str | None = None
+    funding_source_label: str | None = None
+    funding_source_label_mr: str | None = None
+    estimated: float | None = None
+    requested: float | None = None
+    approved: float | None = None
+    received: float = 0
+    spent: float = 0
+    balance: float = 0
+    remaining: float = 0
+    physical_percent: int = 0
+    financial_percent: int = 0
+    flags: list[ProjectFlag] = []
+    # What may be recorded against the work now, so the budget screen can
+    # offer an officer the next entry without a second copy of the rules.
+    steps: ProjectSteps = ProjectSteps()
+
+
+class BudgetSourceRow(ApiModel):
+    code: str | None = None
+    label: str
+    label_mr: str
+    approved: float = 0
+    received: float = 0
+    spent: float = 0
+    projects: int = 0
+
+
+class BudgetOverview(ApiModel):
+    """The Panchayat's money across all its works: a roll-up of the ledgers.
+
+    Budget tracking, not accounts. Every figure is a sum of entries officers
+    recorded against individual works; there are no vouchers behind them and
+    nothing here is reconciled against a bank or PFMS.
+    """
+
+    financial_year: str | None = None
+    financial_years: list[str] = []
+    totals: BudgetTotals = BudgetTotals()
+    projects: list[BudgetProjectRow] = []
+    sources: list[BudgetSourceRow] = []
+    stage_counts: dict[str, int] = {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -638,6 +1001,10 @@ class FacilityOut(ApiModel):
     ward: int | None = None
     details: str | None = None
     details_mr: str | None = None
+    # More than one when a single work installed several of the same thing.
+    quantity: int = 1
+    project_id: str | None = None
+    installed_on: date | None = None
 
 
 class DashboardStats(ApiModel):
@@ -652,6 +1019,10 @@ class DashboardStats(ApiModel):
     total_utilized: float
     pending_documents: int
     next_meeting_date: date | None = None
+    # Works that exist as proposals but have not started, and the subset of
+    # those waiting on a budget decision.
+    planned_projects: int = 0
+    budget_pending_projects: int = 0
 
 
 class NamedCount(ApiModel):

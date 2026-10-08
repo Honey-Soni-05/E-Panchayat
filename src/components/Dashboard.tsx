@@ -119,9 +119,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
       {
         label: t('dashboard.ongoing_projects'),
         value: s.activeProjects.toLocaleString('en-IN'),
-        sub: s.delayedProjects
-          ? t('dashboard.sub_delayed', { count: s.delayedProjects })
-          : t('dashboard.sub_on_track'),
+        // Works that have started. A proposal still waiting on a decision or
+        // on money is counted beside them, not among them.
+        sub:
+          (s.delayedProjects
+            ? t('dashboard.sub_delayed', { count: s.delayedProjects })
+            : t('dashboard.sub_on_track')) +
+          (s.plannedProjects
+            ? isEnglish
+              ? ` · ${s.plannedProjects} not yet started`
+              : ` · ${s.plannedProjects} अद्याप सुरू नाही`
+            : ''),
         icon: Hammer,
         border: s.delayedProjects ? 'border-govsaffron' : 'border-sky-600',
         chip: 'bg-sky-50 text-sky-600 border-sky-200',
@@ -139,7 +147,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
         icon: Coins,
         border: 'border-purple-600',
         chip: 'bg-purple-50 text-purple-600 border-purple-200',
-        tab: 'projects',
+        tab: 'budget',
       },
       {
         label: t('dashboard.pending_documents'),
@@ -176,11 +184,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
         tab: 'citizens',
       });
     }
+    if (s.budgetPendingProjects > 0) {
+      out.push({
+        text: isEnglish
+          ? `${s.budgetPendingProjects} proposal(s) are waiting for a budget decision.`
+          : `${s.budgetPendingProjects} प्रस्ताव निधी मंजुरीच्या प्रतीक्षेत आहेत.`,
+        tab: 'budget',
+      });
+    }
     const unspent = s.totalBudget - s.totalUtilized;
     if (unspent > 0) {
       out.push({
         text: t('dashboard.alert_budget', { amount: lakhs(unspent, isEnglish) }),
-        tab: 'projects',
+        tab: 'budget',
       });
     }
     return out;
