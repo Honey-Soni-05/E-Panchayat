@@ -96,6 +96,17 @@ def _account_key(db: Session, email: str | None, aadhaar: str | None) -> str:
     return f"aadhaar:{digest[:24]}"
 
 
+DEMO_DOMAINS = ("@panchayat.gov.in", "@citizen.panchayat.gov.in")
+
+
+def _is_demo_account(email: str) -> bool:
+    """Seeded demo accounts are shared across every laptop at a presentation,
+    so they never wait for new-device approval: the listed addresses, and any
+    address on the demo domains the seed uses."""
+    email = email.lower()
+    return email in settings.device_check_exempt or email.endswith(DEMO_DOMAINS)
+
+
 def _sha(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
@@ -110,7 +121,7 @@ def _new_device_challenge(
     password from an unknown device is not enough on its own: an alert goes to
     the phone and email on record, and the owner approves or denies it.
     """
-    if user.email.lower() in settings.device_check_exempt:
+    if _is_demo_account(user.email):
         return None  # shared demo account: let every device in
     device_hash = _sha(f"{user.id}:{body.device_id or 'no-device-id'}")
     known = list(db.scalars(select(KnownDevice).where(KnownDevice.user_id == user.id)))

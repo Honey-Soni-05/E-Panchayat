@@ -9,11 +9,17 @@ from app.db.session import SessionLocal
 from app.models import KnownDevice, LoginChallenge, User
 from tests.test_password_reset import API, PASSWORD
 
-EMAIL = "sanjay@citizen.panchayat.gov.in"
+EMAIL = "sanjay@example.com"  # a non-demo address, so the check applies
 
 
 @pytest.fixture(autouse=True)
 def fresh_devices():
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.email == "sanjay@citizen.panchayat.gov.in"))
+        if user is not None:
+            user.email = EMAIL
+            db.commit()
+
     def clear():
         with SessionLocal() as db:
             uid = db.scalar(select(User.id).where(User.email == EMAIL))
@@ -23,6 +29,10 @@ def fresh_devices():
     clear()
     yield
     clear()
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.email == EMAIL))
+        user.email = "sanjay@citizen.panchayat.gov.in"
+        db.commit()
 
 
 def _login(client, device):
@@ -89,7 +99,8 @@ def test_wrong_password_from_new_device_sends_no_alert(client):
 
 
 def test_demo_accounts_skip_device_approval(client):
-    demo = "officer@panchayat.gov.in"
-    for device in ("laptop-1", "laptop-2", "phone"):
+    for demo in ("officer@panchayat.gov.in", "admin@panchayat.gov.in",
+                 "savita@citizen.panchayat.gov.in", "anandrao@citizen.panchayat.gov.in"):
+      for device in ("laptop-1", "laptop-2", "phone"):
         r = client.post(f"{API}/auth/login", json={"email": demo, "password": PASSWORD, "deviceId": device})
         assert r.status_code == 200, r.text
