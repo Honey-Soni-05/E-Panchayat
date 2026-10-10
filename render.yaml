@@ -60,7 +60,7 @@ services:
         sync: false
 
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.7-flash
       - key: GEMINI_EMBED_MODEL
         value: gemini-embedding-001
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -78,7 +78,6 @@ services:
   - type: web
     name: epanchayat-web
     runtime: static
-    plan: free
     branch: main
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
