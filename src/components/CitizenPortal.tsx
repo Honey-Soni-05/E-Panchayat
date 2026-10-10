@@ -48,6 +48,7 @@ import {
   type Village,
 } from '../lib/api';
 import { useMutation, useQuery } from '../lib/useApi';
+import { DOC_GROUPS, marathiFor } from '../lib/documentTypes';
 import { EmptyState, ErrorNotice } from './schemes/SchemeBits';
 
 interface CitizenPortalProps {
@@ -58,11 +59,7 @@ interface CitizenPortalProps {
 
 /** The Marathi label travels with the upload so the officer's queue and the
  *  resident's locker name the same document identically in both languages. */
-const DOC_TYPES: { en: string; mr: string }[] = [
-  { en: 'Income Certificate', mr: 'उत्पन्नाचा दाखला' },
-  { en: 'Aadhaar Card', mr: 'आधार कार्ड' },
-  { en: 'Land ownership 7/12 Extract', mr: '७/१२ उतारा' },
-];
+const OTHER = '__other__';
 
 const DOC_STATUS_STYLE: Record<CitizenDocument['status'], string> = {
   Verified: 'bg-emerald-50 text-emerald-600 border-emerald-200',
@@ -181,15 +178,15 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   // ─── Locker upload ────────────────────────────────────────────────────────
 
-  const [docType, setDocType] = useState<string>('Income Certificate');
+  const [docType, setDocType] = useState<string>('Aadhaar Card');
+  const [customType, setCustomType] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [uploaded, setUploaded] = useState<CitizenDocument | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const upload = useMutation(
     (chosen: File, type: string) => {
-      const match = DOC_TYPES.find((d) => d.en === type);
-      return api.documents.upload(citizenId, type, match?.mr ?? type, chosen);
+      return api.documents.upload(citizenId, type, marathiFor(type), chosen);
     },
     (created) => {
       // The confirmation quotes what the server stored, so it cannot claim a
@@ -764,7 +761,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (file) upload.run(file, docType);
+                const type = docType === OTHER ? customType.trim() : docType;
+                if (file && type) upload.run(file, type);
               }}
               className="space-y-4 text-xs font-semibold"
             >
@@ -778,12 +776,33 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   onChange={(e) => setDocType(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded text-slate-700 bg-white"
                 >
-                  {DOC_TYPES.map((type) => (
-                    <option key={type.en} value={type.en}>
-                      {isEnglish ? `${type.en} / ${type.mr}` : type.mr}
-                    </option>
+                  {DOC_GROUPS.map((group) => (
+                    <optgroup key={group.en} label={isEnglish ? group.en : group.mr}>
+                      {group.types.map((type) => (
+                        <option key={type.en} value={type.en}>
+                          {isEnglish ? `${type.en} / ${type.mr}` : type.mr}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
+                  <option value={OTHER}>
+                    {isEnglish ? 'Other document (type its name)…' : 'इतर दस्तऐवज (नाव लिहा)…'}
+                  </option>
                 </select>
+                {docType === OTHER && (
+                  <input
+                    required
+                    value={customType}
+                    onChange={(e) => setCustomType(e.target.value)}
+                    placeholder={isEnglish ? 'e.g. Medical Certificate' : 'उदा. वैद्यकीय प्रमाणपत्र'}
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-slate-700 bg-white"
+                  />
+                )}
+                <p className="text-[10px] text-slate-400 font-medium m-0">
+                  {isEnglish
+                    ? 'Each upload is checked against every welfare scheme you may qualify for, and counts once an officer verifies it.'
+                    : 'प्रत्येक दस्तऐवज सर्व योजनांसाठी तपासला जातो आणि अधिकाऱ्याच्या पडताळणीनंतर ग्राह्य धरला जातो.'}
+                </p>
               </div>
 
               <div className="space-y-1.5">

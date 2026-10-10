@@ -38,6 +38,46 @@ import {
 
 type Filter = 'all' | 'eligible' | 'almost' | 'new';
 
+/** Upload a missing document straight from the scheme card. The file is
+ *  stored in the resident's Digital Locker under the scheme's own name for it,
+ *  and eligibility is recomputed across every scheme afterwards. */
+const UploadMissing: React.FC<{
+  citizenId: string;
+  name: string;
+  nameMr: string;
+  isEnglish: boolean;
+  onDone: () => void;
+}> = ({ citizenId, name, nameMr, isEnglish, onDone }) => {
+  const [state, setState] = useState<'idle' | 'saving' | 'error'>('idle');
+  return (
+    <label className="ml-2 inline-flex items-center gap-1 cursor-pointer text-[10px] font-bold text-govnavy border border-govnavy/30 rounded px-1.5 py-0.5 hover:bg-govnavy/5">
+      <input
+        type="file"
+        className="hidden"
+        accept=".pdf,image/jpeg,image/png,image/webp"
+        disabled={state === 'saving'}
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setState('saving');
+          try {
+            await api.documents.upload(citizenId, name, nameMr, file);
+            setState('idle');
+            onDone();
+          } catch {
+            setState('error');
+          }
+        }}
+      />
+      {state === 'saving'
+        ? isEnglish ? 'Uploading…' : 'अपलोड होत आहे…'
+        : state === 'error'
+          ? isEnglish ? 'Failed — retry' : 'अयशस्वी — पुन्हा'
+          : isEnglish ? 'Upload' : 'अपलोड करा'}
+    </label>
+  );
+};
+
 export const CitizenSchemes: React.FC = () => {
   const { i18n } = useTranslation();
   const { user } = useAuth();
@@ -314,9 +354,18 @@ export const CitizenSchemes: React.FC = () => {
                                 <span className={missing ? 'text-rose-700' : 'text-slate-700'}>
                                   {isEnglish ? doc.name : doc.nameMr}
                                   {missing && (
-                                    <span className="text-rose-600 font-bold">
-                                      {isEnglish ? ' — not uploaded' : ' — अपलोड बाकी'}
-                                    </span>
+                                    <>
+                                      <span className="text-rose-600 font-bold">
+                                        {isEnglish ? ' — not uploaded' : ' — अपलोड बाकी'}
+                                      </span>
+                                      <UploadMissing
+                                        citizenId={citizenId}
+                                        name={doc.name}
+                                        nameMr={doc.nameMr}
+                                        isEnglish={isEnglish}
+                                        onDone={eligibility.refetch}
+                                      />
+                                    </>
                                   )}
                                   {pending && (
                                     <span className="text-amber-700 font-bold">

@@ -280,6 +280,64 @@ def check_documents(
     return missing, unverified
 
 
+# Document families. Scheme notifications name the same paper a dozen ways
+# ("Bank passbook (Aadhaar-linked)", "Bank or post office savings account"),
+# and residents upload whatever their certificate says on it. Matching on
+# families rather than exact names lets one upload count towards every scheme
+# that accepts it. Order matters only for the exclusions below.
+DOC_FAMILIES: dict[str, tuple[str, ...]] = {
+    "bank": ("passbook", "bank", "savings account", "cancelled cheque"),
+    "ration": ("ration", "family id", "शिधापत्रिका", "रेशन"),
+    "aadhaar": ("aadhaar", "aadhar", "आधार"),
+    "pan": ("pan card",),
+    "passport": ("passport",),
+    "driving": ("driving licence", "driving license"),
+    "voter": ("voter", "epic", "मतदार"),
+    "bpl": ("bpl", "below poverty", "दारिद्र्य"),
+    "income": ("income", "उत्पन्न"),
+    "caste": ("caste", "category proof", "जात"),
+    "domicile": ("domicile", "residence", "अधिवास", "रहिवासी"),
+    "address": ("address proof", "पत्ता"),
+    "utility": ("utility", "electricity bill", "property tax"),
+    "land": ("7/12", "8a", "8-a", "land record", "land ownership", "land extract", "satbara", "सातबारा", "उतारा"),
+    "birth": ("birth certificate", "जन्म"),
+    "death": ("death certificate", "मृत्यू"),
+    "marriage": ("marriage", "विवाह"),
+    "disability": ("disability", "udid", "अपंग", "दिव्यांग"),
+    "photo": ("photograph", "छायाचित्र"),
+    "marksheet": ("mark sheet", "marksheet", "10th", "12th", "ssc", "hsc", "गुणपत्रिका"),
+    "school": ("leaving certificate", "bonafide", "enrollment", "enrolment", "admission"),
+    "diploma": ("diploma", "degree", "graduation"),
+}
+
+# A passbook that mentions Aadhaar is still a passbook, not an Aadhaar card.
+_EXCLUDES = {"bank": {"aadhaar"}, "ration": {"aadhaar"}}
+
+# Generic proofs that several specific documents satisfy.
+_ACCEPTED_AS = {
+    "photo_id": {"aadhaar", "voter", "passport", "pan", "driving"},
+    "address": {"aadhaar", "voter", "passport", "ration", "utility", "domicile", "driving"},
+    "age": {"birth", "school", "marksheet", "passport", "aadhaar"},
+}
+_GENERIC_REQUIREMENTS = {
+    "photo_id": ("photo id", "identity proof", "ओळखपत्र"),
+    "age": ("age proof", "वयाचा"),
+}
+
+
+def document_families(name: str, *, as_requirement: bool = False) -> set[str]:
+    text = (name or "").lower()
+    found = {fam for fam, words in DOC_FAMILIES.items() if any(w in text for w in words)}
+    for fam, drops in _EXCLUDES.items():
+        if fam in found:
+            found -= drops
+    if as_requirement:
+        found |= {g for g, words in _GENERIC_REQUIREMENTS.items() if any(w in text for w in words)}
+    else:
+        found |= {g for g, members in _ACCEPTED_AS.items() if found & members}
+    return found
+
+
 def _find_document(
     req_name: str, req_name_mr: str, documents: list[CitizenDocument]
 ) -> CitizenDocument | None:
@@ -287,11 +345,15 @@ def _find_document(
         return "".join(ch for ch in s.lower() if ch.isalnum())
 
     target, target_mr = norm(req_name), norm(req_name_mr)
+    wanted = document_families(req_name, as_requirement=True) | document_families(
+        req_name_mr, as_requirement=True
+    )
     best: CitizenDocument | None = None
 
     for doc in documents:
         have, have_mr = norm(doc.doc_type), norm(doc.doc_type_mr or "")
-        hit = (target and (target in have or have in target)) or (
+        held = document_families(doc.doc_type) | document_families(doc.doc_type_mr or "")
+        hit = bool(wanted & held) or (target and (target in have or have in target)) or (
             target_mr and (target_mr in have_mr or have_mr in target_mr)
         )
         if hit:
