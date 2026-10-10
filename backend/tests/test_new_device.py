@@ -86,3 +86,10 @@ def test_wrong_password_from_new_device_sends_no_alert(client):
     assert r.status_code == 401
     with SessionLocal() as db:
         assert db.scalar(select(LoginChallenge.id)) is None
+
+
+def test_demo_accounts_skip_device_approval(client):
+    demo = "officer@panchayat.gov.in"
+    for device in ("laptop-1", "laptop-2", "phone"):
+        r = client.post(f"{API}/auth/login", json={"email": demo, "password": PASSWORD, "deviceId": device})
+        assert r.status_code == 200, r.text

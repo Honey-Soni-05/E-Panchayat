@@ -110,6 +110,8 @@ def _new_device_challenge(
     password from an unknown device is not enough on its own: an alert goes to
     the phone and email on record, and the owner approves or denies it.
     """
+    if user.email.lower() in settings.device_check_exempt:
+        return None  # shared demo account: let every device in
     device_hash = _sha(f"{user.id}:{body.device_id or 'no-device-id'}")
     known = list(db.scalars(select(KnownDevice).where(KnownDevice.user_id == user.id)))
     if not known:

@@ -204,7 +204,7 @@ so the sign-up and officer-approval flow can be demonstrated end to end.
 ### Tests
 
 ```bash
-cd backend && python -m pytest        # 295 tests
+cd backend && python -m pytest        # 296 tests
 npm run build                          # typecheck + production build
 ```
 

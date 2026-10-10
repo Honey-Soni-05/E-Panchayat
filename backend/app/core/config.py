@@ -86,6 +86,17 @@ class Settings(BaseSettings):
     # A sign-in from a device the account has not used before waits this long
     # for the owner to approve it from the SMS/email alert.
     LOGIN_APPROVAL_TTL_MINUTES: int = 10
+    # Shared demo accounts are used from many laptops at once during a
+    # presentation, so they skip the new-device approval. Comma separated.
+    # Empty this in any deployment holding real residents.
+    DEVICE_CHECK_EXEMPT_EMAILS: str = (
+        "admin@panchayat.gov.in,officer@panchayat.gov.in,"
+        "officer.theur@panchayat.gov.in,savita@citizen.panchayat.gov.in"
+    )
+
+    @property
+    def device_check_exempt(self) -> set[str]:
+        return {e.strip().lower() for e in self.DEVICE_CHECK_EXEMPT_EMAILS.split(",") if e.strip()}
 
     # CORS — comma separated in the environment
     CORS_ORIGINS: str = "http://localhost:5173"
