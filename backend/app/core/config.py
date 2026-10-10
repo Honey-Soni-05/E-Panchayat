@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     # A sign-in from a device the account has not used before waits this long
     # for the owner to approve it from the SMS/email alert.
     LOGIN_APPROVAL_TTL_MINUTES: int = 10
+    # Off for now: sign-in is email (or Aadhaar) and password only. Set true to
+    # hold sign-ins from unrecognised devices for the owner's approval.
+    NEW_DEVICE_APPROVAL: bool = False
     # Shared demo accounts are used from many laptops at once during a
     # presentation, so they skip the new-device approval. Comma separated.
     # Empty this in any deployment holding real residents.
@@ -93,15 +96,6 @@ class Settings(BaseSettings):
         "admin@panchayat.gov.in,officer@panchayat.gov.in,"
         "officer.theur@panchayat.gov.in,savita@citizen.panchayat.gov.in"
     )
-
-    # Demo accounts allowed to approve a resident application that matches
-    # nobody on the village register — a new resident record is created from
-    # the application instead. Real officers must match against the register.
-    DEMO_UNMATCHED_APPROVERS: str = "officer@panchayat.gov.in,admin@panchayat.gov.in"
-
-    @property
-    def demo_unmatched_approvers(self) -> set[str]:
-        return {e.strip().lower() for e in self.DEMO_UNMATCHED_APPROVERS.split(",") if e.strip()}
 
     @property
     def device_check_exempt(self) -> set[str]:

@@ -36,12 +36,6 @@ import type { LoginChallenge, OtpSent, PublicVillage } from '../lib/api';
  * by an administrator or it is not created.
  */
 
-const DEMO_ACCOUNTS = {
-  officer: { email: 'officer@panchayat.gov.in', label: 'Panchayat Officer' },
-  citizen: { email: 'savita@citizen.panchayat.gov.in', label: 'Village Citizen' },
-} as const;
-
-type DemoRole = keyof typeof DEMO_ACCOUNTS;
 /**
  * 'recover' is reached by a link under the sign-in form rather than a third
  * tab. A resident needs it perhaps once, and only after a trip to the Panchayat
@@ -59,8 +53,7 @@ export const Login: React.FC = () => {
   const { signIn, completeSignIn, loading, error, clearError } = useAuth();
 
   const [mode, setMode] = useState<Mode>('signin');
-  const [tab, setTab] = useState<DemoRole>('officer');
-  const [email, setEmail] = useState<string>(DEMO_ACCOUNTS.officer.email);
+  const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState('');
 
   // Registration form
@@ -133,12 +126,6 @@ export const Login: React.FC = () => {
       .then(setVillages)
       .catch(() => setVillages([]));
   }, [mode, villages.length]);
-
-  const selectTab = (next: DemoRole) => {
-    setTab(next);
-    setEmail(DEMO_ACCOUNTS[next].email);
-    clearError();
-  };
 
   const switchMode = (next: Mode) => {
     setMode(next);
@@ -373,24 +360,6 @@ export const Login: React.FC = () => {
             </div>
           ) : mode === 'signin' ? (
             <>
-              {/* Prefills a demo account. The account decides the role, not this tab. */}
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                {(Object.keys(DEMO_ACCOUNTS) as DemoRole[]).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => selectTab(key)}
-                    className={`py-1.5 rounded border font-bold transition-all ${
-                      tab === key
-                        ? 'border-govnavy/40 bg-govnavy/5 text-govnavy'
-                        : 'border-slate-200 text-slate-500 hover:text-slate-900'
-                    }`}
-                  >
-                    {t(`auth.demo_${key}`)}
-                  </button>
-                ))}
-              </div>
-
               {error && (
                 <div
                   role="alert"
@@ -422,7 +391,7 @@ export const Login: React.FC = () => {
                       autoComplete="username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="officer@panchayat.gov.in"
+                      placeholder="name@example.com or 1234 5678 9012"
                       className={field}
                     />
                   </div>
@@ -478,25 +447,6 @@ export const Login: React.FC = () => {
                   >
                     {isEnglish ? 'Forgot password?' : 'संकेतशब्द विसरलात?'}
                   </button>
-                </p>
-                <p className="text-[10px] text-slate-400 text-center leading-relaxed">
-                  {t('auth.demo_password')}{' '}
-                  <span className="font-mono text-slate-500">Panchayat@2026</span>
-                  <br />
-                  {t('auth.demo_citizen_hint')}{' '}
-                  <span className="font-mono text-slate-500">
-                    firstname@citizen.panchayat.gov.in
-                  </span>
-                  <br />
-                  {isEnglish ? 'Or sign in with demo Aadhaar ' : 'किंवा डेमो आधार '}
-                  <button
-                    type="button"
-                    onClick={() => setEmail('9999 0000 0102')}
-                    className="font-mono text-govnavy hover:underline"
-                  >
-                    9999 0000 0102
-                  </button>{' '}
-                  {isEnglish ? '(Savita Patil)' : '(सविता पाटील)'}
                 </p>
               </div>
             </>

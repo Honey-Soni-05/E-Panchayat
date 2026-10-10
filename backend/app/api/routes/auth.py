@@ -121,7 +121,7 @@ def _new_device_challenge(
     password from an unknown device is not enough on its own: an alert goes to
     the phone and email on record, and the owner approves or denies it.
     """
-    if _is_demo_account(user.email):
+    if not settings.NEW_DEVICE_APPROVAL or _is_demo_account(user.email):
         return None  # shared demo account: let every device in
     device_hash = _sha(f"{user.id}:{body.device_id or 'no-device-id'}")
     known = list(db.scalars(select(KnownDevice).where(KnownDevice.user_id == user.id)))
@@ -916,11 +916,8 @@ def decide_registration(
         )
 
     if not body.citizen_id:
-        if user.email.lower() not in settings.demo_unmatched_approvers:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Approving an application requires choosing the resident record it belongs to.",
-            )
+        # No register match chosen: the officer has decided to accept the
+        # applicant as a new resident, so a record is created from the form.
         body.citizen_id = _citizen_from_application(db, req, scope)
     citizen = db.get(Citizen, body.citizen_id)
     if citizen is None:
@@ -969,9 +966,9 @@ def decide_registration(
 
 
 def _citizen_from_application(db: Session, req: RegistrationRequest, scope: str | None) -> str:
-    """Demo accounts only: register an applicant who is not on the village
-    register by creating a resident record from what they applied with. The
-    unknown attributes are left at neutral defaults for an officer to complete."""
+    """Register an applicant who is not on the village register by creating a
+    resident record from what they applied with. Attributes the form does not
+    collect are left at neutral defaults for an officer to complete."""
     village_id = req.village_id or scope
     if village_id is None:
         raise HTTPException(

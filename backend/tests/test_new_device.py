@@ -13,6 +13,13 @@ EMAIL = "sanjay@example.com"  # a non-demo address, so the check applies
 
 
 @pytest.fixture(autouse=True)
+def device_approval_on(monkeypatch):
+    # The feature is switched off by default; these tests exercise it.
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "NEW_DEVICE_APPROVAL", True)
+
+
+@pytest.fixture(autouse=True)
 def fresh_devices():
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.email == "sanjay@citizen.panchayat.gov.in"))
