@@ -898,11 +898,19 @@ def decide_registration(
         db.refresh(req)
         return _registration_out(db, req)
 
-    if not body.citizen_id:
+    if db.scalar(select(User).where(User.email == req.email)):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Approving an application requires choosing the resident record it belongs to.",
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with that email already exists.",
         )
+
+    if not body.citizen_id:
+        if user.email.lower() not in settings.demo_unmatched_approvers:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Approving an application requires choosing the resident record it belongs to.",
+            )
+        body.citizen_id = _citizen_from_application(db, req, scope)
     citizen = db.get(Citizen, body.citizen_id)
     if citizen is None:
         raise HTTPException(
@@ -947,6 +955,35 @@ def decide_registration(
     db.commit()
     db.refresh(req)
     return _registration_out(db, req)
+
+
+def _citizen_from_application(db: Session, req: RegistrationRequest, scope: str | None) -> str:
+    """Demo accounts only: register an applicant who is not on the village
+    register by creating a resident record from what they applied with. The
+    unknown attributes are left at neutral defaults for an officer to complete."""
+    village_id = req.village_id or scope
+    if village_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The application names no village. Ask the applicant which Gram Panchayat they belong to.",
+        )
+    citizen = Citizen(
+        id=f"cit_{uuid4().hex[:8]}",
+        name=req.full_name,
+        name_mr=req.full_name,
+        age=18,
+        gender="Other",
+        gender_mr="इतर",
+        occupation="Not recorded",
+        occupation_mr="नोंद नाही",
+        income=0,
+        ward=req.claimed_ward or 1,
+        village_id=village_id,
+        phone=req.phone,
+    )
+    db.add(citizen)
+    db.flush()
+    return citizen.id
 
 
 @router.get("/users", response_model=list[UserOut])

@@ -239,7 +239,11 @@ def test_a_rejected_applicant_is_told_why_rather_than_left_guessing(client, offi
     assert "ration card" in resp.json()["detail"]
 
 
-def test_approving_requires_naming_the_resident_record(client, officer):
+def test_approving_requires_naming_the_resident_record(client, officer, monkeypatch):
+    # The demo officer may approve applicants not on the register; a real
+    # officer may not. Test the real rule.
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "DEMO_UNMATCHED_APPROVERS", "")
     email = "reg.no.citizen.id@example.com"
     _apply(client, email)
     req = _find(client, officer, email)

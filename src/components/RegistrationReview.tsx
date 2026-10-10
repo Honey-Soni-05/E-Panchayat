@@ -123,6 +123,7 @@ const ApplicationCard: React.FC<{
   );
 
   const settled = request.status !== 'pending';
+  const en = i18n.language === 'en';
 
   return (
     <article className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -226,7 +227,7 @@ const ApplicationCard: React.FC<{
           <div className="flex gap-2 pt-1">
             <button
               type="button"
-              disabled={!chosen || decide.saving}
+              disabled={decide.saving}
               onClick={() => decide.run(true)}
               className="flex-1 py-2.5 bg-govgreen hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
             >
@@ -235,7 +236,11 @@ const ApplicationCard: React.FC<{
               ) : (
                 <CheckCircle2 size={14} />
               )}
-              <span>{t('registrations.approve')}</span>
+              <span>
+                {chosen
+                    ? t('registrations.approve')
+                    : en ? 'Approve as new resident' : 'नवीन रहिवासी म्हणून मंजूर करा'}
+              </span>
             </button>
             <button
               type="button"

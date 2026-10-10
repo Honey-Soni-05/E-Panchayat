@@ -94,6 +94,15 @@ class Settings(BaseSettings):
         "officer.theur@panchayat.gov.in,savita@citizen.panchayat.gov.in"
     )
 
+    # Demo accounts allowed to approve a resident application that matches
+    # nobody on the village register — a new resident record is created from
+    # the application instead. Real officers must match against the register.
+    DEMO_UNMATCHED_APPROVERS: str = "officer@panchayat.gov.in,admin@panchayat.gov.in"
+
+    @property
+    def demo_unmatched_approvers(self) -> set[str]:
+        return {e.strip().lower() for e in self.DEMO_UNMATCHED_APPROVERS.split(",") if e.strip()}
+
     @property
     def device_check_exempt(self) -> set[str]:
         return {e.strip().lower() for e in self.DEVICE_CHECK_EXEMPT_EMAILS.split(",") if e.strip()}
