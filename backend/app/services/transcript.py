@@ -77,6 +77,14 @@ def extract_text(filename: str, payload: bytes) -> str:
             raise UnsupportedTranscript("DOCX support needs python-docx installed.") from exc
         document = docx.Document(io.BytesIO(payload))
         text = "\n".join(p.text for p in document.paragraphs)
+        # Minutes often list action items in a table; read those rows too.
+        rows = [
+            " | ".join(cell.text.strip() for cell in row.cells)
+            for table in document.tables
+            for row in table.rows
+        ]
+        if rows:
+            text += "\n" + "\n".join(rows)
 
     elif lower.endswith((".txt", ".md")):
         text = payload.decode("utf-8", errors="replace")
