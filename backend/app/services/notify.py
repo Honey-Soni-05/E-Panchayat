@@ -19,3 +19,16 @@ def send_otp(otp: str, *, phone: str | None, email: str | None) -> bool:
     channels = [c for c in (phone and "sms", email and "email") if c]
     log.info("OTP issued; would deliver via %s (no gateway configured)", ", ".join(channels) or "nothing")
     return bool(channels)
+
+
+def send_new_device_alert(
+    *, phone: str | None, email: str | None, device: str, decision_url: str
+) -> bool:
+    """'New sign-in to your E-Panchayat account from <device>. Was this you?
+    Approve or deny: <link>' — by SMS and email."""
+    channels = [c for c in (phone and "sms", email and "email") if c]
+    log.info(
+        "New-device sign-in alert for %s; would deliver via %s (no gateway configured)",
+        device, ", ".join(channels) or "nothing",
+    )
+    return bool(channels)

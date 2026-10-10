@@ -22,9 +22,12 @@ import {
   api,
   clearTokens,
   hasSession,
+  isChallenge,
   setSessionExpiredHandler,
   setTokens,
+  type LoginChallenge,
   type Role,
+  type TokenPair,
   type User,
 } from './api';
 
@@ -34,7 +37,10 @@ interface AuthState {
   /** True while restoring a session on first paint, so we don't flash the login screen. */
   initialising: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  /** Resolves to a challenge when the device needs the owner's approval. */
+  signIn: (email: string, password: string) => Promise<LoginChallenge | null>;
+  /** Finish signing in with tokens released by an approved challenge. */
+  completeSignIn: (tokens: TokenPair) => Promise<void>;
   signOut: () => void;
   clearError: () => void;
   isOfficer: boolean;
@@ -94,9 +100,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     try {
-      const tokens = await api.auth.login(email.trim(), password);
-      setTokens(tokens.accessToken, tokens.refreshToken);
+      const result = await api.auth.login(email.trim(), password);
+      if (isChallenge(result)) return result;
+      setTokens(result.accessToken, result.refreshToken);
       setUser(await api.auth.me());
+      return null;
     } catch (err) {
       clearTokens();
       const message =
@@ -112,6 +120,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const completeSignIn = useCallback(async (tokens: TokenPair) => {
+    setTokens(tokens.accessToken, tokens.refreshToken);
+    setUser(await api.auth.me());
+  }, []);
+
   const value = useMemo<AuthState>(
     () => ({
       user,
@@ -119,13 +132,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       initialising,
       error,
       signIn,
+      completeSignIn,
       signOut,
       clearError: () => setError(null),
       isOfficer: user?.role === 'officer' || user?.role === 'admin',
       isCitizen: user?.role === 'citizen',
       role: user?.role ?? null,
     }),
-    [user, loading, initialising, error, signIn, signOut],
+    [user, loading, initialising, error, signIn, completeSignIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

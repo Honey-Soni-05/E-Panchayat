@@ -14,11 +14,13 @@ import {
   Info,
   KeyRound,
   Fingerprint,
+  ShieldAlert,
+  Smartphone,
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth';
 import { api, ApiError, isAadhaar } from '../lib/api';
-import type { OtpSent, PublicVillage } from '../lib/api';
+import type { LoginChallenge, OtpSent, PublicVillage } from '../lib/api';
 
 /**
  * Sign-in and sign-up.
@@ -55,7 +57,7 @@ const field =
 
 export const Login: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { signIn, loading, error, clearError } = useAuth();
+  const { signIn, completeSignIn, loading, error, clearError } = useAuth();
 
   const [mode, setMode] = useState<Mode>('signin');
   const [tab, setTab] = useState<DemoRole>('officer');
@@ -93,6 +95,30 @@ export const Login: React.FC = () => {
   // from the Panchayat office will do — the 'office' path.
   const [recoverBy, setRecoverBy] = useState<'otp' | 'office'>('otp');
   const [otpInfo, setOtpInfo] = useState<OtpSent | null>(null);
+
+  // A sign-in from a device this account has not used before waits here
+  // until the owner approves or denies it from the SMS / email alert.
+  const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
+  const [challengeState, setChallengeState] = useState<'pending' | 'denied' | 'expired'>('pending');
+
+  useEffect(() => {
+    if (!challenge || challengeState !== 'pending') return;
+    const timer = window.setInterval(async () => {
+      try {
+        const res = await api.auth.pollChallenge(challenge.challengeId, challenge.pollToken);
+        if (res.status === 'approved' && res.tokens) {
+          window.clearInterval(timer);
+          await completeSignIn(res.tokens);
+        } else if (res.status !== 'pending') {
+          window.clearInterval(timer);
+          setChallengeState(res.status === 'expired' ? 'expired' : 'denied');
+        }
+      } catch {
+        /* transient; try again on the next tick */
+      }
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [challenge, challengeState, completeSignIn]);
 
   const isEnglish = i18n.language === 'en';
   const toggleLanguage = () => i18n.changeLanguage(isEnglish ? 'mr' : 'en');
@@ -171,7 +197,11 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signIn(email, password);
+      const pending = await signIn(email, password);
+      if (pending) {
+        setChallengeState('pending');
+        setChallenge(pending);
+      }
     } catch {
       // The message is already in `error` and rendered below.
     }
@@ -280,7 +310,69 @@ export const Login: React.FC = () => {
             ))}
           </div>
 
-          {mode === 'signin' ? (
+          {mode === 'signin' && challenge ? (
+            <div className="space-y-4 text-center">
+              {challengeState === 'pending' ? (
+                <>
+                  <div className="mx-auto w-14 h-14 rounded-full bg-govsaffron/10 flex items-center justify-center">
+                    <Smartphone size={26} className="text-govsaffron animate-pulse" />
+                  </div>
+                  <p className="text-sm font-bold text-govblue-900 m-0">
+                    {isEnglish ? 'New device detected' : 'नवीन उपकरण आढळले'}
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed m-0">
+                    {isEnglish
+                      ? 'This account is usually used from another device. We sent an "Is this you?" alert to the registered mobile and email. Approve it there to continue.'
+                      : 'हे खाते सहसा दुसऱ्या उपकरणावरून वापरले जाते. नोंदणीकृत मोबाइल व ईमेलवर "हे तुम्हीच आहात का?" सूचना पाठवली आहे. पुढे जाण्यासाठी तेथे मंजुरी द्या.'}
+                  </p>
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-600 text-left">
+                    <p className="m-0 font-bold">{challenge.sentTo.join(' · ')}</p>
+                    <p className="m-0 flex items-center gap-1.5 mt-1">
+                      <Loader2 size={12} className="animate-spin" />
+                      {isEnglish
+                        ? `Waiting for approval · expires in ${challenge.expiresInMinutes} minutes`
+                        : `मंजुरीची प्रतीक्षा · ${challenge.expiresInMinutes} मिनिटांत कालबाह्य`}
+                    </p>
+                  </div>
+                  {challenge.demoDecisionUrl && (
+                    <a
+                      href={challenge.demoDecisionUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 font-bold hover:bg-emerald-100"
+                    >
+                      {isEnglish
+                        ? 'Demo mode (no SMS gateway yet): open the link from the SMS / email →'
+                        : 'डेमो मोड: एसएमएस / ईमेलमधील लिंक उघडा →'}
+                    </a>
+                  )}
+                </>
+              ) : (
+                <>
+                  <ShieldAlert size={40} className="mx-auto text-rose-600" />
+                  <p className="text-sm font-bold text-rose-700 m-0">
+                    {challengeState === 'denied'
+                      ? isEnglish ? 'Sign-in was denied' : 'साइन इन नाकारले'
+                      : isEnglish ? 'Approval request expired' : 'मंजुरीची विनंती कालबाह्य'}
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed m-0">
+                    {challengeState === 'denied'
+                      ? isEnglish
+                        ? 'The account owner denied this device. If that was you by mistake, sign in again.'
+                        : 'खातेधारकाने हे उपकरण नाकारले.'
+                      : isEnglish ? 'Sign in again to send a new alert.' : 'नवीन सूचनेसाठी पुन्हा साइन इन करा.'}
+                  </p>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setChallenge(null)}
+                className="text-xs font-bold text-govnavy hover:underline"
+              >
+                {isEnglish ? '← Back to sign in' : '← साइन इनकडे परत'}
+              </button>
+            </div>
+          ) : mode === 'signin' ? (
             <>
               {/* Prefills a demo account. The account decides the role, not this tab. */}
               <div className="grid grid-cols-2 gap-2 text-[11px]">

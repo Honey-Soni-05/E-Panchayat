@@ -48,6 +48,32 @@ class _AccountIdentifier(ApiModel):
 
 class LoginRequest(_AccountIdentifier):
     password: str = Field(min_length=1)
+    # A random id the browser generates once and keeps; see KnownDevice.
+    device_id: str | None = Field(default=None, max_length=100)
+    device_label: str | None = Field(default=None, max_length=200)
+
+
+class TokenPair(ApiModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
+class LoginChallengeOut(ApiModel):
+    """Returned with 202 instead of tokens when the device is not recognised."""
+
+    challenge_id: str
+    poll_token: str
+    sent_to: list[str]
+    expires_in_minutes: int
+    # Demo mode only: the approve/deny link that the SMS and email would carry.
+    demo_decision_url: str | None = None
+
+
+class LoginChallengeStatus(ApiModel):
+    status: str  # pending | approved | denied | expired
+    tokens: TokenPair | None = None
 
 
 class OtpRequest(_AccountIdentifier):
@@ -66,13 +92,6 @@ class OtpSent(ApiModel):
 class OtpReset(_AccountIdentifier):
     otp: str = Field(min_length=4, max_length=10)
     new_password: str = Field(min_length=8, max_length=128)
-
-
-class TokenPair(ApiModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int
 
 
 class RefreshRequest(ApiModel):

@@ -6,7 +6,12 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import hashlib
+import html
+import secrets
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -33,9 +38,11 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
-from app.models import AuthAttempt, Citizen, PasswordReset, RegistrationRequest, User, Village
+from app.models import AuthAttempt, Citizen, KnownDevice, LoginChallenge, PasswordReset, RegistrationRequest, User, Village
 from app.services import notify, ratelimit
 from app.schemas import (
+    LoginChallengeOut,
+    LoginChallengeStatus,
     LoginRequest,
     OtpRequest,
     OtpReset,
@@ -89,7 +96,63 @@ def _account_key(db: Session, email: str | None, aadhaar: str | None) -> str:
     return f"aadhaar:{digest[:24]}"
 
 
-@router.post("/login", response_model=TokenPair)
+def _sha(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _new_device_challenge(
+    db: Session, user: User, body: LoginRequest, request: Request, ip: str | None
+) -> LoginChallengeOut | None:
+    """Hold a sign-in from a device this account has never used.
+
+    The first device an account signs in from is trusted as its home device,
+    so nobody is challenged on their very first sign-in. After that, a correct
+    password from an unknown device is not enough on its own: an alert goes to
+    the phone and email on record, and the owner approves or denies it.
+    """
+    device_hash = _sha(f"{user.id}:{body.device_id or 'no-device-id'}")
+    known = list(db.scalars(select(KnownDevice).where(KnownDevice.user_id == user.id)))
+    if not known:
+        db.add(KnownDevice(id=f"dev_{uuid4().hex[:16]}", user_id=user.id,
+                           device_hash=device_hash, label=body.device_label))
+        db.commit()
+        return None
+    if any(d.device_hash == device_hash for d in known):
+        return None
+
+    poll, decision = secrets.token_urlsafe(24), secrets.token_urlsafe(24)
+    challenge = LoginChallenge(
+        id=f"lch_{uuid4().hex[:16]}", user_id=user.id, device_hash=device_hash,
+        label=(body.device_label or "Unknown browser")[:200], ip=ip,
+        poll_hash=_sha(poll), decision_hash=_sha(decision),
+        expires_at=datetime.now(timezone.utc)
+        + timedelta(minutes=settings.LOGIN_APPROVAL_TTL_MINUTES),
+    )
+    db.add(challenge)
+    db.commit()
+
+    url = (
+        f"{str(request.base_url).rstrip('/')}{settings.API_V1_PREFIX}"
+        f"/auth/login-challenges/{challenge.id}/decide?token={decision}"
+    )
+    phone = user.citizen.phone if user.citizen else None
+    notify.send_new_device_alert(phone=phone, email=user.email,
+                                 device=challenge.label, decision_url=url)
+    ratelimit.record(db, email=user.email, ip=ip, outcome="device_challenged", user_id=user.id)
+    return LoginChallengeOut(
+        challenge_id=challenge.id,
+        poll_token=poll,
+        sent_to=[*([_mask_phone(phone)] if phone else []), _mask_email(user.email)],
+        expires_in_minutes=settings.LOGIN_APPROVAL_TTL_MINUTES,
+        demo_decision_url=url if settings.OTP_DEMO_MODE else None,
+    )
+
+
+@router.post(
+    "/login",
+    response_model=TokenPair,
+    responses={202: {"model": LoginChallengeOut, "description": "New device: approval pending"}},
+)
 def login(
     body: LoginRequest, request: Request, db: Session = Depends(get_db)
 ) -> TokenPair:
@@ -167,12 +230,111 @@ def login(
             detail="This account has been deactivated. Contact the Panchayat office.",
         )
 
+    challenge = _new_device_challenge(db, user, body, request, ip)
+    if challenge is not None:
+        return JSONResponse(status_code=202, content=challenge.model_dump(by_alias=True))
+
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
     ratelimit.record(
         db, email=email, ip=ip, outcome="ok", successful=True, user_id=user.id
     )
     return _issue(user)
+
+
+def _load_challenge(db: Session, challenge_id: str) -> LoginChallenge:
+    challenge = db.get(LoginChallenge, challenge_id)
+    if challenge is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown sign-in request.")
+    if challenge.status == "pending" and as_utc(challenge.expires_at) <= datetime.now(timezone.utc):
+        challenge.status = "expired"
+        db.commit()
+    return challenge
+
+
+@router.get("/login-challenges/{challenge_id}", response_model=LoginChallengeStatus)
+def poll_login_challenge(
+    challenge_id: str, poll: str, request: Request, db: Session = Depends(get_db)
+) -> LoginChallengeStatus:
+    """The waiting device asks whether the owner has answered yet."""
+    challenge = _load_challenge(db, challenge_id)
+    if not secrets.compare_digest(challenge.poll_hash, _sha(poll)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown sign-in request.")
+    if challenge.status != "approved":
+        return LoginChallengeStatus(status="denied" if challenge.status == "used" else challenge.status)
+
+    user = db.get(User, challenge.user_id)
+    if user is None or not user.is_active:
+        return LoginChallengeStatus(status="denied")
+    # Tokens are handed over exactly once, and the device becomes trusted.
+    challenge.status = "used"
+    db.add(KnownDevice(id=f"dev_{uuid4().hex[:16]}", user_id=user.id,
+                       device_hash=challenge.device_hash, label=challenge.label))
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+    ratelimit.record(db, email=user.email, ip=ratelimit.client_ip(request),
+                     outcome="ok", successful=True, user_id=user.id)
+    return LoginChallengeStatus(status="approved", tokens=_issue(user))
+
+
+def _decision_page(title: str, body_html: str) -> HTMLResponse:
+    return HTMLResponse(f"""<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title>
+<style>body{{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;
+background:linear-gradient(135deg,#0c1838,#142a63);color:#1e293b}}.c{{background:#fff;border-radius:16px;
+padding:28px;max-width:380px;width:calc(100% - 32px);box-shadow:0 20px 40px -12px #0008;border-top:4px solid #ff8a1f}}
+h1{{font-size:20px;margin:0 0 8px;color:#0f1f4b}}p{{font-size:14px;line-height:1.5;color:#475569}}
+.r{{display:flex;gap:10px;margin-top:18px}}button{{flex:1;padding:12px;border:0;border-radius:10px;font-weight:700;
+font-size:14px;cursor:pointer}}.a{{background:#13a05a;color:#fff}}.d{{background:#e11d48;color:#fff}}
+dl{{font-size:13px;background:#f1f5f9;border-radius:10px;padding:10px 14px}}dt{{font-weight:700}}dd{{margin:0 0 6px}}</style>
+</head><body><div class="c">{body_html}</div></body></html>""")
+
+
+@router.get("/login-challenges/{challenge_id}/decide", response_class=HTMLResponse)
+def decision_form(challenge_id: str, token: str, db: Session = Depends(get_db)) -> HTMLResponse:
+    """The page the SMS/email link opens. A GET only shows the question; the
+    answer is a POST, so a link preview in a messaging app cannot approve it."""
+    challenge = _load_challenge(db, challenge_id)
+    if not secrets.compare_digest(challenge.decision_hash, _sha(token)):
+        return _decision_page("Invalid link", "<h1>Invalid link</h1><p>This link is not valid.</p>")
+    if challenge.status != "pending":
+        return _decision_page("Already answered",
+                              f"<h1>Already answered</h1><p>This sign-in request is {challenge.status}.</p>")
+    when = as_utc(challenge.created_at).strftime("%d %b %Y, %H:%M UTC")
+    return _decision_page("Is this you?", f"""
+<h1>New sign-in detected</h1>
+<p>Someone entered the correct password for your E-Panchayat account from a device we do not recognise. <b>Is this you?</b></p>
+<dl><dt>Device</dt><dd>{html.escape(challenge.label or "Unknown")}</dd>
+<dt>IP address</dt><dd>{html.escape(challenge.ip or "Unknown")}</dd><dt>Time</dt><dd>{when}</dd></dl>
+<form method="post" class="r"><input type="hidden" name="token" value="{html.escape(token)}">
+<button class="a" name="action" value="approve">Yes, approve</button>
+<button class="d" name="action" value="deny">No, deny entry</button></form>""")
+
+
+@router.post("/login-challenges/{challenge_id}/decide", response_class=HTMLResponse)
+def decide(
+    challenge_id: str,
+    request: Request,
+    token: str = Form(...),
+    action: str = Form(...),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    challenge = _load_challenge(db, challenge_id)
+    if not secrets.compare_digest(challenge.decision_hash, _sha(token)) or action not in ("approve", "deny"):
+        return _decision_page("Invalid link", "<h1>Invalid link</h1><p>This link is not valid.</p>")
+    if challenge.status != "pending":
+        return _decision_page("Already answered",
+                              f"<h1>Already answered</h1><p>This sign-in request is {challenge.status}.</p>")
+    challenge.status = "approved" if action == "approve" else "denied"
+    db.commit()
+    user = db.get(User, challenge.user_id)
+    ratelimit.record(db, email=user.email if user else "", ip=ratelimit.client_ip(request),
+                     outcome=f"device_{challenge.status}", user_id=challenge.user_id)
+    if action == "approve":
+        return _decision_page("Approved", "<h1>&#10003; Sign-in approved</h1>"
+                              "<p>The device will be signed in and remembered. You can close this page.</p>")
+    return _decision_page("Denied", "<h1>&#10007; Entry denied</h1><p>The device was blocked. Someone knows "
+                          "your password: change it now, or use <b>Forgot password</b> to reset it.</p>")
 
 
 @router.post("/refresh", response_model=TokenPair)

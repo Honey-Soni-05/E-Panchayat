@@ -71,6 +71,43 @@ const accountIdentifier = (value: string) =>
     ? { aadhaar: value.replace(/[\s-]/g, '') }
     : { email: value.trim() };
 
+// ─── Device identity ────────────────────────────────────────────────────────
+
+const DEVICE_KEY = 'epanchayat_device_id';
+
+/** A random id this browser keeps, so the server can tell a home device from a
+ *  new one. It identifies the browser, not the person, and carries no data. */
+const deviceInfo = () => {
+  let id = readStorage(DEVICE_KEY);
+  if (!id) {
+    id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    writeStorage(DEVICE_KEY, id);
+  }
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'unknown OS';
+  return { deviceId: id, deviceLabel: `${browser} on ${os}` };
+};
+
+export interface LoginChallenge {
+  challengeId: string;
+  pollToken: string;
+  sentTo: string[];
+  expiresInMinutes: number;
+  /** Demo mode only: the approve/deny link the SMS and email would carry. */
+  demoDecisionUrl: string | null;
+}
+
+export interface LoginChallengeStatus {
+  status: 'pending' | 'approved' | 'denied' | 'expired';
+  tokens: TokenPair | null;
+}
+
+export const isChallenge = (r: TokenPair | LoginChallenge): r is LoginChallenge =>
+  'challengeId' in r;
+
 export interface OtpSent {
   sentTo: string[];
   expiresInMinutes: number;
@@ -734,10 +771,17 @@ export const api = {
 
   auth: {
     /** `identifier` is an email address or a 12-digit Aadhaar number. */
-    login: (identifier: string, password: string): Promise<TokenPair> =>
+    /** Resolves to tokens, or — from a device this account has not used
+     *  before — to a challenge awaiting the owner's approval (HTTP 202). */
+    login: (identifier: string, password: string): Promise<TokenPair | LoginChallenge> =>
       request('/auth/login', {
         method: 'POST',
-        body: { ...accountIdentifier(identifier), password },
+        body: { ...accountIdentifier(identifier), password, ...deviceInfo() },
+        anonymous: true,
+      }),
+
+    pollChallenge: (challengeId: string, pollToken: string): Promise<LoginChallengeStatus> =>
+      request(`/auth/login-challenges/${challengeId}?poll=${encodeURIComponent(pollToken)}`, {
         anonymous: true,
       }),
 

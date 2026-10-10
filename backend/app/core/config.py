@@ -83,6 +83,10 @@ class Settings(BaseSettings):
     # Set to false once a real gateway is configured in services/notify.py.
     OTP_DEMO_MODE: bool = True
 
+    # A sign-in from a device the account has not used before waits this long
+    # for the owner to approve it from the SMS/email alert.
+    LOGIN_APPROVAL_TTL_MINUTES: int = 10
+
     # CORS — comma separated in the environment
     CORS_ORIGINS: str = "http://localhost:5173"
 

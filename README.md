@@ -204,7 +204,7 @@ so the sign-up and officer-approval flow can be demonstrated end to end.
 ### Tests
 
 ```bash
-cd backend && python -m pytest        # 291 tests
+cd backend && python -m pytest        # 295 tests
 npm run build                          # typecheck + production build
 ```
 
@@ -421,6 +421,30 @@ No SMS or email gateway is connected yet. `services/notify.py` is the one place
 to plug one in; until then `OTP_DEMO_MODE=true` (the default) returns the OTP in
 the API response and shows it on screen so the flow can be demonstrated. Turn it
 off in any deployment with real residents.
+
+### New-device sign-in approval
+
+Each browser keeps a random device id (`localStorage`, carries no personal
+data). The first device an account signs in from becomes its **home device**.
+A correct password from any *other* device does not sign in: the API answers
+`202` with a pending challenge and sends an **"Is this you?"** alert by SMS and
+email to the registered mobile and address, carrying a link with **Approve** and
+**Deny entry** buttons. The waiting browser polls; on approval it receives its
+tokens once and the device is remembered, and on denial it gets nothing and the
+owner is told to change their password.
+
+- Two separate secrets, both stored only as SHA-256: the *poll token* (held by
+  the waiting device) and the *decision token* (sent to the owner). Neither can
+  do the other's job.
+- The link's GET only shows the question; answering is a POST, so an SMS app's
+  link preview cannot approve a sign-in by fetching it.
+- Requests expire after `LOGIN_APPROVAL_TTL_MINUTES` (10). A wrong password
+  never triggers an alert.
+- In demo mode the link is shown on the waiting screen, since no SMS/email
+  gateway is connected (`services/notify.send_new_device_alert`).
+
+To demo it: sign in normally once, then sign in to the same account from an
+incognito window or a second browser.
 
 ### Password reset, over the counter
 
