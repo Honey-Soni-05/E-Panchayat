@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Lock,
   Mail,
-  ShieldCheck,
   Globe,
   ArrowRight,
   Loader2,
@@ -480,10 +479,6 @@ export const Login: React.FC = () => {
                     {isEnglish ? 'Forgot password?' : 'संकेतशब्द विसरलात?'}
                   </button>
                 </p>
-                <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-medium">
-                  <ShieldCheck size={14} className="text-govgreen" />
-                  <span>{t('auth.jwt_note')}</span>
-                </div>
                 <p className="text-[10px] text-slate-400 text-center leading-relaxed">
                   {t('auth.demo_password')}{' '}
                   <span className="font-mono text-slate-500">Panchayat@2026</span>

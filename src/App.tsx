@@ -1,19 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Bot,
-  Award,
-  Database,
-  ArrowRight,
-  Sparkles,
-  Layers,
-  Globe,
-  LayoutDashboard,
-  AlertTriangle,
-  LineChart,
-  FileText,
-  Loader2,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 // Import local components
 import { Sidebar } from './components/Sidebar';
@@ -34,6 +21,7 @@ import { RegistrationReview } from './components/RegistrationReview';
 import { AccountRecovery } from './components/AccountRecovery';
 import { AuditTrail } from './components/AuditTrail';
 import { Login } from './components/Login';
+import { Landing } from './components/Landing';
 
 // Import i18n initialization
 import './i18n/i18n';
@@ -43,7 +31,7 @@ import { api, type Village } from './lib/api';
 import { useQuery } from './lib/useApi';
 
 function App() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { user, initialising, signOut, isOfficer } = useAuth();
 
   const isAdmin = user?.role === 'admin';
@@ -60,10 +48,6 @@ function App() {
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const toggleLanguage = () => {
-    const nextLang = i18n.language === 'en' ? 'mr' : 'en';
-    i18n.changeLanguage(nextLang);
-  };
 
   const handleSignOut = () => {
     signOut();
@@ -144,262 +128,8 @@ function App() {
         </div>
       )}
 
-      {/* 1. LANDING PAGE VIEW */}
-      {view === 'landing' && (
-        <div className="relative overflow-hidden bg-slate-50 min-h-screen flex flex-col justify-between">
-          {/* Top National Tricolor Indicator Strip */}
-          <div className="w-full gov-tricolor-strip z-20" />
-
-          {/* Official Indian Gov Header Banner */}
-          <div className="bg-white border-b border-slate-200 py-3 shadow-sm z-20">
-            <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {/* Ashoka Emblem Vector representation */}
-                <div className="w-12 h-14 bg-slate-50 border border-slate-200 rounded flex items-center justify-center p-1.5 shadow-sm">
-                  <div className="flex flex-col items-center select-none text-[8px] font-bold text-amber-800">
-                    <span className="text-xs">🦁</span>
-                    <span className="tracking-tighter">सत्यमेव</span>
-                    <span className="tracking-tighter">जयते</span>
-                  </div>
-                </div>
-                <div className="flex flex-col select-none">
-                  <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-                    {t('landing.ministry')}
-                  </span>
-                  <span className="font-extrabold text-govnavy tracking-tight text-lg">
-                    {t('landing.portal_name')}
-                  </span>
-                  <span className="text-[10px] font-bold text-govsaffron uppercase tracking-widest mt-0.5">
-                    {t('landing.region')}
-                  </span>
-                </div>
-              </div>
-
-              {/* PM/CM & Flag Section */}
-              <div className="flex items-center gap-6 self-end md:self-center">
-                <div className="text-right hidden sm:block">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">
-                    {t('landing.governance')}
-                  </span>
-                  <span className="text-xs font-extrabold text-govgreen uppercase block">
-                    {t('landing.mission')}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50">
-                  <span className="text-sm">🇮🇳</span>
-                  <span className="text-xs font-bold text-slate-700">English | मराठी</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Custom Landing Page Navigation */}
-          <header className="max-w-7xl mx-auto w-full px-6 py-4 flex items-center justify-between border-b border-slate-100 z-20">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-govsaffron animate-pulse" />
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                {t('landing.status')}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Language Switch */}
-              <button
-                onClick={toggleLanguage}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors text-xs font-bold shadow-sm"
-              >
-                <Globe size={14} className="text-govnavy" />
-                <span>{i18n.language === 'en' ? 'मराठी' : 'English'}</span>
-              </button>
-
-              <button
-                onClick={() => setShowLogin(true)}
-                className="px-4 py-2 rounded-lg bg-govnavy hover:bg-govblue-700 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors shadow-md"
-              >
-                <span>{t('landing.sign_in')}</span>
-                <LayoutDashboard size={14} />
-              </button>
-            </div>
-          </header>
-
-          {/* Hero Section */}
-          <main className="max-w-7xl mx-auto w-full px-6 py-12 sm:py-16 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center z-10">
-            {/* Left Content */}
-            <div className="space-y-6 lg:col-span-6 text-left">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-govnavy/10 text-govnavy text-[11px] font-bold uppercase tracking-wider border border-govnavy/15 select-none">
-                <Sparkles size={12} className="text-govsaffron animate-pulse" />
-                <span>{t('landing.badge')}</span>
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-govnavy leading-tight tracking-tight m-0 font-sans">
-                {t('landing.headline_1')}<br />
-                <span className="text-govsaffron">{t('landing.headline_2')}</span>
-              </h1>
-
-              <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl">
-                {t('landing.intro')}
-              </p>
-
-              {/* CTAs */}
-              <div className="flex flex-wrap gap-4 pt-2">
-                <button
-                  onClick={() => setShowLogin(true)}
-                  className="px-6 py-3 rounded-lg bg-govnavy hover:bg-govblue-700 text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:translate-y-[-1px]"
-                >
-                  <span>{t('landing.cta_dashboard')}</span>
-                  <ArrowRight size={16} />
-                </button>
-                <button
-                  onClick={() => setShowLogin(true)}
-                  className="px-6 py-3 rounded-lg bg-white border border-govsaffron text-govsaffron hover:bg-orange-50/50 font-bold text-sm flex items-center gap-2 transition-all"
-                >
-                  <Bot size={16} />
-                  <span>{t('landing.cta_assistant')}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Right Flow Diagram Card */}
-            <div className="lg:col-span-6 flex items-center justify-center">
-              <div className="w-full max-w-md bg-white rounded-xl border border-slate-200 p-6 space-y-5 shadow-sm border-t-4 border-govsaffron relative overflow-hidden">
-                <h3 className="text-xs text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
-                  <Database size={14} className="text-govnavy" />
-                  <span>{t('landing.architecture')}</span>
-                </h3>
-
-                {/* Vertical Step Flow */}
-                <div className="space-y-3.5 text-xs font-semibold font-sans">
-                  <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-slate-500 font-bold border border-slate-200">
-                      1
-                    </span>
-                    <span className="text-slate-700">
-                      {t('landing.arch_1')}
-                    </span>
-                  </div>
-                  <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
-                  <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-slate-500 font-bold border border-slate-200">
-                      2
-                    </span>
-                    <span className="text-slate-700">{t('landing.arch_2')}</span>
-                  </div>
-                  <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
-                  <div className="flex items-center gap-3 bg-govblue-50 p-2.5 rounded border border-govblue-200">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-govnavy font-bold border border-govblue-200">
-                      3
-                    </span>
-                    <span className="text-govnavy font-bold flex items-center gap-1">
-                      <Sparkles size={12} className="text-govsaffron animate-pulse" />
-                      <span>{t('landing.arch_3')}</span>
-                    </span>
-                  </div>
-                  <div className="h-3 border-l-2 border-dashed border-govsaffron/40 ml-5"></div>
-                  <div className="flex items-center gap-3 bg-emerald-50 p-2.5 rounded border border-emerald-200">
-                    <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] text-govgreen font-bold border border-emerald-200">
-                      4
-                    </span>
-                    <span className="text-govgreen font-extrabold">
-                      {t('landing.arch_4')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </main>
-
-          {/* Features Grid Showcase */}
-          <section className="bg-slate-100/80 border-t border-slate-200 py-12">
-            <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govsaffron">
-                <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center text-govsaffron border border-orange-100">
-                  <Award size={18} />
-                </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
-                  {t('landing.f1_title')}
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {t('landing.f1_body')}
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govnavy">
-                <div className="w-9 h-9 rounded-lg bg-govblue-50 flex items-center justify-center text-govnavy border border-govblue-100">
-                  <Layers size={18} />
-                </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
-                  {t('landing.f2_title')}
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {t('landing.f2_body')}
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govgreen">
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-govgreen border border-emerald-100">
-                  <AlertTriangle size={18} />
-                </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
-                  {t('landing.f3_title')}
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {t('landing.f3_body')}
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govnavy">
-                <div className="w-9 h-9 rounded-lg bg-govblue-50 flex items-center justify-center text-govnavy border border-govblue-100">
-                  <LineChart size={18} />
-                </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
-                  {t('landing.f4_title')}
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {t('landing.f4_body')}
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govsaffron">
-                <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center text-govsaffron border border-orange-100">
-                  <FileText size={18} />
-                </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
-                  {t('landing.f5_title')}
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {t('landing.f5_body')}
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-5 border border-slate-200 text-left space-y-2.5 border-t-3 border-govgreen">
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-govgreen border border-emerald-100">
-                  <Bot size={18} />
-                </div>
-                <h4 className="text-sm font-bold text-govblue-900 tracking-wide uppercase">
-                  {t('landing.f6_title')}
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {t('landing.f6_body')}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* National Informatics Centre (NIC) stamp footer */}
-          <footer className="bg-white border-t border-slate-200 z-20 text-[11px] text-slate-500">
-            <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <span>{t('landing.copyright')}</span>
-              <div className="flex gap-4 font-bold text-slate-600">
-                <span className="select-none">{t('landing.designed_by')}</span>
-                <span>•</span>
-                <a href="#" className="hover:underline">
-                  {t('landing.terms')}
-                </a>
-              </div>
-            </div>
-          </footer>
-        </div>
-      )}
+      {/* 1. PUBLIC HOME PAGE */}
+      {view === 'landing' && <Landing onSignIn={() => setShowLogin(true)} />}
 
       {/* 2. SECURE LOGIN VIEW */}
       {view === 'login' && <Login />}
