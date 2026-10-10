@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -23,16 +23,23 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    aadhaar_digest,
+    generate_otp,
     generate_reset_code,
     hash_password,
+    is_valid_aadhaar,
+    normalise_aadhaar,
     normalise_reset_code,
     verify_password,
 )
 from app.db.session import get_db
-from app.models import Citizen, PasswordReset, RegistrationRequest, User, Village
-from app.services import ratelimit
+from app.models import AuthAttempt, Citizen, PasswordReset, RegistrationRequest, User, Village
+from app.services import notify, ratelimit
 from app.schemas import (
     LoginRequest,
+    OtpRequest,
+    OtpReset,
+    OtpSent,
     PasswordChange,
     PasswordResetIssued,
     PasswordResetRedeem,
@@ -56,11 +63,37 @@ def _issue(user: User) -> TokenPair:
     )
 
 
+def _account_key(db: Session, email: str | None, aadhaar: str | None) -> str:
+    """The email an identifier resolves to, or a stable stand-in if none does.
+
+    Aadhaar sign-in resolves the number to the resident, then to their account,
+    and from there behaves exactly like email sign-in — same throttle, same
+    audit row, same refusal. An Aadhaar that matches nobody gets a pseudonymous
+    key derived from its digest, so it is throttled identically to a real one
+    and the response cannot reveal whether the number is registered.
+    """
+    if email:
+        return email.lower().strip()
+    digits = normalise_aadhaar(aadhaar)
+    if not is_valid_aadhaar(digits):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="An Aadhaar number has 12 digits and does not start with 0 or 1.",
+        )
+    digest = aadhaar_digest(digits)
+    citizen = db.scalar(select(Citizen).where(Citizen.aadhaar_hash == digest))
+    if citizen is not None:
+        user = db.scalar(select(User).where(User.citizen_id == citizen.id))
+        if user is not None:
+            return user.email
+    return f"aadhaar:{digest[:24]}"
+
+
 @router.post("/login", response_model=TokenPair)
 def login(
     body: LoginRequest, request: Request, db: Session = Depends(get_db)
 ) -> TokenPair:
-    email = body.email.lower()
+    email = _account_key(db, body.email, body.aadhaar)
     ip = ratelimit.client_ip(request)
 
     # Before the password is checked, not after: a throttled attempt should not
@@ -118,7 +151,11 @@ def login(
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password.",
+            detail=(
+                "Incorrect Aadhaar number or password."
+                if body.aadhaar and not body.email
+                else "Incorrect email or password."
+            ),
         )
     if not user.is_active:
         # Correct password, disabled account. Recorded, but not a guess.
@@ -346,6 +383,159 @@ def redeem_password_reset(
     ratelimit.record(
         db, email=email, ip=ip, outcome="reset_redeemed", user_id=user.id
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Self-service recovery by OTP
+#
+# A resident who has forgotten their password asks for a six-digit OTP, sent to
+# the phone and email on record. Two conditions send them to the office instead:
+#
+#   * the account is locked — five wrong passwords inside the sign-in window.
+#     Someone who is guessing may also be holding the resident's phone, so an
+#     OTP is no longer enough; an officer verifies them in person and issues the
+#     office reset code (POST /auth/users/{id}/password-reset).
+#   * the account is staff. Officer and admin passwords are reset by an admin.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_OTP_LOCKED = HTTPException(
+    status_code=status.HTTP_423_LOCKED,
+    detail=(
+        "This account is locked after repeated failed sign-in attempts. For your "
+        "security, visit the Gram Panchayat office: an officer will verify you and "
+        "give you a reset code."
+    ),
+)
+
+
+def _is_locked(db: Session, email: str) -> bool:
+    since = datetime.now(timezone.utc) - timedelta(minutes=settings.LOGIN_WINDOW_MINUTES)
+    return (
+        ratelimit._count_failures(db, since=since, email=email)
+        >= settings.LOGIN_MAX_FAILURES_PER_EMAIL
+    )
+
+
+def _mask_phone(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone)
+    return f"SMS to ******{digits[-4:]}" if len(digits) >= 4 else "SMS"
+
+
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    return f"Email to {local[:1]}{'*' * max(len(local) - 1, 2)}@{domain}"
+
+
+@router.post("/forgot-password", response_model=OtpSent)
+def request_otp(
+    body: OtpRequest, request: Request, db: Session = Depends(get_db)
+) -> OtpSent:
+    email = _account_key(db, body.email, body.aadhaar)
+    ip = ratelimit.client_ip(request)
+
+    if _is_locked(db, email):
+        ratelimit.record(db, email=email, ip=ip, outcome="otp_locked")
+        raise _OTP_LOCKED
+
+    since = datetime.now(timezone.utc) - timedelta(hours=1)
+    sent_recently = db.scalar(
+        select(func.count())
+        .select_from(AuthAttempt)
+        .where(AuthAttempt.email == email)
+        .where(AuthAttempt.outcome == "otp_sent")
+        .where(AuthAttempt.created_at >= since)
+    ) or 0
+    if sent_recently >= settings.OTP_MAX_PER_HOUR:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many OTPs requested. Wait an hour, or visit the Panchayat office.",
+            headers={"Retry-After": "3600"},
+        )
+
+    user = db.scalar(select(User).where(User.email == email))
+    if user is None or not user.is_active or user.role != "citizen":
+        # Staff and unknown accounts get the same answer: nothing self-service.
+        ratelimit.record(db, email=email, ip=ip, outcome="otp_refused")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "We could not send an OTP for that account. Residents can recover "
+                "access at the Panchayat office; staff should contact the administrator."
+            ),
+        )
+
+    otp = generate_otp()
+    now = datetime.now(timezone.utc)
+    # A new OTP voids any earlier unused one, office codes included.
+    for old in db.scalars(
+        select(PasswordReset)
+        .where(PasswordReset.user_id == user.id)
+        .where(PasswordReset.used_at.is_(None))
+    ):
+        old.used_at = now
+    db.add(PasswordReset(
+        id=f"pwr_{uuid4().hex[:16]}",
+        user_id=user.id,
+        hashed_code=hash_password(otp),
+        issued_by_id=None,  # None marks a self-service OTP
+        expires_at=now + timedelta(minutes=settings.OTP_TTL_MINUTES),
+    ))
+    db.commit()
+
+    phone = user.citizen.phone if user.citizen else None
+    sent_to = notify.send_otp(otp, phone=phone, email=user.email)
+    ratelimit.record(db, email=email, ip=ip, outcome="otp_sent", user_id=user.id)
+
+    return OtpSent(
+        sent_to=[*( [_mask_phone(phone)] if phone else []), _mask_email(user.email)]
+        if sent_to else [],
+        expires_in_minutes=settings.OTP_TTL_MINUTES,
+        demo_otp=otp if settings.OTP_DEMO_MODE else None,
+    )
+
+
+@router.post("/forgot-password/verify", status_code=status.HTTP_204_NO_CONTENT)
+def verify_otp(body: OtpReset, request: Request, db: Session = Depends(get_db)) -> None:
+    email = _account_key(db, body.email, body.aadhaar)
+    ip = ratelimit.client_ip(request)
+
+    try:
+        ratelimit.check_reset_allowed(db, email, ip)
+    except HTTPException:
+        ratelimit.record(db, email=email, ip=ip, outcome="rate_limited")
+        raise
+    if _is_locked(db, email):
+        raise _OTP_LOCKED
+
+    refused = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="That OTP is not valid or has expired. Request a new one.",
+    )
+    user = db.scalar(select(User).where(User.email == email))
+    reset = None
+    if user is not None:
+        reset = db.scalar(
+            select(PasswordReset)
+            .where(PasswordReset.user_id == user.id)
+            .where(PasswordReset.used_at.is_(None))
+            .where(PasswordReset.issued_by_id.is_(None))
+            .order_by(PasswordReset.created_at.desc())
+        )
+    entered = "".join(ch for ch in body.otp if ch.isdigit())
+    if (
+        user is None
+        or reset is None
+        or as_utc(reset.expires_at) <= datetime.now(timezone.utc)
+        or not verify_password(entered, reset.hashed_code)
+    ):
+        ratelimit.record(db, email=email, ip=ip, outcome="reset_bad_code")
+        raise refused
+
+    user.hashed_password = hash_password(body.new_password)
+    _revoke_existing_sessions(user)
+    reset.used_at = datetime.now(timezone.utc)
+    db.commit()
+    ratelimit.record(db, email=email, ip=ip, outcome="otp_redeemed", user_id=user.id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

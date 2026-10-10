@@ -169,3 +169,229 @@ tbody tr:hover {
   background-color: #f0f4f9 !important;
   border-left: 4px solid #000080 !important;
 }
+
+/* =============================================================
+   VISUAL REFRESH — layered on top of the government theme.
+   Navy + saffron identity kept; depth, motion and polish added.
+   ============================================================= */
+
+:root {
+  --ep-navy: #0f1f4b;
+  --ep-navy-2: #1b3478;
+  --ep-saffron: #ff8a1f;
+  --ep-green: #13a05a;
+  --ep-radius: 14px;
+  --ep-shadow-sm: 0 1px 2px rgba(15, 31, 75, 0.06), 0 1px 3px rgba(15, 31, 75, 0.08);
+  --ep-shadow-md: 0 4px 12px -2px rgba(15, 31, 75, 0.10), 0 2px 6px -2px rgba(15, 31, 75, 0.06);
+  --ep-shadow-lg: 0 18px 40px -12px rgba(15, 31, 75, 0.25);
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #eef2f8;
+}
+
+h1, h2, h3, .font-black, .font-extrabold {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── App background: soft mesh gradient ───────────────────── */
+.app-shell {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(255, 138, 31, 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(19, 160, 90, 0.07), transparent 60%),
+    linear-gradient(180deg, #f3f6fb 0%, #eaf0f8 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* ── Sidebar: deep navy with glowing active state ─────────── */
+.app-sidebar {
+  background: linear-gradient(185deg, #0f1f4b 0%, #142a63 55%, #0c1838 100%) !important;
+  border-right: none !important;
+  box-shadow: 4px 0 24px -8px rgba(15, 31, 75, 0.45) !important;
+}
+.app-sidebar > div,
+.app-sidebar .bg-slate-50\/80,
+.app-sidebar .bg-slate-50\/50 {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.app-sidebar .text-govblue-900,
+.app-sidebar .text-slate-900,
+.app-sidebar .text-slate-700,
+.app-sidebar .text-slate-800 { color: #ffffff !important; }
+.app-sidebar .text-slate-600,
+.app-sidebar .text-slate-500,
+.app-sidebar .text-slate-400 { color: #aebbd8 !important; }
+.app-sidebar nav button {
+  border-radius: 10px !important;
+  transition: background 0.2s ease, transform 0.15s ease, color 0.2s ease !important;
+}
+.app-sidebar nav button:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #ffffff !important;
+  transform: translateX(2px);
+}
+.app-sidebar nav button:hover svg { color: #ffffff !important; }
+.app-sidebar nav .bg-govblue-50 {
+  background: linear-gradient(90deg, rgba(255, 138, 31, 0.22), rgba(255, 255, 255, 0.06)) !important;
+  border-left-color: var(--ep-saffron) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.app-sidebar nav .bg-govblue-50 svg,
+.app-sidebar nav .bg-govblue-50 .text-govnavy { color: #ffb36b !important; }
+.app-sidebar .bg-white {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.app-sidebar .bg-white:hover { background: rgba(255, 255, 255, 0.12) !important; }
+.app-sidebar .text-govnavy { color: #ffb36b !important; }
+.app-sidebar .bg-govnavy\/10 {
+  background: rgba(255, 179, 107, 0.15) !important;
+  border-color: rgba(255, 179, 107, 0.3) !important;
+}
+.app-sidebar .bg-govblue-100 {
+  background: linear-gradient(135deg, var(--ep-saffron), #ffb36b) !important;
+  color: #0f1f4b !important;
+  border: none !important;
+}
+
+/* ── Top bar: frosted glass ───────────────────────────────── */
+.app-topbar {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid rgba(15, 31, 75, 0.08) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), var(--ep-shadow-sm) !important;
+}
+
+/* ── Page entry animation ─────────────────────────────────── */
+@keyframes ep-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.app-main > * { animation: ep-rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.app-main > * > *:nth-child(2) { animation: ep-rise 0.5s 0.05s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.app-main > * > *:nth-child(3) { animation: ep-rise 0.5s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.app-main > * > *:nth-child(4) { animation: ep-rise 0.5s 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* ── Cards: rounder, layered shadows, lift on hover ───────── */
+.app-main .bg-white.rounded-xl,
+.app-main .bg-white.rounded-lg,
+.app-main .bg-white.rounded-2xl {
+  border-radius: var(--ep-radius) !important;
+  border-color: rgba(15, 31, 75, 0.07) !important;
+  box-shadow: var(--ep-shadow-sm) !important;
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+.app-main .bg-white.rounded-xl:hover,
+.app-main .bg-white.rounded-2xl:hover {
+  box-shadow: var(--ep-shadow-md) !important;
+  border-color: rgba(15, 31, 75, 0.12) !important;
+}
+.app-main .grid > .bg-white.rounded-xl:hover { transform: translateY(-2px); }
+
+/* Stat tiles get a saffron accent bar on hover */
+.app-main .grid > .bg-white.rounded-xl { position: relative; overflow: hidden; }
+.app-main .grid > .bg-white.rounded-xl::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--ep-saffron), var(--ep-green));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.app-main .grid > .bg-white.rounded-xl:hover::before { opacity: 1; }
+
+/* ── Buttons ──────────────────────────────────────────────── */
+button { transition: all 0.18s ease; }
+.bg-govnavy {
+  background: linear-gradient(135deg, var(--ep-navy-2) 0%, var(--ep-navy) 100%) !important;
+  box-shadow: 0 6px 16px -6px rgba(15, 31, 75, 0.55) !important;
+}
+.bg-govnavy:hover:not(:disabled) {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -8px rgba(15, 31, 75, 0.6) !important;
+}
+.bg-govsaffron {
+  background: linear-gradient(135deg, #ffa24a, var(--ep-saffron)) !important;
+}
+button:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+
+/* ── Inputs: softer, with a focus halo ────────────────────── */
+input, select, textarea {
+  border-radius: 10px !important;
+  border-color: #d5dce8 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--ep-navy-2) !important;
+  box-shadow: 0 0 0 4px rgba(27, 52, 120, 0.12) !important;
+}
+
+/* ── Tables ───────────────────────────────────────────────── */
+thead tr {
+  background: linear-gradient(180deg, #f7f9fc, #eef2f8) !important;
+  border-bottom: 1px solid #dfe5ef !important;
+}
+thead th { text-transform: uppercase; font-size: 0.68rem !important; letter-spacing: 0.06em; }
+tbody tr { transition: background 0.15s ease; }
+tbody tr:hover { background-color: #f5f8fd !important; }
+
+/* ── Badges & pills ───────────────────────────────────────── */
+.rounded.uppercase, span.rounded-full { letter-spacing: 0.04em; }
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar-thumb { background: #c3cdde; border-radius: 9999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Login: animated gradient hero with a glass card ──────── */
+.login-hero {
+  background:
+    radial-gradient(900px 500px at 15% 10%, rgba(255, 138, 31, 0.28), transparent 60%),
+    radial-gradient(800px 500px at 90% 90%, rgba(19, 160, 90, 0.22), transparent 60%),
+    linear-gradient(135deg, #0c1838 0%, #142a63 50%, #0f1f4b 100%) !important;
+  background-size: 140% 140%, 140% 140%, 100% 100% !important;
+  animation: ep-drift 18s ease-in-out infinite alternate;
+}
+@keyframes ep-drift {
+  from { background-position: 0% 0%, 100% 100%, 0 0; }
+  to { background-position: 30% 20%, 70% 80%, 0 0; }
+}
+.login-hero > header {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+.login-hero > header .text-govnavy { color: #ffffff !important; }
+.login-hero > header .text-slate-400 { color: #aebbd8 !important; }
+.login-hero > header button {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+.login-hero > header button svg { color: #ffb36b !important; }
+.login-hero > header .bg-slate-50 {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+.login-hero footer, .login-hero > footer {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+.login-hero > footer, .login-hero > footer * { color: #aebbd8 !important; }
+.login-card {
+  background: rgba(255, 255, 255, 0.97) !important;
+  box-shadow: var(--ep-shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.4) !important;
+  border-top-width: 4px !important;
+  animation: ep-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

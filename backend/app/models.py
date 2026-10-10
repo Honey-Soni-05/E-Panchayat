@@ -280,6 +280,14 @@ class Citizen(Base, TimestampMixin):
     )
     phone: Mapped[str | None] = mapped_column(String(30))
 
+    # Aadhaar is never stored in the clear. The digest is an HMAC keyed on
+    # SECRET_KEY, so it can be looked up at sign-in but cannot be reversed by
+    # brute force from a database dump alone (a plain hash of a 12-digit number
+    # would fall in hours). The last four digits are kept for display, which is
+    # what UIDAI's own masked-Aadhaar format shows.
+    aadhaar_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
+    aadhaar_last4: Mapped[str | None] = mapped_column(String(4))
+
     family_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("families.id", ondelete="SET NULL"), index=True
     )

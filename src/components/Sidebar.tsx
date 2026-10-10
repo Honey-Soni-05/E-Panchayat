@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside 
-      className={`h-screen sticky top-0 flex flex-col justify-between bg-white border-r border-slate-200 transition-all duration-300 z-30 shadow-sm ${
+      className={`app-sidebar h-screen sticky top-0 flex flex-col justify-between bg-white border-r border-slate-200 transition-all duration-300 z-30 shadow-sm ${
         collapsed ? 'w-20' : 'w-64'
       }`}
     >

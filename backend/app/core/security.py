@@ -1,5 +1,7 @@
 """Password hashing, JWT issuing/verification, and reset codes."""
 
+import hashlib
+import hmac
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
@@ -76,6 +78,28 @@ def generate_reset_code() -> str:
 def normalise_reset_code(entered: str) -> str:
     """What the resident typed, reduced to what was generated."""
     return "".join(ch for ch in (entered or "").upper() if ch in _CODE_ALPHABET)
+
+
+def generate_otp() -> str:
+    """Six digits from `secrets`, zero-padded: '048213'."""
+    return f"{secrets.randbelow(10**6):06d}"
+
+
+def normalise_aadhaar(entered: str | None) -> str:
+    """Digits only, so '1234 5678 9012' and '1234-5678-9012' are the same."""
+    return "".join(ch for ch in (entered or "") if ch.isdigit())
+
+
+def is_valid_aadhaar(digits: str) -> bool:
+    """Twelve digits, not starting with 0 or 1 (UIDAI never issues those)."""
+    return len(digits) == 12 and digits[0] not in "01"
+
+
+def aadhaar_digest(digits: str) -> str:
+    """Keyed digest used to find a resident by Aadhaar without storing it."""
+    return hmac.new(
+        settings.SECRET_KEY.encode(), f"aadhaar:{digits}".encode(), hashlib.sha256
+    ).hexdigest()
 
 
 def _create_token(subject: str, token_type: TokenType, expires: timedelta,

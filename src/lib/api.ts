@@ -61,6 +61,23 @@ export const setSessionExpiredHandler = (fn: (() => void) | null) => {
   onSessionExpired = fn;
 };
 
+// ─── Account identifiers ────────────────────────────────────────────────────
+
+/** True when the text is a 12-digit Aadhaar number, spaces or dashes allowed. */
+export const isAadhaar = (value: string): boolean => /^\d{12}$/.test(value.replace(/[\s-]/g, ''));
+
+const accountIdentifier = (value: string) =>
+  isAadhaar(value)
+    ? { aadhaar: value.replace(/[\s-]/g, '') }
+    : { email: value.trim() };
+
+export interface OtpSent {
+  sentTo: string[];
+  expiresInMinutes: number;
+  /** Present only while the server runs without an SMS/email gateway. */
+  demoOtp: string | null;
+}
+
 // ─── Errors ─────────────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
@@ -716,10 +733,28 @@ export const api = {
     fetch(`${BASE_URL.replace(/\/api\/v1$/, '')}/health`).then((r) => r.json()),
 
   auth: {
-    login: (email: string, password: string): Promise<TokenPair> =>
+    /** `identifier` is an email address or a 12-digit Aadhaar number. */
+    login: (identifier: string, password: string): Promise<TokenPair> =>
       request('/auth/login', {
         method: 'POST',
-        body: { email, password },
+        body: { ...accountIdentifier(identifier), password },
+        anonymous: true,
+      }),
+
+    /** Self-service recovery: send an OTP to the phone and email on record.
+     *  Refused with 423 when the account is locked after repeated failed
+     *  sign-ins — then only an office reset code will do. */
+    requestOtp: (identifier: string): Promise<OtpSent> =>
+      request('/auth/forgot-password', {
+        method: 'POST',
+        body: accountIdentifier(identifier),
+        anonymous: true,
+      }),
+
+    verifyOtp: (identifier: string, otp: string, newPassword: string): Promise<void> =>
+      request('/auth/forgot-password/verify', {
+        method: 'POST',
+        body: { ...accountIdentifier(identifier), otp, newPassword },
         anonymous: true,
       }),
     me: (): Promise<User> => request('/auth/me'),

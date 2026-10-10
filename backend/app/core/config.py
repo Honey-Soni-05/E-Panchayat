@@ -73,6 +73,16 @@ class Settings(BaseSettings):
     # way, keyed on the account the code belongs to.
     RESET_MAX_FAILURES_PER_EMAIL: int = 5
 
+    # Self-service recovery: a six-digit OTP sent to the phone and email on
+    # record. Short-lived because it travels over a channel, and capped per hour
+    # so the endpoint cannot be used to flood a resident's phone.
+    OTP_TTL_MINUTES: int = 10
+    OTP_MAX_PER_HOUR: int = 3
+    # No SMS or email gateway is wired up yet. In demo mode the OTP is returned
+    # in the API response (and logged) so the flow can be shown end to end.
+    # Set to false once a real gateway is configured in services/notify.py.
+    OTP_DEMO_MODE: bool = True
+
     # CORS — comma separated in the environment
     CORS_ORIGINS: str = "http://localhost:5173"
 

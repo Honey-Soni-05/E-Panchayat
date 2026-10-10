@@ -28,7 +28,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import hash_password
+from app.core.security import aadhaar_digest, hash_password
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
 from app.sample_docs import write_sample
@@ -79,6 +79,17 @@ FAMILY_NAME_MR = {
     "Jadhav Family": "जाधव कुटुंब",
     "Ghadge Family": "घाडगे कुटुंब",
 }
+
+
+def demo_aadhaar(citizen_id: str) -> str | None:
+    """A synthetic, clearly-fake Aadhaar for a seeded resident.
+
+    cit_102 -> 999900000102. Real residents' numbers must never be loaded here.
+    """
+    digits = "".join(ch for ch in citizen_id if ch.isdigit())
+    if not citizen_id.startswith("cit_") or not digits:
+        return None
+    return f"9999{int(digits):08d}"
 
 
 def _date(value: str | None) -> date | None:
@@ -218,6 +229,8 @@ def seed_citizens(db: Session, data: dict) -> None:
             gender=c["gender"], gender_mr=c["genderMr"],
             occupation=c["occupation"], occupation_mr=c["occupationMr"],
             income=c["income"], ward=c["ward"], phone=c.get("phone"),
+            aadhaar_hash=aadhaar_digest(demo_aadhaar(c["id"])) if demo_aadhaar(c["id"]) else None,
+            aadhaar_last4=(demo_aadhaar(c["id"]) or "")[-4:] or None,
             family_id=c["familyId"], relation=relation, relation_mr=relation_mr,
             is_head=c["id"] in heads,
             # Synthetic. Real scheme rules key off these, so without them the
